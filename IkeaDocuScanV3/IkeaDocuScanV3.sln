@@ -1,0 +1,43 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.14.36603.0 d17.14
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IkeaDocuScan-Web", "IkeaDocuScan-Web\IkeaDocuScan-Web\IkeaDocuScan-Web.csproj", "{A957ABCD-3DEC-0462-9EC3-D7FA038212BC}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IkeaDocuScan-Web.Client", "IkeaDocuScan-Web\IkeaDocuScan-Web.Client\IkeaDocuScan-Web.Client.csproj", "{0D33E305-BD36-8F63-0462-1C4B2FABFCEE}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IkeaDocuScanV3.AppHost", "IkeaDocuScanV3.AppHost\IkeaDocuScanV3.AppHost.csproj", "{65806E27-5084-450F-9573-D305270CD2FE}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IkeaDocuScanV3.ServiceDefaults", "IkeaDocuScanV3.ServiceDefaults\IkeaDocuScanV3.ServiceDefaults.csproj", "{075E3DC6-5CB6-F5A4-7A2D-401AAA8E030B}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{A957ABCD-3DEC-0462-9EC3-D7FA038212BC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A957ABCD-3DEC-0462-9EC3-D7FA038212BC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A957ABCD-3DEC-0462-9EC3-D7FA038212BC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A957ABCD-3DEC-0462-9EC3-D7FA038212BC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0D33E305-BD36-8F63-0462-1C4B2FABFCEE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0D33E305-BD36-8F63-0462-1C4B2FABFCEE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0D33E305-BD36-8F63-0462-1C4B2FABFCEE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0D33E305-BD36-8F63-0462-1C4B2FABFCEE}.Release|Any CPU.Build.0 = Release|Any CPU
+		{65806E27-5084-450F-9573-D305270CD2FE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{65806E27-5084-450F-9573-D305270CD2FE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{65806E27-5084-450F-9573-D305270CD2FE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{65806E27-5084-450F-9573-D305270CD2FE}.Release|Any CPU.Build.0 = Release|Any CPU
+		{075E3DC6-5CB6-F5A4-7A2D-401AAA8E030B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{075E3DC6-5CB6-F5A4-7A2D-401AAA8E030B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{075E3DC6-5CB6-F5A4-7A2D-401AAA8E030B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{075E3DC6-5CB6-F5A4-7A2D-401AAA8E030B}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {C4D0F886-D9F1-4CB8-8EAE-58C2DEA784C2}
+	EndGlobalSection
+EndGlobal
