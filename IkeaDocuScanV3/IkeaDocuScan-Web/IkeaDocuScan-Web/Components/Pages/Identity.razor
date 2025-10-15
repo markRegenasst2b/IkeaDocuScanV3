@@ -1,0 +1,37 @@
+@page "/identity"
+@using System.Security.Claims
+@inject IHttpContextAccessor HttpContextAccessor
+
+<h3>Identity Info</h3>
+
+@if (username != null)
+{
+    <p>Windows Username: @username</p>
+    <p>Is Authenticated: @isAuthenticated</p>
+    <p>Authentication Type: @authenticationType</p>
+
+    <h4>All Claims:</h4>
+    @foreach (var claim in claims)
+    {
+        <p>@claim.Type: @claim.Value</p>
+    }
+}
+
+@code {
+    private string? username;
+    private bool isAuthenticated;
+    private string? authenticationType;
+    private List<Claim> claims = new();
+
+    protected override void OnInitialized()
+    {
+        var httpContext = HttpContextAccessor.HttpContext;
+        if (httpContext?.User != null)
+        {
+            username = httpContext.User.Identity?.Name;
+            isAuthenticated = httpContext.User.Identity?.IsAuthenticated ?? false;
+            authenticationType = httpContext.User.Identity?.AuthenticationType;
+            claims = httpContext.User.Claims.ToList();
+        }
+    }
+}

@@ -1,0 +1,70 @@
+@page "/serverhome"
+@using System.Security.Claims
+@inject IHttpContextAccessor HttpContextAccessor
+
+<PageTitle>Server Home</PageTitle>
+
+<h1>Server-Side Home (Windows Auth Test)</h1>
+
+<div style="background: #e7f3ff; border: 1px solid #b3d9ff; padding: 20px; margin: 20px 0; border-radius: 5px;">
+    <h3>Debug Information:</h3>
+    <pre>@debugInfo</pre>
+</div>
+
+@if (username != null)
+{
+    <div style="background: #d4edda; border: 1px solid #c3e6cb; padding: 20px; margin: 20px 0; border-radius: 5px;">
+        <h2 style="color: #155724;">✓ Authentication Successful!</h2>
+        <p><strong>Windows Username:</strong> @username</p>
+        <p><strong>Is Authenticated:</strong> @isAuthenticated</p>
+        <p><strong>Authentication Type:</strong> @authenticationType</p>
+    </div>
+
+    <div style="background: #f0f0f0; padding: 10px; margin: 10px 0;">
+        <h3>All Claims (@claimsCount total):</h3>
+        @foreach (var claim in claims)
+        {
+            <p><strong>@claim.Type:</strong> @claim.Value</p>
+        }
+    </div>
+}
+else
+{
+    <div style="background: #f8d7da; border: 1px solid #f5c6cb; padding: 20px; margin: 20px 0; border-radius: 5px;">
+        <h2 style="color: #721c24;">✗ Not Authenticated</h2>
+        <p>Windows authentication is not working.</p>
+    </div>
+}
+
+@code {
+    private string? username;
+    private bool isAuthenticated;
+    private string? authenticationType;
+    private int claimsCount;
+    private List<Claim> claims = new();
+    private string? debugInfo;
+
+    protected override void OnInitialized()
+    {
+        var httpContext = HttpContextAccessor.HttpContext;
+
+        debugInfo = $"HttpContext is null: {httpContext == null}\n";
+
+        if (httpContext != null)
+        {
+            debugInfo += $"User is null: {httpContext.User == null}\n";
+            debugInfo += $"Identity is null: {httpContext.User?.Identity == null}\n";
+            debugInfo += $"Environment.UserName: {Environment.UserName}\n";
+            debugInfo += $"WindowsIdentity.GetCurrent().Name: {System.Security.Principal.WindowsIdentity.GetCurrent().Name}\n";
+
+            if (httpContext.User != null)
+            {
+                username = httpContext.User.Identity?.Name;
+                isAuthenticated = httpContext.User.Identity?.IsAuthenticated ?? false;
+                authenticationType = httpContext.User.Identity?.AuthenticationType;
+                claims = httpContext.User.Claims.ToList();
+                claimsCount = claims.Count;
+            }
+        }
+    }
+}

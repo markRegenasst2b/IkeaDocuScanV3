@@ -1,6 +1,6 @@
 ﻿@page "/"
 @using Microsoft.AspNetCore.Components.Authorization
-@inject AuthenticationStateProvider AuthenticationStateProvider
+@using System.Security.Claims
 
 <PageTitle>Home</PageTitle>
 
@@ -8,12 +8,22 @@
 
 Welcome to your new app.
 
-
 <AuthorizeView>
     <Authorized>
-        <p>Hello, @context.User.Identity?.Name!</p>
+        <p style="color: green; font-weight: bold;">Hello, @context.User.Identity?.Name!</p>
+        <div style="background: #f0f0f0; padding: 10px; margin: 10px 0;">
+            <h3>Debug Info:</h3>
+            <p>Username: @context.User.Identity?.Name</p>
+            <p>Is Authenticated: @context.User.Identity?.IsAuthenticated</p>
+            <p>Authentication Type: @context.User.Identity?.AuthenticationType</p>
+            <p>Claims Count: @context.User.Claims.Count()</p>
+            @foreach (var claim in context.User.Claims)
+            {
+                <p>- @claim.Type: @claim.Value</p>
+            }
+        </div>
     </Authorized>
     <NotAuthorized>
-        <p>You are not authorized. '@(context.User.Identity?.Name!)'</p>
+        <p style="color: red;">You are not authorized</p>
     </NotAuthorized>
 </AuthorizeView>
