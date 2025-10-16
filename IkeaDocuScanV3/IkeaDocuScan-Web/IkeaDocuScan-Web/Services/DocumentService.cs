@@ -211,7 +211,7 @@ public class DocumentService : IDocumentService
 
             // Related entities
             DocumentTypeId = entity.DtId,
-            DocumentTypeName = entity.Dt?.Name,
+            DocumentTypeName = entity.Dt?.DtName,
             CounterPartyId = entity.CounterPartyId,
             CounterPartyName = entity.CounterParty?.Name,
             DocumentNameId = entity.DocumentNameId,
