@@ -1,0 +1,506 @@
+@page "/documents"
+@rendermode InteractiveAuto
+@using IkeaDocuScan.Shared.DTOs.Documents
+@using IkeaDocuScan.Shared.Interfaces
+@using Microsoft.AspNetCore.SignalR.Client
+@inject IDocumentService DocumentService
+@inject NavigationManager Navigation
+@inject ILogger<Documents> Logger
+@implements IAsyncDisposable
+
+<PageTitle>Documents</PageTitle>
+
+<div class="container-fluid">
+    <div class="row mb-3">
+        <div class="col">
+            <h1>Documents Management</h1>
+        </div>
+        <div class="col-auto">
+            <button class="btn btn-primary" @onclick="ShowCreateDialog">
+                <span>➕</span> Create New Document
+            </button>
+        </div>
+    </div>
+
+    @if (errorMessage != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            @errorMessage
+            <button type="button" class="btn-close" @onclick="() => errorMessage = null"></button>
+        </div>
+    }
+
+    @if (successMessage != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            @successMessage
+            <button type="button" class="btn-close" @onclick="() => successMessage = null"></button>
+        </div>
+    }
+
+    @if (documents == null)
+    {
+        <div class="text-center p-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-3">Loading documents...</p>
+        </div>
+    }
+    else if (documents.Count == 0)
+    {
+        <div class="alert alert-info">
+            <h4>No documents found</h4>
+            <p>Click "Create New Document" to add your first document.</p>
+        </div>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table table-striped table-hover">
+                <thead class="table-dark">
+                    <tr>
+                        <th>ID</th>
+                        <th>BarCode</th>
+                        <th>Name</th>
+                        <th>Document Type</th>
+                        <th>Counter Party</th>
+                        <th>Date of Contract</th>
+                        <th>Created By</th>
+                        <th>Created On</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var doc in documents)
+                    {
+                        <tr>
+                            <td>@doc.Id</td>
+                            <td><strong>@doc.BarCode</strong></td>
+                            <td>@doc.Name</td>
+                            <td>@doc.DocumentTypeName</td>
+                            <td>@doc.CounterPartyName</td>
+                            <td>@doc.DateOfContract?.ToShortDateString()</td>
+                            <td>@doc.CreatedBy</td>
+                            <td>@doc.CreatedOn.ToLocalTime().ToString("g")</td>
+                            <td>
+                                <button class="btn btn-sm btn-info" @onclick="() => ViewDocument(doc)">View</button>
+                                <button class="btn btn-sm btn-warning" @onclick="() => EditDocument(doc)">Edit</button>
+                                <button class="btn btn-sm btn-danger" @onclick="() => DeleteDocument(doc.Id, doc.Name)">Delete</button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+            <div class="text-muted">
+                Total: @documents.Count document(s)
+            </div>
+        </div>
+    }
+</div>
+
+<!-- Create/Edit Dialog -->
+@if (showDialog)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-xl modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">@(editingDocument == null ? "Create New Document" : $"Edit Document #{editingDocument.Id}")</h5>
+                    <button type="button" class="btn-close" @onclick="CloseDialog"></button>
+                </div>
+                <div class="modal-body">
+                    @if (isSaving)
+                    {
+                        <div class="text-center p-3">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Saving...</span>
+                            </div>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="row g-3">
+                            <!-- Basic Information -->
+                            <div class="col-12">
+                                <h6 class="border-bottom pb-2">Basic Information</h6>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Name *</label>
+                                <input class="form-control" @bind="currentDocument.Name" required />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Document No</label>
+                                <input class="form-control" @bind="currentDocument.DocumentNo" />
+                            </div>
+                            <div class="col-md-12">
+                                <label class="form-label">Comment</label>
+                                <textarea class="form-control" rows="3" @bind="currentDocument.Comment"></textarea>
+                            </div>
+
+                            <!-- Related Entities -->
+                            <div class="col-12 mt-4">
+                                <h6 class="border-bottom pb-2">Related Information</h6>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Document Type ID</label>
+                                <input type="number" class="form-control" @bind="currentDocument.DocumentTypeId" />
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Counter Party ID</label>
+                                <input type="number" class="form-control" @bind="currentDocument.CounterPartyId" />
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Document Name ID</label>
+                                <input type="number" class="form-control" @bind="currentDocument.DocumentNameId" />
+                            </div>
+
+                            <!-- Dates -->
+                            <div class="col-12 mt-4">
+                                <h6 class="border-bottom pb-2">Dates</h6>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Date of Contract</label>
+                                <input type="date" class="form-control" @bind="currentDocument.DateOfContract" />
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Receiving Date</label>
+                                <input type="date" class="form-control" @bind="currentDocument.ReceivingDate" />
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Dispatch Date</label>
+                                <input type="date" class="form-control" @bind="currentDocument.DispatchDate" />
+                            </div>
+
+                            <!-- Boolean Flags -->
+                            <div class="col-12 mt-4">
+                                <h6 class="border-bottom pb-2">Flags</h6>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" @bind="currentDocument.Fax" />
+                                    <label class="form-check-label">Fax</label>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" @bind="currentDocument.OriginalReceived" />
+                                    <label class="form-check-label">Original Received</label>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" @bind="currentDocument.Confidential" />
+                                    <label class="form-check-label">Confidential</label>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" @bind="currentDocument.BankConfirmation" />
+                                    <label class="form-check-label">Bank Confirmation</label>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseDialog" disabled="@isSaving">Cancel</button>
+                    <button type="button" class="btn btn-primary" @onclick="SaveDocument" disabled="@isSaving">
+                        @(isSaving ? "Saving..." : "Save")
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- View Dialog -->
+@if (showViewDialog && viewingDocument != null)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-xl modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Document Details - #@viewingDocument.Id</h5>
+                    <button type="button" class="btn-close" @onclick="CloseViewDialog"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <strong>ID:</strong> @viewingDocument.Id
+                        </div>
+                        <div class="col-md-6">
+                            <strong>BarCode:</strong> @viewingDocument.BarCode
+                        </div>
+                        <div class="col-md-12">
+                            <strong>Name:</strong> @viewingDocument.Name
+                        </div>
+                        <div class="col-md-12">
+                            <strong>Comment:</strong> @viewingDocument.Comment
+                        </div>
+                        <div class="col-md-6">
+                            <strong>Document Type:</strong> @viewingDocument.DocumentTypeName
+                        </div>
+                        <div class="col-md-6">
+                            <strong>Counter Party:</strong> @viewingDocument.CounterPartyName
+                        </div>
+                        <div class="col-md-6">
+                            <strong>Document Name:</strong> @viewingDocument.DocumentNameText
+                        </div>
+                        <div class="col-md-6">
+                            <strong>Date of Contract:</strong> @viewingDocument.DateOfContract?.ToShortDateString()
+                        </div>
+                        <div class="col-md-12 mt-3">
+                            <strong>Audit Information:</strong>
+                            <ul>
+                                <li>Created: @viewingDocument.CreatedOn.ToLocalTime() by @viewingDocument.CreatedBy</li>
+                                @if (viewingDocument.ModifiedOn.HasValue)
+                                {
+                                    <li>Modified: @viewingDocument.ModifiedOn.Value.ToLocalTime() by @viewingDocument.ModifiedBy</li>
+                                }
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseViewDialog">Close</button>
+                    <button type="button" class="btn btn-warning" @onclick="() => { CloseViewDialog(); EditDocument(viewingDocument); }">Edit</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<DocumentDto>? documents;
+    private HubConnection? hubConnection;
+    private bool showDialog;
+    private bool showViewDialog;
+    private bool isSaving;
+    private DocumentDto? editingDocument;
+    private DocumentDto? viewingDocument;
+    private CreateDocumentDto currentDocument = new();
+    private string? errorMessage;
+    private string? successMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            // Load initial data
+            Logger.LogInformation("Loading documents");
+            documents = await DocumentService.GetAllAsync();
+
+            // Setup SignalR for real-time updates
+            hubConnection = new HubConnectionBuilder()
+                .WithUrl(Navigation.ToAbsoluteUri("/hubs/data-updates"))
+                .WithAutomaticReconnect()
+                .Build();
+
+            hubConnection.On<DocumentDto>("DocumentCreated", (doc) =>
+            {
+                Logger.LogInformation("Document created via SignalR: {DocumentId}", doc.Id);
+                documents?.Add(doc);
+                InvokeAsync(StateHasChanged);
+            });
+
+            hubConnection.On<DocumentDto>("DocumentUpdated", (doc) =>
+            {
+                Logger.LogInformation("Document updated via SignalR: {DocumentId}", doc.Id);
+                var existing = documents?.FirstOrDefault(d => d.Id == doc.Id);
+                if (existing != null)
+                {
+                    var index = documents!.IndexOf(existing);
+                    documents[index] = doc;
+                    InvokeAsync(StateHasChanged);
+                }
+            });
+
+            hubConnection.On<int>("DocumentDeleted", (id) =>
+            {
+                Logger.LogInformation("Document deleted via SignalR: {DocumentId}", id);
+                var doc = documents?.FirstOrDefault(d => d.Id == id);
+                if (doc != null)
+                {
+                    documents?.Remove(doc);
+                    InvokeAsync(StateHasChanged);
+                }
+            });
+
+            await hubConnection.StartAsync();
+            Logger.LogInformation("SignalR connection established");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error initializing documents page");
+            errorMessage = $"Error loading documents: {ex.Message}";
+        }
+    }
+
+    private void ShowCreateDialog()
+    {
+        editingDocument = null;
+        currentDocument = new CreateDocumentDto();
+        showDialog = true;
+        errorMessage = null;
+        successMessage = null;
+    }
+
+    private void ViewDocument(DocumentDto doc)
+    {
+        viewingDocument = doc;
+        showViewDialog = true;
+    }
+
+    private void CloseViewDialog()
+    {
+        showViewDialog = false;
+        viewingDocument = null;
+    }
+
+    private void EditDocument(DocumentDto doc)
+    {
+        editingDocument = doc;
+        currentDocument = new CreateDocumentDto
+        {
+            Name = doc.Name,
+            Comment = doc.Comment,
+            DocumentTypeId = doc.DocumentTypeId,
+            CounterPartyId = doc.CounterPartyId,
+            DocumentNameId = doc.DocumentNameId,
+            FileId = doc.FileId,
+            DateOfContract = doc.DateOfContract,
+            ReceivingDate = doc.ReceivingDate,
+            DispatchDate = doc.DispatchDate,
+            ActionDate = doc.ActionDate,
+            ValidUntil = doc.ValidUntil,
+            SendingOutDate = doc.SendingOutDate,
+            ForwardedToSignatoriesDate = doc.ForwardedToSignatoriesDate,
+            ActionDescription = doc.ActionDescription,
+            ReminderGroup = doc.ReminderGroup,
+            DocumentNo = doc.DocumentNo,
+            AssociatedToPua = doc.AssociatedToPua,
+            VersionNo = doc.VersionNo,
+            AssociatedToAppendix = doc.AssociatedToAppendix,
+            Authorisation = doc.Authorisation,
+            ThirdParty = doc.ThirdParty,
+            ThirdPartyId = doc.ThirdPartyId,
+            CurrencyCode = doc.CurrencyCode,
+            Amount = doc.Amount,
+            Fax = doc.Fax,
+            OriginalReceived = doc.OriginalReceived,
+            BankConfirmation = doc.BankConfirmation,
+            TranslatedVersionReceived = doc.TranslatedVersionReceived,
+            Confidential = doc.Confidential
+        };
+        showDialog = true;
+        errorMessage = null;
+        successMessage = null;
+    }
+
+    private void CloseDialog()
+    {
+        showDialog = false;
+        editingDocument = null;
+    }
+
+    private async Task SaveDocument()
+    {
+        try
+        {
+            isSaving = true;
+            errorMessage = null;
+            successMessage = null;
+
+            if (string.IsNullOrWhiteSpace(currentDocument.Name))
+            {
+                errorMessage = "Document name is required";
+                return;
+            }
+
+            if (editingDocument == null)
+            {
+                // Create
+                await DocumentService.CreateAsync(currentDocument);
+                successMessage = "Document created successfully";
+            }
+            else
+            {
+                // Update
+                var updateDto = new UpdateDocumentDto
+                {
+                    Id = editingDocument.Id,
+                    Name = currentDocument.Name,
+                    Comment = currentDocument.Comment,
+                    DocumentTypeId = currentDocument.DocumentTypeId,
+                    CounterPartyId = currentDocument.CounterPartyId,
+                    DocumentNameId = currentDocument.DocumentNameId,
+                    FileId = currentDocument.FileId,
+                    DateOfContract = currentDocument.DateOfContract,
+                    ReceivingDate = currentDocument.ReceivingDate,
+                    DispatchDate = currentDocument.DispatchDate,
+                    ActionDate = currentDocument.ActionDate,
+                    ValidUntil = currentDocument.ValidUntil,
+                    SendingOutDate = currentDocument.SendingOutDate,
+                    ForwardedToSignatoriesDate = currentDocument.ForwardedToSignatoriesDate,
+                    ActionDescription = currentDocument.ActionDescription,
+                    ReminderGroup = currentDocument.ReminderGroup,
+                    DocumentNo = currentDocument.DocumentNo,
+                    AssociatedToPua = currentDocument.AssociatedToPua,
+                    VersionNo = currentDocument.VersionNo,
+                    AssociatedToAppendix = currentDocument.AssociatedToAppendix,
+                    Authorisation = currentDocument.Authorisation,
+                    ThirdParty = currentDocument.ThirdParty,
+                    ThirdPartyId = currentDocument.ThirdPartyId,
+                    CurrencyCode = currentDocument.CurrencyCode,
+                    Amount = currentDocument.Amount,
+                    Fax = currentDocument.Fax,
+                    OriginalReceived = currentDocument.OriginalReceived,
+                    BankConfirmation = currentDocument.BankConfirmation,
+                    TranslatedVersionReceived = currentDocument.TranslatedVersionReceived,
+                    Confidential = currentDocument.Confidential
+                };
+                await DocumentService.UpdateAsync(updateDto);
+                successMessage = "Document updated successfully";
+            }
+
+            CloseDialog();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error saving document");
+            errorMessage = $"Error saving document: {ex.Message}";
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+    private async Task DeleteDocument(int id, string name)
+    {
+        // Note: In a real app, you'd want a proper confirmation dialog
+        // For now, we'll use browser's confirm which requires JSInterop
+        try
+        {
+            errorMessage = null;
+            successMessage = null;
+
+            await DocumentService.DeleteAsync(id);
+            successMessage = $"Document '{name}' deleted successfully";
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error deleting document {DocumentId}", id);
+            errorMessage = $"Error deleting document: {ex.Message}";
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (hubConnection is not null)
+        {
+            await hubConnection.DisposeAsync();
+        }
+    }
+}

@@ -6,6 +6,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <RootNamespace>IkeaDocuScan-Web</RootNamespace>
     <AssemblyName>$(AssemblyName.Replace(' ', '_'))</AssemblyName>
+    <UserSecretsId>74a314ee-2410-466f-9b19-15c0dbd38fa9</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>

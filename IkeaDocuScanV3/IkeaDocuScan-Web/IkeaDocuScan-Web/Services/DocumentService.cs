@@ -32,12 +32,15 @@ public class DocumentService : IDocumentService
     {
         _logger.LogInformation("Fetching all documents");
 
-        return await _context.Documents
+        // Load entities from database first (with navigation properties)
+        var entities = await _context.Documents
             .Include(d => d.DocumentName)
             .Include(d => d.Dt)
             .Include(d => d.CounterParty)
-            .Select(d => MapToDto(d))
             .ToListAsync();
+
+        // Then map to DTOs in memory
+        return entities.Select(d => MapToDto(d)).ToList();
     }
 
     public async Task<DocumentDto?> GetByIdAsync(int id)
