@@ -2,8 +2,13 @@ using IkeaDocuScan_Web;
 using IkeaDocuScan_Web.Components;
 using IkeaDocuScan_Web.Middleware;
 using IkeaDocuScan_Web.Services;
+using IkeaDocuScan_Web.Endpoints;
+using IkeaDocuScan_Web.Hubs;
+using IkeaDocuScan.Infrastructure.Data;
+using IkeaDocuScan.Shared.Interfaces;
 using Microsoft.AspNetCore.Authentication.Negotiate;
 using Microsoft.AspNetCore.Components.Authorization;
+using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -34,6 +39,23 @@ builder.Services.AddScoped<UserIdentityService>();
 builder.Services.AddCascadingAuthenticationState();
 builder.Services.AddScoped<AuthenticationStateProvider, PersistingServerAuthenticationStateProvider>();
 
+// Database
+builder.Services.AddDbContext<AppDbContext>(options =>
+    options.UseSqlServer(
+        builder.Configuration.GetConnectionString("DefaultConnection"),
+        sqlOptions => sqlOptions.EnableRetryOnFailure()
+    ));
+
+// Data access services
+builder.Services.AddScoped<IDocumentService, DocumentService>();
+
+// SignalR for real-time updates
+builder.Services.AddSignalR();
+
+// Exception handling
+builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
+builder.Services.AddProblemDetails();
+
 var app = builder.Build();
 
 app.MapDefaultEndpoints();
@@ -45,10 +67,11 @@ if (app.Environment.IsDevelopment())
 }
 else
 {
-    app.UseExceptionHandler("/Error", createScopeForErrors: true);
-    // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
     app.UseHsts();
 }
+
+// Use exception handler for all environments
+app.UseExceptionHandler();
 
 app.UseHttpsRedirection();
 
@@ -64,5 +87,11 @@ app.MapRazorComponents<App>()
     .AddInteractiveWebAssemblyRenderMode()
     .AddAdditionalAssemblies(typeof(IkeaDocuScan_Web.Client._Imports).Assembly)
     ;
+
+// Map SignalR hub
+app.MapHub<DataUpdateHub>("/hubs/data-updates");
+
+// Map API endpoints
+app.MapDocumentEndpoints();
 
 app.Run();
