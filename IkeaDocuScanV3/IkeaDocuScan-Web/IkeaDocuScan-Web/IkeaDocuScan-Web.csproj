@@ -11,6 +11,8 @@
   <ItemGroup>
     <ProjectReference Include="..\..\IkeaDocuScanV3.ServiceDefaults\IkeaDocuScanV3.ServiceDefaults.csproj" />
     <ProjectReference Include="..\IkeaDocuScan-Web.Client\IkeaDocuScan-Web.Client.csproj" />
+    <ProjectReference Include="..\..\IkeaDocuScan.Infrastructure\IkeaDocuScan.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\IkeaDocuScan.Shared\IkeaDocuScan.Shared.csproj" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.Negotiate" Version="9.0.10" />
     <PackageReference Include="Microsoft.AspNetCore.Components.Authorization" Version="9.0.10" />
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="9.0.10" />
