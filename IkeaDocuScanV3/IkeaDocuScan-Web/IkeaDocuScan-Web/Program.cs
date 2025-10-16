@@ -1,5 +1,4 @@
 using IkeaDocuScan_Web;
-using IkeaDocuScan_Web.Client.Pages;
 using IkeaDocuScan_Web.Components;
 using IkeaDocuScan_Web.Middleware;
 using IkeaDocuScan_Web.Services;
@@ -63,6 +62,7 @@ app.MapStaticAssets();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode()
     .AddInteractiveWebAssemblyRenderMode()
-    .AddAdditionalAssemblies(typeof(IkeaDocuScan_Web.Client._Imports).Assembly);
+    .AddAdditionalAssemblies(typeof(IkeaDocuScan_Web.Client._Imports).Assembly)
+    ;
 
 app.Run();
