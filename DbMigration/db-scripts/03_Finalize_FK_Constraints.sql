@@ -94,6 +94,12 @@ GO
 PRINT 'Dropped column: ChildCounterPartyNoAlpha';
 PRINT '';
 
+
+ALTER TABLE [dbo].[Document] DROP CONSTRAINT [FK__Document__FileId__656C112C]
+GO
+
+
+
 ALTER TABLE CounterParty DROP CONSTRAINT [DF_CounterParty_CounterPartyNo]
 GO
 ALTER TABLE CounterParty

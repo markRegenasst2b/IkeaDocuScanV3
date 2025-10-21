@@ -40,7 +40,7 @@ public partial class AppDbContext : DbContext
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
 #warning To protect potentially sensitive information in your connection string, you should move it out of source code. You can avoid scaffolding the connection string by using the Name= syntax to read it from configuration - see https://go.microsoft.com/fwlink/?linkid=2131148. For more guidance on storing connection strings, see https://go.microsoft.com/fwlink/?LinkId=723263.
-        => optionsBuilder.UseSqlServer("Server=localhost;initial catalog=IkeaDocumentScanningCH;integrated security=True;TrustServerCertificate=True;");
+        => optionsBuilder.UseSqlServer("Server=localhost;Database=IkeaDocuScan;User Id=docuscanV3;Password=docuscanV325;TrustServerCertificate=True;");
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -53,7 +53,6 @@ public partial class AppDbContext : DbContext
         {
             entity.HasKey(e => e.CounterPartyId).HasName("PK__CounterParty__3B75D760");
 
-            entity.Property(e => e.CounterPartyNo).HasDefaultValue(-1);
             entity.Property(e => e.CounterPartyNoAlpha).HasDefaultValue("");
             entity.Property(e => e.Country).IsFixedLength();
             entity.Property(e => e.DisplayAtCheckIn).HasDefaultValue(true);
@@ -66,6 +65,10 @@ public partial class AppDbContext : DbContext
         modelBuilder.Entity<CounterPartyRelation>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("PK__CounterP__3214EC274F1EBB10");
+
+            entity.HasOne(d => d.ChildCounterParty).WithMany(p => p.CounterPartyRelationChildCounterParties).HasConstraintName("FK_CounterPartyRelation_Child_CounterParty");
+
+            entity.HasOne(d => d.ParentCounterParty).WithMany(p => p.CounterPartyRelationParentCounterParties).HasConstraintName("FK_CounterPartyRelation_Parent_CounterParty");
 
             entity.HasOne(d => d.RelationTypeNavigation).WithMany(p => p.CounterPartyRelations).HasConstraintName("FK__CounterPa__Relat__5FB337D6");
         });

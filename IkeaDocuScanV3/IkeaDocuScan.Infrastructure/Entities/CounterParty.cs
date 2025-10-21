@@ -14,8 +14,6 @@ public partial class CounterParty
     [Key]
     public int CounterPartyId { get; set; }
 
-    public int CounterPartyNo { get; set; }
-
     [StringLength(128)]
     [Unicode(false)]
     public string? Name { get; set; }
@@ -48,6 +46,12 @@ public partial class CounterParty
     [StringLength(32)]
     [Unicode(false)]
     public string? CounterPartyNoAlpha { get; set; }
+
+    [InverseProperty("ChildCounterParty")]
+    public virtual ICollection<CounterPartyRelation> CounterPartyRelationChildCounterParties { get; set; } = new List<CounterPartyRelation>();
+
+    [InverseProperty("ParentCounterParty")]
+    public virtual ICollection<CounterPartyRelation> CounterPartyRelationParentCounterParties { get; set; } = new List<CounterPartyRelation>();
 
     [ForeignKey("Country")]
     [InverseProperty("CounterParties")]

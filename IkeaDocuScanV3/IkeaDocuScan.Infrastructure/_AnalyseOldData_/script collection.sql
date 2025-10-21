@@ -12,19 +12,94 @@
 -- check relation table for mismatched numeric and alpha counterparty numbers
 select * 
 from CounterPartyRelation 
-where ChildCounterPartyNoAlpha <> CAST(ChildCounterPartyNo as varchar(20)) 
+where (ChildCounterPartyNoAlpha <> CAST(ChildCounterPartyNo as varchar(20)))
 or   (ChildCounterPartyNo is null and ChildCounterPartyNoAlpha is not null)
 or   (ChildCounterPartyNo is not null and ChildCounterPartyNoAlpha is null)
-or   ParentCounterPartyNoAlpha <> CAST(ParentCounterPartyNo as varchar(20)) 
+or   (ParentCounterPartyNoAlpha <> CAST(ParentCounterPartyNo as varchar(20))) 
 or   (ParentCounterPartyNo is null and ParentCounterPartyNoAlpha is not null)
 or   (ParentCounterPartyNo is not null and ParentCounterPartyNoAlpha is null)
 or   (ParentCounterPartyNo is not null and TRY_CAST(ParentCounterPartyNoAlpha as decimal) is null)
 or   (ChildCounterPartyNo is not null and TRY_CAST(ChildCounterPartyNoAlpha as decimal) is null)
 
+
+select * 
+from CounterPartyRelation 
+where (ChildCounterPartyNoAlpha <> CAST(ChildCounterPartyNo as varchar(20)))
+or   (ChildCounterPartyNo is null and ChildCounterPartyNoAlpha is not null)
+or   (ChildCounterPartyNo is not null and ChildCounterPartyNoAlpha is null)
+or   (ChildCounterPartyNo is not null and TRY_CAST(ChildCounterPartyNoAlpha as decimal) is null)
+
+
+select * 
+from CounterPartyRelation 
+where (ParentCounterPartyNoAlpha <> CAST(ParentCounterPartyNo as varchar(20)))
+or   (ParentCounterPartyNo is null and ParentCounterPartyNoAlpha is not null)
+or   (ParentCounterPartyNo is not null and ParentCounterPartyNoAlpha is null)
+or   (ParentCounterPartyNo is not null and TRY_CAST(ParentCounterPartyNoAlpha as decimal) is null)
+
+-- count counterpartyrelations
+select * from CounterPartyRelation
+-- list invlid relations (values)
 select * 
 from CounterPartyRelation 
 where TRY_CAST(ParentCounterPartyNoAlpha as decimal) is null
 or    TRY_CAST(ChildCounterPartyNoAlpha as decimal) is null
+or    ParentCounterPartyNo is null
+or    ChildCounterPartyNo is null
+-- list valid relations (values)
+select * 
+from CounterPartyRelation 
+where TRY_CAST(ParentCounterPartyNoAlpha as decimal) is not null
+and    TRY_CAST(ChildCounterPartyNoAlpha as decimal) is not null
+and    ParentCounterPartyNo is not null
+and    ChildCounterPartyNo is not null
+and (cast(ParentCounterPartyNo as varchar(20)) = ParentCounterPartyNoAlpha or cast(ChildCounterPartyNo as varchar(20)) = ChildCounterPartyNoAlpha)
+-- list broken child relations
+select * 
+from CounterPartyRelation cpr
+where TRY_CAST(ParentCounterPartyNoAlpha as decimal) is not null
+and    TRY_CAST(ChildCounterPartyNoAlpha as decimal) is not null
+and    ParentCounterPartyNo is not null
+and    ChildCounterPartyNo is not null
+and (cast(ParentCounterPartyNo as varchar(20)) = ParentCounterPartyNoAlpha or cast(ChildCounterPartyNo as varchar(20)) = ChildCounterPartyNoAlpha)
+and (not exists (select null from CounterParty cp where cpr.ChildCounterPartyNoAlpha = cp.CounterPartyNoAlpha))
+-- list broken parent relations
+select * 
+from CounterPartyRelation cpr
+where TRY_CAST(ParentCounterPartyNoAlpha as decimal) is not null
+and    TRY_CAST(ChildCounterPartyNoAlpha as decimal) is not null
+and    ParentCounterPartyNo is not null
+and    ChildCounterPartyNo is not null
+and (cast(ParentCounterPartyNo as varchar(20)) = ParentCounterPartyNoAlpha or cast(ChildCounterPartyNo as varchar(20)) = ChildCounterPartyNoAlpha)
+and (not exists  (select null from CounterParty cp where cpr.ParentCounterPartyNoAlpha = cp.CounterPartyNoAlpha))
+
+-- list candiates to be deleted
+select * 
+from CounterPartyRelation 
+where TRY_CAST(ParentCounterPartyNoAlpha as decimal) is null
+or    TRY_CAST(ChildCounterPartyNoAlpha as decimal) is null
+or    ParentCounterPartyNo is null
+or    ChildCounterPartyNo is null
+union
+select * 
+from CounterPartyRelation cpr
+where TRY_CAST(ParentCounterPartyNoAlpha as decimal) is not null
+and    TRY_CAST(ChildCounterPartyNoAlpha as decimal) is not null
+and    ParentCounterPartyNo is not null
+and    ChildCounterPartyNo is not null
+and (cast(ParentCounterPartyNo as varchar(20)) = ParentCounterPartyNoAlpha or cast(ChildCounterPartyNo as varchar(20)) = ChildCounterPartyNoAlpha)
+and (not exists (select null from CounterParty cp where cpr.ChildCounterPartyNoAlpha = cp.CounterPartyNoAlpha))
+union
+select * 
+from CounterPartyRelation cpr
+where TRY_CAST(ParentCounterPartyNoAlpha as decimal) is not null
+and    TRY_CAST(ChildCounterPartyNoAlpha as decimal) is not null
+and    ParentCounterPartyNo is not null
+and    ChildCounterPartyNo is not null
+and (cast(ParentCounterPartyNo as varchar(20)) = ParentCounterPartyNoAlpha or cast(ChildCounterPartyNo as varchar(20)) = ChildCounterPartyNoAlpha)
+and (not exists  (select null from CounterParty cp where cpr.ParentCounterPartyNoAlpha = cp.CounterPartyNoAlpha))
+order by 1
+
 
 
 
@@ -47,6 +122,15 @@ select * from Document where ForwardedToSignatoriesDate is not null
 select * from Document where ReminderGroup is not null
 -- check if SendingOutDate is used
 select * from Document where SendingOutDate is not null
+
+-- check uniqueness of counterpartynoalpha
+	select * from CounterParty where counterpartynoalpha in (
+	select counterpartynoalpha from CounterParty group by CounterPartyNoAlpha having COUNT(*) > 1)
+	order by CounterPartyNoAlpha;
+
+-- check if counterpartyrelation references a non unique counterpartynoalpha
+select * from CounterPartyRelation cpr where ParentCounterPartyNoAlpha in (select counterpartynoalpha from CounterParty group by CounterPartyNoAlpha having COUNT(*) > 1)
+select * from CounterPartyRelation cpr where ChildCounterPartyNoAlpha in (select counterpartynoalpha from CounterParty group by CounterPartyNoAlpha having COUNT(*) > 1)
 
 
 

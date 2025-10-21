@@ -92,6 +92,12 @@ BEGIN
 END
 GO
 
+PRINT 'Creating database user: docuscanch...';
+GO
+
+CREATE USER docuscanV3 FOR LOGIN docuscanV3;
+GO
+
 
 -- Grant db_owner role
 IF NOT EXISTS (

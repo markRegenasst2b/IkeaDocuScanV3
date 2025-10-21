@@ -7,17 +7,13 @@ using Microsoft.EntityFrameworkCore;
 namespace IkeaDocuScan.Infrastructure.Entities;
 
 [Table("CounterPartyRelation")]
-[Index("ChildCounterPartyNoAlpha", Name = "COUNTERPARTYRELATION_CHILD_IDX")]
-[Index("ParentCounterPartyNoAlpha", Name = "COUNTERPARTYRELATION_PARENT_IDX")]
+[Index("ChildCounterPartyId", Name = "IX_CounterPartyRelation_ChildCounterPartyId")]
+[Index("ParentCounterPartyId", Name = "IX_CounterPartyRelation_ParentCounterPartyId")]
 public partial class CounterPartyRelation
 {
     [Key]
     [Column("ID")]
     public int Id { get; set; }
-
-    public int? ParentCounterPartyNo { get; set; }
-
-    public int? ChildCounterPartyNo { get; set; }
 
     public int? RelationType { get; set; }
 
@@ -25,13 +21,17 @@ public partial class CounterPartyRelation
     [Unicode(false)]
     public string? Comment { get; set; }
 
-    [StringLength(32)]
-    [Unicode(false)]
-    public string? ParentCounterPartyNoAlpha { get; set; }
+    public int? ParentCounterPartyId { get; set; }
 
-    [StringLength(32)]
-    [Unicode(false)]
-    public string? ChildCounterPartyNoAlpha { get; set; }
+    public int? ChildCounterPartyId { get; set; }
+
+    [ForeignKey("ChildCounterPartyId")]
+    [InverseProperty("CounterPartyRelationChildCounterParties")]
+    public virtual CounterParty? ChildCounterParty { get; set; }
+
+    [ForeignKey("ParentCounterPartyId")]
+    [InverseProperty("CounterPartyRelationParentCounterParties")]
+    public virtual CounterParty? ParentCounterParty { get; set; }
 
     [ForeignKey("RelationType")]
     [InverseProperty("CounterPartyRelations")]
