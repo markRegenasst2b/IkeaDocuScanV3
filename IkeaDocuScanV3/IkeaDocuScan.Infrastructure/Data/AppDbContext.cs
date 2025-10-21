@@ -28,6 +28,8 @@ public partial class AppDbContext : DbContext
 
     public virtual DbSet<Currency> Currencies { get; set; }
 
+    public virtual DbSet<DocuScanUser> DocuScanUsers { get; set; }
+
     public virtual DbSet<Document> Documents { get; set; }
 
     public virtual DbSet<DocumentFile> DocumentFiles { get; set; }
@@ -91,6 +93,13 @@ public partial class AppDbContext : DbContext
 
             entity.Property(e => e.CurrencyCode).IsFixedLength();
             entity.Property(e => e.DecimalPlaces).HasDefaultValue(2);
+        });
+
+        modelBuilder.Entity<DocuScanUser>(entity =>
+        {
+            entity.HasKey(e => e.UserId).HasName("DOCUSCANUSER_PK");
+
+            entity.Property(e => e.CreatedOn).HasDefaultValueSql("(getdate())");
         });
 
         modelBuilder.Entity<Document>(entity =>
@@ -218,6 +227,8 @@ public partial class AppDbContext : DbContext
             entity.HasOne(d => d.CountryCodeNavigation).WithMany(p => p.UserPermissions).HasConstraintName("FK__UserPermi__Count__693CA210");
 
             entity.HasOne(d => d.DocumentType).WithMany(p => p.UserPermissions).HasConstraintName("FK__UserPermi__Docum__6A30C649");
+
+            entity.HasOne(d => d.User).WithMany(p => p.UserPermissions).HasConstraintName("FK_UserPermissions_DocuScanUser");
         });
 
         OnModelCreatingPartial(modelBuilder);
