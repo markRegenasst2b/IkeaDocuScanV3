@@ -1,0 +1,592 @@
+@page "/edit-userpermissions"
+@rendermode InteractiveAuto
+@attribute [Authorize(Policy = "HasAccess")]
+@using IkeaDocuScan.Shared.DTOs.UserPermissions
+@using IkeaDocuScan.Shared.DTOs.CounterParties
+@using IkeaDocuScan.Shared.Interfaces
+@using IkeaDocuScan_Web.Client.Components
+@using Microsoft.AspNetCore.Authorization
+@inject IUserPermissionService UserPermissionService
+@inject ILogger<EditUserPermissions> Logger
+@implements IDisposable
+
+<PageTitle>Edit User Permissions</PageTitle>
+
+<div class="container-fluid mt-4">
+    <h1>User Permissions Management</h1>
+    <p class="text-muted">Manage user permissions for Counter Parties, Countries, and Document Types</p>
+
+    @if (selectedUser == null)
+    {
+        <!-- User List View -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5 class="mb-0">Search Users</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label for="searchInput" class="form-label">Search by Account Name</label>
+                    <input
+                        type="text"
+                        class="form-control"
+                        id="searchInput"
+                        placeholder="Type at least @MinSearchLength characters to search..."
+                        value="@searchTerm"
+                        @oninput="OnSearchTermChanged" />
+                    <small class="form-text text-muted">
+                        @if (searchTerm.Length > 0 && searchTerm.Length < MinSearchLength)
+                        {
+                            <span class="text-warning">Type at least @MinSearchLength characters to search...</span>
+                        }
+                        else
+                        {
+                            <span>Filters by user account name. Leave empty to show all users.</span>
+                        }
+                    </small>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5 class="mb-0">DocuScan Users (@(users?.Count ?? 0))</h5>
+            </div>
+            <div class="card-body">
+                @if (isLoading)
+                {
+                    <div class="text-center p-4">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mt-2">Loading users...</p>
+                    </div>
+                }
+                else if (errorMessage != null)
+                {
+                    <div class="alert alert-danger">
+                        @errorMessage
+                    </div>
+                }
+                else if (users != null && users.Count > 0)
+                {
+                    <div class="table-responsive">
+                        <table class="table table-hover table-striped">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>User ID</th>
+                                    <th>Account Name</th>
+                                    <th>Last Logon</th>
+                                    <th>Super User</th>
+                                    <th>Permissions</th>
+                                    <th style="width: 150px;">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var user in users)
+                                {
+                                    <tr style="cursor: pointer;" @onclick="() => SelectUser(user)">
+                                        <td>@user.UserId</td>
+                                        <td><strong>@user.AccountName</strong></td>
+                                        <td>@(user.LastLogon?.ToString("yyyy-MM-dd HH:mm") ?? "-")</td>
+                                        <td>
+                                            @if (user.IsSuperUser)
+                                            {
+                                                <span class="badge bg-success">Yes</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-secondary">No</span>
+                                            }
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-info">@user.PermissionCount</span>
+                                        </td>
+                                        <td>
+                                            <button class="btn btn-sm btn-primary" @onclick="() => SelectUser(user)" @onclick:stopPropagation="true">
+                                                <i class="fa fa-edit"></i> Manage
+                                            </button>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+                else
+                {
+                    <div class="alert alert-info">
+                        No users found. @(string.IsNullOrWhiteSpace(searchTerm) ? "" : "Try a different search term.")
+                    </div>
+                }
+            </div>
+        </div>
+    }
+    else
+    {
+        <!-- User Permissions Detail View -->
+        <div class="card mt-4">
+            <div class="card-header bg-primary text-white">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Permissions for @selectedUser.AccountName</h5>
+                    <button class="btn btn-sm btn-light" @onclick="BackToUserList">
+                        <i class="fa fa-arrow-left"></i> Back to Users
+                    </button>
+                </div>
+            </div>
+            <div class="card-body">
+                @if (saveErrorMessage != null)
+                {
+                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                        @saveErrorMessage
+                        <button type="button" class="btn-close" @onclick="() => saveErrorMessage = null"></button>
+                    </div>
+                }
+
+                @if (saveSuccessMessage != null)
+                {
+                    <div class="alert alert-success alert-dismissible fade show" role="alert">
+                        @saveSuccessMessage
+                        <button type="button" class="btn-close" @onclick="() => saveSuccessMessage = null"></button>
+                    </div>
+                }
+
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <strong>User ID:</strong> @selectedUser.UserId
+                    </div>
+                    <div class="col-md-4">
+                        <strong>Account Name:</strong> @selectedUser.AccountName
+                    </div>
+                    <div class="col-md-4">
+                        <strong>Super User:</strong> @(selectedUser.IsSuperUser ? "Yes" : "No")
+                    </div>
+                </div>
+
+                <hr />
+
+                @if (!showPermissionForm)
+                {
+                    <!-- Permissions List -->
+                    <div class="mb-3">
+                        <button class="btn btn-success" @onclick="ShowAddPermissionForm">
+                            <i class="fa fa-plus"></i> Add New Permission
+                        </button>
+                    </div>
+
+                    @if (isLoadingPermissions)
+                    {
+                        <div class="text-center p-4">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <p class="mt-2">Loading permissions...</p>
+                        </div>
+                    }
+                    else if (permissions != null && permissions.Count > 0)
+                    {
+                        <div class="table-responsive">
+                            <table class="table table-hover table-striped">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Document Type</th>
+                                        <th>Counter Party</th>
+                                        <th>Country</th>
+                                        <th style="width: 150px;">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var permission in permissions)
+                                    {
+                                        <tr>
+                                            <td>@permission.Id</td>
+                                            <td>@(permission.DocumentTypeName ?? "-")</td>
+                                            <td>
+                                                @if (!string.IsNullOrEmpty(permission.CounterPartyName))
+                                                {
+                                                    <span>@permission.CounterPartyName</span>
+                                                    @if (!string.IsNullOrEmpty(permission.CounterPartyNoAlpha))
+                                                    {
+                                                        <br /><small class="text-muted">(@permission.CounterPartyNoAlpha)</small>
+                                                    }
+                                                }
+                                                else
+                                                {
+                                                    <span>-</span>
+                                                }
+                                            </td>
+                                            <td>
+                                                @if (!string.IsNullOrEmpty(permission.CountryName))
+                                                {
+                                                    <span>@permission.CountryName (@permission.CountryCode)</span>
+                                                }
+                                                else
+                                                {
+                                                    <span>-</span>
+                                                }
+                                            </td>
+                                            <td>
+                                                <button class="btn btn-sm btn-primary me-1" @onclick="() => EditPermission(permission)">
+                                                    <i class="fa fa-edit"></i> Edit
+                                                </button>
+                                                <button class="btn btn-sm btn-danger" @onclick="() => DeletePermission(permission)">
+                                                    <i class="fa fa-trash"></i> Delete
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="alert alert-info">
+                            This user has no permissions yet. Click "Add New Permission" to create one.
+                        </div>
+                    }
+                }
+                else
+                {
+                    <!-- Permission Form (Add/Edit) -->
+                    <div class="card border-secondary">
+                        <div class="card-header">
+                            <h6 class="mb-0">@(editingPermission == null ? "Add New Permission" : $"Edit Permission #{editingPermission.Id}")</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-12 mb-3">
+                                    <DocumentTypeSelect
+                                        Label="Document Type"
+                                        SelectedDocumentTypeId="@selectedDocumentTypeId"
+                                        SelectedDocumentTypeIdChanged="@OnDocumentTypeSelected" />
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-12 mb-3">
+                                    <label class="form-label">Counter Party</label>
+                                    <CounterPartySearch
+                                        SelectedCounterParty="@selectedCounterParty"
+                                        SelectedCounterPartyChanged="@OnCounterPartySelected"
+                                        MinSearchLength="3" />
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-12 mb-3">
+                                    <CountrySelect
+                                        Label="Country"
+                                        SelectedCountryCode="@selectedCountryCode"
+                                        SelectedCountryCodeChanged="@OnCountrySelected" />
+                                </div>
+                            </div>
+
+                            <div class="mt-4">
+                                <button class="btn btn-success me-2" @onclick="SavePermission" disabled="@isSaving">
+                                    @if (isSaving)
+                                    {
+                                        <span class="spinner-border spinner-border-sm me-2"></span>
+                                    }
+                                    <i class="fa fa-save"></i> @(editingPermission == null ? "Add Permission" : "Save Changes")
+                                </button>
+                                <button class="btn btn-secondary" @onclick="CancelPermissionForm" disabled="@isSaving">
+                                    <i class="fa fa-times"></i> Cancel
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter]
+    [SupplyParameterFromQuery]
+    public int MinSearchLength { get; set; } = 3;
+
+    // User list
+    private List<DocuScanUserDto>? users;
+    private DocuScanUserDto? selectedUser;
+
+    // Permissions for selected user
+    private List<UserPermissionDto>? permissions;
+    private UserPermissionDto? editingPermission;
+
+    // UI state
+    private bool showPermissionForm = false;
+    private bool isLoading = false;
+    private bool isLoadingPermissions = false;
+    private bool isSaving = false;
+
+    // Messages
+    private string? errorMessage = null;
+    private string? saveErrorMessage = null;
+    private string? saveSuccessMessage = null;
+
+    // Search
+    private string searchTerm = string.Empty;
+    private Timer? _debounceTimer;
+    private const int DebounceDelayMs = 500;
+
+    // Edit form values
+    private int? selectedDocumentTypeId;
+    private CounterPartyDto? selectedCounterParty;
+    private string? selectedCountryCode;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadUsers();
+    }
+
+    private async Task LoadUsers()
+    {
+        isLoading = true;
+        errorMessage = null;
+
+        try
+        {
+            Logger.LogInformation("Loading DocuScan users");
+            var filter = string.IsNullOrWhiteSpace(searchTerm) || searchTerm.Length < MinSearchLength
+                ? null
+                : searchTerm;
+
+            users = await UserPermissionService.GetAllUsersAsync(filter);
+            Logger.LogInformation("Loaded {Count} users", users.Count);
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error loading users: {ex.Message}";
+            Logger.LogError(ex, "Error loading users");
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void OnSearchTermChanged(ChangeEventArgs e)
+    {
+        searchTerm = e.Value?.ToString() ?? string.Empty;
+
+        // Cancel previous timer
+        _debounceTimer?.Dispose();
+
+        // Start new debounce timer
+        _debounceTimer = new Timer(async _ =>
+        {
+            await InvokeAsync(async () =>
+            {
+                await LoadUsers();
+                StateHasChanged();
+            });
+        }, null, DebounceDelayMs, Timeout.Infinite);
+    }
+
+    private async Task SelectUser(DocuScanUserDto user)
+    {
+        selectedUser = user;
+        saveErrorMessage = null;
+        saveSuccessMessage = null;
+        await LoadUserPermissions();
+    }
+
+    private void BackToUserList()
+    {
+        selectedUser = null;
+        permissions = null;
+        showPermissionForm = false;
+        editingPermission = null;
+        ClearFormFields();
+    }
+
+    private async Task LoadUserPermissions()
+    {
+        if (selectedUser == null) return;
+
+        isLoadingPermissions = true;
+        saveErrorMessage = null;
+
+        try
+        {
+            Logger.LogInformation("Loading permissions for user {UserId}", selectedUser.UserId);
+            permissions = await UserPermissionService.GetByUserIdAsync(selectedUser.UserId);
+            Logger.LogInformation("Loaded {Count} permissions for user {UserId}", permissions.Count, selectedUser.UserId);
+        }
+        catch (Exception ex)
+        {
+            saveErrorMessage = $"Error loading permissions: {ex.Message}";
+            Logger.LogError(ex, "Error loading permissions for user {UserId}", selectedUser.UserId);
+        }
+        finally
+        {
+            isLoadingPermissions = false;
+        }
+    }
+
+    private void ShowAddPermissionForm()
+    {
+        editingPermission = null;
+        ClearFormFields();
+        showPermissionForm = true;
+        saveErrorMessage = null;
+        saveSuccessMessage = null;
+    }
+
+    private void EditPermission(UserPermissionDto permission)
+    {
+        editingPermission = permission;
+        selectedDocumentTypeId = permission.DocumentTypeId;
+        selectedCountryCode = permission.CountryCode;
+
+        // Set selected counter party
+        if (permission.CounterPartyId.HasValue)
+        {
+            selectedCounterParty = new CounterPartyDto
+            {
+                CounterPartyId = permission.CounterPartyId.Value,
+                Name = permission.CounterPartyName,
+                CounterPartyNoAlpha = permission.CounterPartyNoAlpha
+            };
+        }
+        else
+        {
+            selectedCounterParty = null;
+        }
+
+        showPermissionForm = true;
+        saveErrorMessage = null;
+        saveSuccessMessage = null;
+    }
+
+    private void CancelPermissionForm()
+    {
+        showPermissionForm = false;
+        editingPermission = null;
+        ClearFormFields();
+    }
+
+    private void ClearFormFields()
+    {
+        selectedDocumentTypeId = null;
+        selectedCounterParty = null;
+        selectedCountryCode = null;
+    }
+
+    private async Task SavePermission()
+    {
+        if (selectedUser == null) return;
+
+        isSaving = true;
+        saveErrorMessage = null;
+        saveSuccessMessage = null;
+
+        try
+        {
+            if (editingPermission == null)
+            {
+                // Add new permission
+                Logger.LogInformation("Creating new permission for user {UserId}", selectedUser.UserId);
+
+                var createDto = new CreateUserPermissionDto
+                {
+                    UserId = selectedUser.UserId,
+                    DocumentTypeId = selectedDocumentTypeId,
+                    CounterPartyId = selectedCounterParty?.CounterPartyId,
+                    CountryCode = selectedCountryCode
+                };
+
+                await UserPermissionService.CreateAsync(createDto);
+                saveSuccessMessage = "Permission added successfully!";
+                Logger.LogInformation("Permission created successfully for user {UserId}", selectedUser.UserId);
+            }
+            else
+            {
+                // Update existing permission
+                Logger.LogInformation("Updating permission {Id}", editingPermission.Id);
+
+                var updateDto = new UpdateUserPermissionDto
+                {
+                    Id = editingPermission.Id,
+                    DocumentTypeId = selectedDocumentTypeId,
+                    CounterPartyId = selectedCounterParty?.CounterPartyId,
+                    CountryCode = selectedCountryCode
+                };
+
+                await UserPermissionService.UpdateAsync(updateDto);
+                saveSuccessMessage = "Permission updated successfully!";
+                Logger.LogInformation("Permission {Id} updated successfully", editingPermission.Id);
+            }
+
+            // Reload permissions list and update user count
+            await LoadUserPermissions();
+            await LoadUsers();
+
+            // Close form
+            showPermissionForm = false;
+            editingPermission = null;
+            ClearFormFields();
+        }
+        catch (Exception ex)
+        {
+            saveErrorMessage = $"Error saving permission: {ex.Message}";
+            Logger.LogError(ex, "Error saving permission");
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+    private async Task DeletePermission(UserPermissionDto permission)
+    {
+        if (!await ConfirmDelete(permission)) return;
+
+        saveErrorMessage = null;
+        saveSuccessMessage = null;
+
+        try
+        {
+            Logger.LogInformation("Deleting permission {Id}", permission.Id);
+            await UserPermissionService.DeleteAsync(permission.Id);
+            saveSuccessMessage = "Permission deleted successfully!";
+
+            // Reload permissions list and update user count
+            await LoadUserPermissions();
+            await LoadUsers();
+        }
+        catch (Exception ex)
+        {
+            saveErrorMessage = $"Error deleting permission: {ex.Message}";
+            Logger.LogError(ex, "Error deleting permission {Id}", permission.Id);
+        }
+    }
+
+    private async Task<bool> ConfirmDelete(UserPermissionDto permission)
+    {
+        // Simple confirmation - in production, use a proper modal
+        return await Task.FromResult(true); // TODO: Add proper confirmation dialog
+    }
+
+    private void OnDocumentTypeSelected(int? documentTypeId)
+    {
+        selectedDocumentTypeId = documentTypeId;
+    }
+
+    private void OnCounterPartySelected(CounterPartyDto counterParty)
+    {
+        selectedCounterParty = counterParty;
+    }
+
+    private void OnCountrySelected(string? countryCode)
+    {
+        selectedCountryCode = countryCode;
+    }
+
+    public void Dispose()
+    {
+        _debounceTimer?.Dispose();
+    }
+}

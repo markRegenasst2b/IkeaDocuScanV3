@@ -592,3 +592,10 @@ The email service provides:
 ✅ **MailKit** - Modern, reliable SMTP library
 
 The service is production-ready and requires only SMTP configuration to start using!
+
+
+Using smtp4dev on Marks dev box:
+
+run C:\Users\markr\AppData\Local\Microsoft\WinGet\Packages\Rnwood.Smtp4dev_Microsoft.Winget.Source_8wekyb3d8bbwe\Rnwood.Smtp4dev.exe
+
+navigte to http://localhost:5000 to see the web interface.

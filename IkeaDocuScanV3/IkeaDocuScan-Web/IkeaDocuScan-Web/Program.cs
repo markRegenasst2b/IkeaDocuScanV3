@@ -120,6 +120,7 @@ builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<ICounterPartyService, CounterPartyService>();
 builder.Services.AddScoped<ICountryService, CountryService>();
 builder.Services.AddScoped<IDocumentTypeService, DocumentTypeService>();
+builder.Services.AddScoped<IUserPermissionService, UserPermissionService>();
 
 // SignalR for real-time updates
 builder.Services.AddSignalR();
@@ -168,5 +169,6 @@ app.MapDocumentEndpoints();
 app.MapCounterPartyEndpoints();
 app.MapCountryEndpoints();
 app.MapDocumentTypeEndpoints();
+app.MapUserPermissionEndpoints();
 
 app.Run();

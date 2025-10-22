@@ -32,6 +32,7 @@ builder.Services.AddScoped<IDocumentService, DocumentHttpService>();
 builder.Services.AddScoped<ICounterPartyService, CounterPartyHttpService>();
 builder.Services.AddScoped<ICountryService, CountryHttpService>();
 builder.Services.AddScoped<IDocumentTypeService, DocumentTypeHttpService>();
+builder.Services.AddScoped<IUserPermissionService, UserPermissionHttpService>();
 
 await builder.Build().RunAsync();
 
