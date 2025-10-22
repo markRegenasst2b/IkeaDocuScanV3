@@ -10,6 +10,14 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Content Remove="appsettings.Local.json" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="appsettings.Local.json" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\..\IkeaDocuScanV3.ServiceDefaults\IkeaDocuScanV3.ServiceDefaults.csproj" />
     <ProjectReference Include="..\IkeaDocuScan-Web.Client\IkeaDocuScan-Web.Client.csproj" />
     <ProjectReference Include="..\..\IkeaDocuScan.Infrastructure\IkeaDocuScan.Infrastructure.csproj" />

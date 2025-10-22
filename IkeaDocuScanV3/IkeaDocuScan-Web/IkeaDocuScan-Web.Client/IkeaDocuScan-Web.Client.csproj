@@ -11,10 +11,14 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Blazorise" Version="1.8.5" />
+    <PackageReference Include="Blazorise.Bootstrap5" Version="1.8.5" />
+    <PackageReference Include="Blazorise.DataGrid" Version="1.8.5" />
+    <PackageReference Include="Blazorise.Icons.FontAwesome" Version="1.8.5" />
     <ProjectReference Include="..\..\IkeaDocuScan.Shared\IkeaDocuScan.Shared.csproj" />
     <PackageReference Include="Microsoft.AspNetCore.Components.Authorization" Version="9.0.10" />
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="9.0.10" />
-    <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="9.0.0" />
+    <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="9.0.10" />
   </ItemGroup>
 
 </Project>

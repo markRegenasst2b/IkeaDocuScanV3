@@ -1,0 +1,306 @@
+@page "/checkin-scanned/detail/{FileName}"
+@rendermode InteractiveAuto
+@using IkeaDocuScan.Shared.DTOs.ScannedFiles
+@using IkeaDocuScan.Shared.Interfaces
+@using IkeaDocuScan.Shared.Enums
+@inject IScannedFileService ScannedFileService
+@inject IAuditTrailService AuditTrailService
+@inject NavigationManager Navigation
+@inject ILogger<CheckinFileDetail> Logger
+
+<PageTitle>File Details - @FileName</PageTitle>
+
+<div class="container-fluid">
+    <div class="row mb-3">
+        <div class="col">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item">
+                        <a href="/checkin-scanned" style="cursor: pointer;">
+                            <i class="fa fa-folder-open"></i> Scanned Files
+                        </a>
+                    </li>
+                    <li class="breadcrumb-item active" aria-current="page">@FileName</li>
+                </ol>
+            </nav>
+        </div>
+    </div>
+
+    @if (errorMessage != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="fa fa-exclamation-circle"></i> @errorMessage
+            <button type="button" class="btn-close" @onclick="() => errorMessage = null"></button>
+        </div>
+    }
+
+    @if (successMessage != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="fa fa-check-circle"></i> @successMessage
+            <button type="button" class="btn-close" @onclick="() => successMessage = null"></button>
+        </div>
+    }
+
+    @if (isLoading)
+    {
+        <div class="text-center p-5">
+            <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-3">Loading file details...</p>
+        </div>
+    }
+    else if (file == null)
+    {
+        <div class="alert alert-warning">
+            <h4><i class="fa fa-exclamation-triangle"></i> File Not Found</h4>
+            <p>The requested file could not be found.</p>
+            <button class="btn btn-primary" @onclick="GoBack">
+                <i class="fa fa-arrow-left"></i> Back to File List
+            </button>
+        </div>
+    }
+    else
+    {
+        <div class="row">
+            <!-- Left Column: File Preview -->
+            <div class="col-lg-8">
+                <div class="card mb-3">
+                    <div class="card-header bg-dark text-white">
+                        <h5 class="mb-0"><i class="fa fa-eye"></i> File Preview</h5>
+                    </div>
+                    <div class="card-body text-center" style="min-height: 500px; background-color: #f5f5f5;">
+                        @if (file.Extension.ToLower() == ".pdf")
+                        {
+                            <div class="alert alert-info">
+                                <i class="fa fa-file-pdf"></i>
+                                PDF Preview requires additional implementation (PDF.js library)
+                            </div>
+                            <p><strong>@file.FileName</strong></p>
+                        }
+                        else if (IsImageFile(file.Extension))
+                        {
+                            <div class="alert alert-info">
+                                <i class="fa fa-image"></i>
+                                Image Preview: @file.FileName
+                            </div>
+                            <p class="text-muted">Image preview requires serving file content via API endpoint</p>
+                        }
+                        else
+                        {
+                            <div class="alert alert-secondary">
+                                <i class="@file.GetIconClass() fa-5x"></i>
+                                <p class="mt-3"><strong>@file.FileName</strong></p>
+                                <p>Preview not available for this file type</p>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column: File Information & Actions -->
+            <div class="col-lg-4">
+                <!-- File Information Card -->
+                <div class="card mb-3">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0"><i class="fa fa-info-circle"></i> File Information</h5>
+                    </div>
+                    <div class="card-body">
+                        <table class="table table-sm">
+                            <tbody>
+                                <tr>
+                                    <td><strong>File Name:</strong></td>
+                                    <td>@file.FileName</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Type:</strong></td>
+                                    <td><span class="badge bg-info">@file.FileType</span></td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Size:</strong></td>
+                                    <td>@file.SizeFormatted</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Created:</strong></td>
+                                    <td>@file.CreatedDate.ToString("yyyy-MM-dd HH:mm:ss")</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Modified:</strong></td>
+                                    <td>@file.ModifiedDate.ToString("yyyy-MM-dd HH:mm:ss")</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Extension:</strong></td>
+                                    <td><code>@file.Extension</code></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Actions Card -->
+                <div class="card mb-3">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="mb-0"><i class="fa fa-tasks"></i> Actions</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="d-grid gap-2">
+                            <button class="btn btn-success btn-lg" @onclick="CheckInDocument" disabled="@isProcessing">
+                                @if (isProcessing)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-2"></span>
+                                }
+                                else
+                                {
+                                    <i class="fa fa-check me-2"></i>
+                                }
+                                Check-in Document
+                            </button>
+
+                            <button class="btn btn-outline-primary" @onclick="DownloadFile" disabled="@isProcessing">
+                                <i class="fa fa-download"></i> Download
+                            </button>
+
+                            <button class="btn btn-outline-secondary" @onclick="GoBack">
+                                <i class="fa fa-arrow-left"></i> Back to List
+                            </button>
+                        </div>
+
+                        <hr />
+
+                        <div class="alert alert-warning mb-0">
+                            <small>
+                                <i class="fa fa-info-circle"></i>
+                                Checking in this file will create a new document record in the system and log the action.
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public string FileName { get; set; } = string.Empty;
+
+    private ScannedFileDto? file;
+    private bool isLoading = true;
+    private bool isProcessing = false;
+    private string? errorMessage;
+    private string? successMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadFileDetails();
+    }
+
+    private async Task LoadFileDetails()
+    {
+        try
+        {
+            isLoading = true;
+            errorMessage = null;
+
+            var decodedFileName = Uri.UnescapeDataString(FileName);
+            Logger.LogInformation("Loading file details for: {FileName}", decodedFileName);
+
+            file = await ScannedFileService.GetFileByNameAsync(decodedFileName);
+
+            if (file == null)
+            {
+                Logger.LogWarning("File not found: {FileName}", decodedFileName);
+                errorMessage = "File not found";
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading file details: {FileName}", FileName);
+            errorMessage = $"Error loading file: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task CheckInDocument()
+    {
+        if (file == null) return;
+
+        try
+        {
+            isProcessing = true;
+            errorMessage = null;
+            successMessage = null;
+
+            Logger.LogInformation("Checking in file: {FileName}", file.FileName);
+
+            // TODO: Implement actual document check-in logic
+            // This should:
+            // 1. Create a new Document record
+            // 2. Copy or move the file to the document storage
+            // 3. Generate a barcode
+            // 4. Log the check-in action
+
+            // For now, just log the check-in action
+            await AuditTrailService.LogAsync(
+                AuditAction.CheckIn,
+                "TEMP-" + DateTime.Now.Ticks.ToString(), // Temporary barcode
+                $"File checked in: {file.FileName} ({file.SizeFormatted})"
+            );
+
+            successMessage = $"File '{file.FileName}' has been checked in successfully!";
+            Logger.LogInformation("File checked in successfully: {FileName}", file.FileName);
+
+            // Wait a moment to show the success message
+            await Task.Delay(2000);
+
+            // Navigate back to the list or to the documents page
+            Navigation.NavigateTo("/documents");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error checking in file: {FileName}", file.FileName);
+            errorMessage = $"Error checking in file: {ex.Message}";
+        }
+        finally
+        {
+            isProcessing = false;
+        }
+    }
+
+    private async Task DownloadFile()
+    {
+        if (file == null) return;
+
+        try
+        {
+            Logger.LogInformation("Download requested for file: {FileName}", file.FileName);
+
+            // TODO: Implement file download
+            // This requires:
+            // 1. An API endpoint that serves file content
+            // 2. JSInterop to trigger download in browser
+
+            errorMessage = "Download functionality requires API endpoint implementation";
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error downloading file: {FileName}", file.FileName);
+            errorMessage = $"Error downloading file: {ex.Message}";
+        }
+    }
+
+    private void GoBack()
+    {
+        Navigation.NavigateTo("/checkin-scanned");
+    }
+
+    private bool IsImageFile(string extension)
+    {
+        var imageExtensions = new[] { ".jpg", ".jpeg", ".png", ".bmp", ".tif", ".tiff" };
+        return imageExtensions.Contains(extension.ToLowerInvariant());
+    }
+}

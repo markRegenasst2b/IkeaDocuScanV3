@@ -6,11 +6,20 @@ using IkeaDocuScan_Web.Endpoints;
 using IkeaDocuScan_Web.Hubs;
 using IkeaDocuScan.Infrastructure.Data;
 using IkeaDocuScan.Shared.Interfaces;
+using IkeaDocuScan.Shared.Configuration;
 using Microsoft.AspNetCore.Authentication.Negotiate;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Configure configuration sources with layered approach
+builder.Configuration
+    .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
+    .AddJsonFile($"appsettings.{builder.Environment.EnvironmentName}.json", optional: true, reloadOnChange: true)
+    .AddJsonFile("appsettings.Local.json", optional: true, reloadOnChange: true)
+    .AddEncryptedJsonFile("secrets.encrypted.json", optional: true, reloadOnChange: false, "ConnectionStrings:DefaultConnection")
+    .AddEnvironmentVariables();
 
 builder.AddServiceDefaults();
 
@@ -46,9 +55,21 @@ builder.Services.AddDbContext<AppDbContext>(options =>
         sqlOptions => sqlOptions.EnableRetryOnFailure()
     ));
 
+// Configuration options
+builder.Services.Configure<IkeaDocuScanOptions>(
+    builder.Configuration.GetSection(IkeaDocuScanOptions.SectionName));
+
+// Validate configuration on startup
+var options = builder.Configuration.GetSection(IkeaDocuScanOptions.SectionName).Get<IkeaDocuScanOptions>();
+options?.Validate();
+
+// Memory cache for file list caching
+builder.Services.AddMemoryCache();
+
 // Data access services
 builder.Services.AddScoped<IDocumentService, DocumentService>();
 builder.Services.AddScoped<IAuditTrailService, AuditTrailService>();
+builder.Services.AddScoped<IScannedFileService, ScannedFileService>();
 
 // SignalR for real-time updates
 builder.Services.AddSignalR();

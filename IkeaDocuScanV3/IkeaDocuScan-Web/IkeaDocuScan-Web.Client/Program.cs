@@ -1,6 +1,9 @@
+using Blazorise;
+using Blazorise.Bootstrap5;
+using Blazorise.Icons.FontAwesome;
+using IkeaDocuScan.Shared.Interfaces;
 using IkeaDocuScan_Web.Client;
 using IkeaDocuScan_Web.Client.Services;
-using IkeaDocuScan.Shared.Interfaces;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 
@@ -16,7 +19,20 @@ builder.Services.AddScoped(sp => new HttpClient
     BaseAddress = new Uri(builder.HostEnvironment.BaseAddress)
 });
 
+// Add Blazorise
+builder.Services
+    .AddBlazorise(options => {
+        options.Immediate = true;
+    })
+    .AddBootstrap5Providers()
+    .AddFontAwesomeIcons();
+
 // Data services
 builder.Services.AddScoped<IDocumentService, DocumentHttpService>();
 
 await builder.Build().RunAsync();
+
+
+
+
+

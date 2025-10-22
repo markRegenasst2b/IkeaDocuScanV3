@@ -1,0 +1,9 @@
+# Local configuration files (not to be committed)
+appsettings.Local.json
+secrets.encrypted.json
+
+# User-specific files
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
