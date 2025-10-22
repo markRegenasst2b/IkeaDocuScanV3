@@ -1,0 +1,177 @@
+@page "/access-denied"
+@rendermode InteractiveServer
+@using IkeaDocuScan.Shared.Interfaces
+@using IkeaDocuScan.Shared.DTOs.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
+@inject ICurrentUserService CurrentUserService
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject IConfiguration Configuration
+
+<PageTitle>Access Denied - IKEA DocuScan</PageTitle>
+
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow">
+                <div class="card-header bg-warning text-dark">
+                    <h3 class="mb-0">
+                        <i class="fas fa-exclamation-triangle"></i> Access Denied
+                    </h3>
+                </div>
+                <div class="card-body">
+                    @if (!string.IsNullOrWhiteSpace(username))
+                    {
+                        <div class="alert alert-info">
+                            <strong>User:</strong> @username
+                        </div>
+                    }
+
+                    <h5>You do not have access to the IKEA DocuScan system.</h5>
+
+                    <p class="mt-3">
+                        Your user account has been recognized, but you do not have the necessary permissions
+                        to use this application.
+                    </p>
+
+                    @if (showRequestForm)
+                    {
+                        <div class="card mt-4">
+                            <div class="card-header">
+                                Request Access
+                            </div>
+                            <div class="card-body">
+                                @if (!string.IsNullOrWhiteSpace(resultMessage))
+                                {
+                                    <div class="alert @(requestSuccess ? "alert-success" : "alert-danger")">
+                                        @resultMessage
+                                    </div>
+                                }
+
+                                @if (!requestSuccess)
+                                {
+                                    <div class="mb-3">
+                                        <label for="reason" class="form-label">
+                                            Reason for access request (optional):
+                                        </label>
+                                        <textarea
+                                            id="reason"
+                                            class="form-control"
+                                            rows="3"
+                                            @bind="reason"
+                                            placeholder="Please describe why you need access to this system...">
+                                        </textarea>
+                                    </div>
+
+                                    <button
+                                        class="btn btn-primary"
+                                        @onclick="RequestAccess"
+                                        disabled="@isProcessing">
+                                        @if (isProcessing)
+                                        {
+                                            <span class="spinner-border spinner-border-sm me-2"></span>
+                                            <span>Processing...</span>
+                                        }
+                                        else
+                                        {
+                                            <span>Request Access</span>
+                                        }
+                                    </button>
+                                }
+                            </div>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="alert alert-secondary mt-4">
+                            <h6>Contact Administrator</h6>
+                            <p>
+                                Please contact your system administrator to request access:
+                            </p>
+                            @if (!string.IsNullOrWhiteSpace(contactEmail))
+                            {
+                                <p class="mb-0">
+                                    <strong>Email:</strong>
+                                    <a href="mailto:@contactEmail?subject=Access%20Request%20for%20IKEA%20DocuScan&body=Username:%20@username">
+                                        @contactEmail
+                                    </a>
+                                </p>
+                            }
+                        </div>
+
+                        <button
+                            class="btn btn-primary mt-3"
+                            @onclick="ShowRequestForm">
+                            Request Access Directly
+                        </button>
+                    }
+
+                    <div class="mt-4">
+                        <a href="/" class="btn btn-secondary">
+                            <i class="fas fa-home"></i> Return to Home
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private string? username;
+    private string? contactEmail;
+    private bool showRequestForm = false;
+    private string reason = string.Empty;
+    private bool isProcessing = false;
+    private string? resultMessage;
+    private bool requestSuccess = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Get username from authentication state
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        username = authState.User.Identity?.Name;
+
+        // Get contact email from configuration
+        contactEmail = Configuration["IkeaDocuScan:ContactEmail"] ?? "admin@company.com";
+    }
+
+    private void ShowRequestForm()
+    {
+        showRequestForm = true;
+    }
+
+    private async Task RequestAccess()
+    {
+        if (string.IsNullOrWhiteSpace(username))
+        {
+            resultMessage = "Unable to determine your username. Please contact your administrator directly.";
+            return;
+        }
+
+        isProcessing = true;
+        resultMessage = null;
+
+        try
+        {
+            var result = await CurrentUserService.RequestAccessAsync(username, reason);
+
+            requestSuccess = result.Success;
+            resultMessage = result.Message;
+
+            if (result.Success)
+            {
+                // Clear the form
+                reason = string.Empty;
+            }
+        }
+        catch (Exception ex)
+        {
+            requestSuccess = false;
+            resultMessage = $"An error occurred: {ex.Message}";
+        }
+        finally
+        {
+            isProcessing = false;
+        }
+    }
+}

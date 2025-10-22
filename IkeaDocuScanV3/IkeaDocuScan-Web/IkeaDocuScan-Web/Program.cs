@@ -4,12 +4,17 @@ using IkeaDocuScan_Web.Middleware;
 using IkeaDocuScan_Web.Services;
 using IkeaDocuScan_Web.Endpoints;
 using IkeaDocuScan_Web.Hubs;
+using IkeaDocuScan_Web.Authorization;
 using IkeaDocuScan.Infrastructure.Data;
 using IkeaDocuScan.Shared.Interfaces;
 using IkeaDocuScan.Shared.Configuration;
 using Microsoft.AspNetCore.Authentication.Negotiate;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.EntityFrameworkCore;
+using Blazorise;
+using Blazorise.Bootstrap5;
+using Blazorise.Icons.FontAwesome;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -28,6 +33,12 @@ builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents()
     .AddInteractiveWebAssemblyComponents();
 
+// Add Blazorise
+builder.Services
+    .AddBlazorise()
+    .AddBootstrap5Providers()
+    .AddFontAwesomeIcons();
+
 // Add Authentication Services
 // Note: Negotiate (Windows Auth) only works on Windows with IIS
 // For development on Linux/WSL, we need an alternative approach
@@ -42,7 +53,27 @@ else
         .AddScheme<Microsoft.AspNetCore.Authentication.AuthenticationSchemeOptions, TestAuthenticationHandler>("TestScheme", options => { });
 }
 
-builder.Services.AddAuthorization();
+// Authorization with custom policies
+builder.Services.AddAuthorization(options =>
+{
+    // Policy requiring user to have access to the system
+    options.AddPolicy("HasAccess", policy =>
+        policy.Requirements.Add(new UserAccessRequirement()));
+
+    // Policy requiring user to be a super user
+    options.AddPolicy("SuperUser", policy =>
+        policy.Requirements.Add(new SuperUserRequirement()));
+
+    // Default policy requires authentication
+    options.FallbackPolicy = new AuthorizationPolicyBuilder()
+        .RequireAuthenticatedUser()
+        .Build();
+});
+
+// Register authorization handlers
+builder.Services.AddScoped<IAuthorizationHandler, UserAccessHandler>();
+builder.Services.AddScoped<IAuthorizationHandler, SuperUserHandler>();
+
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<UserIdentityService>();
 builder.Services.AddCascadingAuthenticationState();
@@ -59,9 +90,15 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 builder.Services.Configure<IkeaDocuScanOptions>(
     builder.Configuration.GetSection(IkeaDocuScanOptions.SectionName));
 
+builder.Services.Configure<EmailOptions>(
+    builder.Configuration.GetSection(EmailOptions.SectionName));
+
 // Validate configuration on startup
 var options = builder.Configuration.GetSection(IkeaDocuScanOptions.SectionName).Get<IkeaDocuScanOptions>();
 options?.Validate();
+
+var emailOptions = builder.Configuration.GetSection(EmailOptions.SectionName).Get<EmailOptions>();
+emailOptions?.Validate();
 
 // Memory cache for file list caching
 builder.Services.AddMemoryCache();
@@ -70,6 +107,8 @@ builder.Services.AddMemoryCache();
 builder.Services.AddScoped<IDocumentService, DocumentService>();
 builder.Services.AddScoped<IAuditTrailService, AuditTrailService>();
 builder.Services.AddScoped<IScannedFileService, ScannedFileService>();
+builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
+builder.Services.AddScoped<IEmailService, EmailService>();
 
 // SignalR for real-time updates
 builder.Services.AddSignalR();

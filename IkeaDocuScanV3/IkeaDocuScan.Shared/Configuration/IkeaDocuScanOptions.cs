@@ -47,6 +47,26 @@ public class IkeaDocuScanOptions
     public int CacheDurationSeconds { get; set; } = 60;
 
     /// <summary>
+    /// Contact email for access requests and support
+    /// </summary>
+    public string ContactEmail { get; set; } = "admin@company.com";
+
+    /// <summary>
+    /// Active Directory group for Reader role
+    /// </summary>
+    public string? ADGroupReader { get; set; } = "ADGroup.Builtin.Reader";
+
+    /// <summary>
+    /// Active Directory group for Publisher role
+    /// </summary>
+    public string? ADGroupPublisher { get; set; } = "ADGroup.Builtin.Publisher";
+
+    /// <summary>
+    /// Active Directory group for SuperUser role
+    /// </summary>
+    public string? ADGroupSuperUser { get; set; } = "ADGroup.Builtin.SuperUser";
+
+    /// <summary>
     /// Validate configuration options
     /// </summary>
     public void Validate()

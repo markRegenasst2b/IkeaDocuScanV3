@@ -16,6 +16,7 @@ public class DocumentService : IDocumentService
     private readonly IHubContext<DataUpdateHub> _hubContext;
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IAuditTrailService _auditTrailService;
+    private readonly IEmailService _emailService;
     private readonly ILogger<DocumentService> _logger;
 
     public DocumentService(
@@ -23,12 +24,14 @@ public class DocumentService : IDocumentService
         IHubContext<DataUpdateHub> hubContext,
         IHttpContextAccessor httpContextAccessor,
         IAuditTrailService auditTrailService,
+        IEmailService emailService,
         ILogger<DocumentService> logger)
     {
         _context = context;
         _hubContext = hubContext;
         _httpContextAccessor = httpContextAccessor;
         _auditTrailService = auditTrailService;
+        _emailService = emailService;
         _logger = logger;
     }
 
@@ -59,6 +62,31 @@ public class DocumentService : IDocumentService
 
         if (entity == null)
             throw new DocumentNotFoundException(id);
+
+        return MapToDto(entity);
+    }
+
+    public async Task<DocumentDto?> GetByBarCodeAsync(string barCode)
+    {
+        _logger.LogInformation("Fetching document by BarCode {BarCode}", barCode);
+
+        if (!int.TryParse(barCode, out int barCodeInt))
+        {
+            _logger.LogWarning("Invalid BarCode format: {BarCode}", barCode);
+            return null;
+        }
+
+        var entity = await _context.Documents
+            .Include(d => d.DocumentName)
+            .Include(d => d.Dt)
+            .Include(d => d.CounterParty)
+            .FirstOrDefaultAsync(d => d.BarCode == barCodeInt);
+
+        if (entity == null)
+        {
+            _logger.LogWarning("Document not found with BarCode {BarCode}", barCode);
+            return null;
+        }
 
         return MapToDto(entity);
     }
@@ -316,5 +344,161 @@ public class DocumentService : IDocumentService
     {
         var maxBarCode = await _context.Documents.MaxAsync(d => (int?)d.BarCode) ?? 0;
         return maxBarCode + 1;
+    }
+
+    /// <summary>
+    /// Send document link to recipient via email
+    /// </summary>
+    /// <param name="barCode">Document bar code</param>
+    /// <param name="recipientEmail">Recipient email address</param>
+    /// <param name="message">Optional message to include</param>
+    public async Task SendDocumentLinkAsync(string barCode, string recipientEmail, string? message = null)
+    {
+        _logger.LogInformation("Sending document link for {BarCode} to {RecipientEmail}", barCode, recipientEmail);
+
+        var document = await GetByBarCodeAsync(barCode);
+        if (document == null)
+        {
+            throw new DocumentNotFoundException($"Document with bar code {barCode} not found");
+        }
+
+        // Generate document link (adjust URL as needed)
+        var documentLink = $"{GetBaseUrl()}/documents/{barCode}";
+
+        await _emailService.SendDocumentLinkAsync(recipientEmail, barCode, documentLink, message);
+        await _auditTrailService.LogAsync(AuditAction.SendLink, barCode, $"Link sent to {recipientEmail}");
+
+        _logger.LogInformation("Document link sent successfully for {BarCode}", barCode);
+    }
+
+    /// <summary>
+    /// Send document as attachment via email
+    /// </summary>
+    /// <param name="barCode">Document bar code</param>
+    /// <param name="recipientEmail">Recipient email address</param>
+    /// <param name="fileData">Document file data</param>
+    /// <param name="fileName">File name</param>
+    /// <param name="message">Optional message to include</param>
+    public async Task SendDocumentAttachmentAsync(
+        string barCode,
+        string recipientEmail,
+        byte[] fileData,
+        string fileName,
+        string? message = null)
+    {
+        _logger.LogInformation("Sending document attachment for {BarCode} to {RecipientEmail}", barCode, recipientEmail);
+
+        var document = await GetByBarCodeAsync(barCode);
+        if (document == null)
+        {
+            throw new DocumentNotFoundException($"Document with bar code {barCode} not found");
+        }
+
+        await _emailService.SendDocumentAttachmentAsync(
+            recipientEmail,
+            barCode,
+            fileData,
+            fileName,
+            message);
+
+        await _auditTrailService.LogAsync(AuditAction.SendAttachment, barCode, $"Attachment sent to {recipientEmail}");
+
+        _logger.LogInformation("Document attachment sent successfully for {BarCode}", barCode);
+    }
+
+    /// <summary>
+    /// Send multiple document links via email
+    /// </summary>
+    /// <param name="barCodes">Collection of document bar codes</param>
+    /// <param name="recipientEmail">Recipient email address</param>
+    /// <param name="message">Optional message to include</param>
+    public async Task SendDocumentLinksAsync(
+        IEnumerable<string> barCodes,
+        string recipientEmail,
+        string? message = null)
+    {
+        var barCodeList = barCodes.ToList();
+        _logger.LogInformation("Sending {Count} document links to {RecipientEmail}", barCodeList.Count, recipientEmail);
+
+        var documents = new List<(string BarCode, string Link)>();
+        var baseUrl = GetBaseUrl();
+
+        foreach (var barCode in barCodeList)
+        {
+            var document = await GetByBarCodeAsync(barCode);
+            if (document != null)
+            {
+                var link = $"{baseUrl}/documents/{barCode}";
+                documents.Add((barCode, link));
+            }
+        }
+
+        if (documents.Count == 0)
+        {
+            throw new DocumentNotFoundException("No valid documents found for the provided bar codes");
+        }
+
+        await _emailService.SendDocumentLinksAsync(recipientEmail, documents, message);
+        await _auditTrailService.LogBatchAsync(
+            AuditAction.SendLinks,
+            documents.Select(d => d.BarCode),
+            $"Links sent to {recipientEmail}");
+
+        _logger.LogInformation("{Count} document links sent successfully", documents.Count);
+    }
+
+    /// <summary>
+    /// Send multiple documents as attachments via email
+    /// </summary>
+    /// <param name="documentsToSend">Collection of documents with bar codes, file data, and file names</param>
+    /// <param name="recipientEmail">Recipient email address</param>
+    /// <param name="message">Optional message to include</param>
+    public async Task SendDocumentAttachmentsAsync(
+        IEnumerable<(string BarCode, byte[] FileData, string FileName)> documentsToSend,
+        string recipientEmail,
+        string? message = null)
+    {
+        var documentList = documentsToSend.ToList();
+        _logger.LogInformation("Sending {Count} document attachments to {RecipientEmail}",
+            documentList.Count, recipientEmail);
+
+        var validDocuments = new List<(string BarCode, byte[] Data, string FileName)>();
+
+        foreach (var (barCode, fileData, fileName) in documentList)
+        {
+            var document = await GetByBarCodeAsync(barCode);
+            if (document != null && fileData?.Length > 0)
+            {
+                validDocuments.Add((barCode, fileData, fileName));
+            }
+        }
+
+        if (validDocuments.Count == 0)
+        {
+            throw new DocumentNotFoundException("No valid documents found for the provided bar codes");
+        }
+
+        await _emailService.SendDocumentAttachmentsAsync(recipientEmail, validDocuments, message);
+        await _auditTrailService.LogBatchAsync(
+            AuditAction.SendAttachments,
+            validDocuments.Select(d => d.BarCode),
+            $"Attachments sent to {recipientEmail}");
+
+        _logger.LogInformation("{Count} document attachments sent successfully", validDocuments.Count);
+    }
+
+    /// <summary>
+    /// Get base URL for generating document links
+    /// </summary>
+    private string GetBaseUrl()
+    {
+        var request = _httpContextAccessor.HttpContext?.Request;
+        if (request != null)
+        {
+            return $"{request.Scheme}://{request.Host}";
+        }
+
+        // Fallback - should be configured in production
+        return "https://docuscan.company.com";
     }
 }

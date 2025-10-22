@@ -9,4 +9,10 @@ public class DocumentNotFoundException : BusinessException
     {
         DocumentId = id;
     }
+
+    public DocumentNotFoundException(string message)
+        : base(message)
+    {
+        DocumentId = 0;
+    }
 }
