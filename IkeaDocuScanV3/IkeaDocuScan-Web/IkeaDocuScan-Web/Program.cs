@@ -48,6 +48,7 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 
 // Data access services
 builder.Services.AddScoped<IDocumentService, DocumentService>();
+builder.Services.AddScoped<IAuditTrailService, AuditTrailService>();
 
 // SignalR for real-time updates
 builder.Services.AddSignalR();

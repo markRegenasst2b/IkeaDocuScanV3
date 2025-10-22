@@ -3,6 +3,7 @@ using IkeaDocuScan.Infrastructure.Entities;
 using IkeaDocuScan.Shared.DTOs.Documents;
 using IkeaDocuScan.Shared.Interfaces;
 using IkeaDocuScan.Shared.Exceptions;
+using IkeaDocuScan.Shared.Enums;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.SignalR;
 using IkeaDocuScan_Web.Hubs;
@@ -14,17 +15,20 @@ public class DocumentService : IDocumentService
     private readonly AppDbContext _context;
     private readonly IHubContext<DataUpdateHub> _hubContext;
     private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly IAuditTrailService _auditTrailService;
     private readonly ILogger<DocumentService> _logger;
 
     public DocumentService(
         AppDbContext context,
         IHubContext<DataUpdateHub> hubContext,
         IHttpContextAccessor httpContextAccessor,
+        IAuditTrailService auditTrailService,
         ILogger<DocumentService> logger)
     {
         _context = context;
         _hubContext = hubContext;
         _httpContextAccessor = httpContextAccessor;
+        _auditTrailService = auditTrailService;
         _logger = logger;
     }
 
@@ -115,6 +119,13 @@ public class DocumentService : IDocumentService
         _context.Documents.Add(entity);
         await _context.SaveChangesAsync();
 
+        // Log the registration action to audit trail
+        await _auditTrailService.LogAsync(
+            AuditAction.Register,
+            entity.BarCode.ToString(),
+            $"Document registered: {entity.Name}"
+        );
+
         var result = await GetByIdAsync(entity.Id);
 
         // Notify all clients
@@ -143,6 +154,17 @@ public class DocumentService : IDocumentService
                 });
             }
         }
+
+        // Capture changes for audit details
+        var changes = new List<string>();
+        if (entity.Name != dto.Name)
+            changes.Add($"Name: '{entity.Name}' -> '{dto.Name}'");
+        if (entity.DtId != dto.DocumentTypeId)
+            changes.Add("DocumentType changed");
+        if (entity.CounterPartyId != dto.CounterPartyId)
+            changes.Add("CounterParty changed");
+        if (entity.Comment != dto.Comment)
+            changes.Add("Comment updated");
 
         entity.Name = dto.Name;
         entity.DtId = dto.DocumentTypeId;
@@ -178,6 +200,17 @@ public class DocumentService : IDocumentService
 
         await _context.SaveChangesAsync();
 
+        // Log the edit action to audit trail
+        var auditDetails = changes.Any()
+            ? $"Document edited: {string.Join(", ", changes)}"
+            : "Document edited";
+
+        await _auditTrailService.LogAsync(
+            AuditAction.Edit,
+            entity.BarCode.ToString(),
+            auditDetails
+        );
+
         var result = await GetByIdAsync(entity.Id);
 
         // Notify all clients
@@ -194,8 +227,18 @@ public class DocumentService : IDocumentService
         if (entity == null)
             throw new DocumentNotFoundException(id);
 
+        var barCode = entity.BarCode.ToString();
+        var documentName = entity.Name;
+
         _context.Documents.Remove(entity);
         await _context.SaveChangesAsync();
+
+        // Log the delete action to audit trail
+        await _auditTrailService.LogAsync(
+            AuditAction.Delete,
+            barCode,
+            $"Document deleted: {documentName}"
+        );
 
         // Notify all clients
         await _hubContext.Clients.All.SendAsync("DocumentDeleted", id);
