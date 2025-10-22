@@ -2,6 +2,7 @@
 @using IkeaDocuScan.Shared.Interfaces
 @inject ICounterPartyService CounterPartyService
 @inject ILogger<CounterPartySearch> Logger
+@implements IDisposable
 
 <div class="counter-party-search-component">
     @if (SelectedCounterParty != null)
@@ -42,16 +43,23 @@
                                     type="text"
                                     class="form-control"
                                     id="searchInput"
-                                    placeholder="Type to search..."
-                                    @bind="searchTerm"
-                                    @bind:event="oninput"
+                                    placeholder="Type to search (min @MinSearchLength chars)..."
+                                    value="@searchTerm"
+                                    @oninput="OnSearchTermChanged"
                                     @onkeyup="HandleKeyUp" />
                                 <button class="btn btn-outline-secondary" type="button" @onclick="SearchCounterParties">
                                     <i class="fa fa-search"></i> Search
                                 </button>
                             </div>
                             <small class="form-text text-muted">
-                                Search filters Name, CounterPartyNoAlpha, City, and Country fields
+                                @if (searchTerm.Length > 0 && searchTerm.Length < MinSearchLength)
+                                {
+                                    <span class="text-warning">Type at least @MinSearchLength characters to search...</span>
+                                }
+                                else
+                                {
+                                    <span>Search filters Name, CounterPartyNoAlpha, City, and Country fields</span>
+                                }
                             </small>
                         </div>
 
@@ -143,11 +151,16 @@
     [Parameter]
     public EventCallback<CounterPartyDto> SelectedCounterPartyChanged { get; set; }
 
+    [Parameter]
+    public int MinSearchLength { get; set; } = 3;
+
     private bool showModal = false;
     private string searchTerm = string.Empty;
     private List<CounterPartyDto>? searchResults = null;
     private bool isLoading = false;
     private string? errorMessage = null;
+    private Timer? _debounceTimer;
+    private const int DebounceDelayMs = 500; // Wait 500ms after user stops typing
 
     private void OpenModal()
     {
@@ -160,19 +173,47 @@
     private void CloseModal()
     {
         showModal = false;
+        _debounceTimer?.Dispose();
+    }
+
+    private void OnSearchTermChanged(ChangeEventArgs e)
+    {
+        searchTerm = e.Value?.ToString() ?? string.Empty;
+
+        // Cancel previous timer
+        _debounceTimer?.Dispose();
+
+        // Clear results if search term is too short
+        if (searchTerm.Length < MinSearchLength)
+        {
+            searchResults = null;
+            return;
+        }
+
+        // Start new debounce timer
+        _debounceTimer = new Timer(async _ =>
+        {
+            await InvokeAsync(async () =>
+            {
+                await SearchCounterParties();
+                StateHasChanged();
+            });
+        }, null, DebounceDelayMs, Timeout.Infinite);
     }
 
     private async Task HandleKeyUp(KeyboardEventArgs e)
     {
-        if (e.Key == "Enter")
+        if (e.Key == "Enter" && searchTerm.Length >= MinSearchLength)
         {
+            // Cancel debounce timer and search immediately
+            _debounceTimer?.Dispose();
             await SearchCounterParties();
         }
     }
 
     private async Task SearchCounterParties()
     {
-        if (string.IsNullOrWhiteSpace(searchTerm))
+        if (string.IsNullOrWhiteSpace(searchTerm) || searchTerm.Length < MinSearchLength)
         {
             searchResults = null;
             return;
@@ -206,5 +247,10 @@
         Logger.LogInformation("Selected counter party: {Name} ({Number})",
             counterParty.Name, counterParty.CounterPartyNoAlpha);
         CloseModal();
+    }
+
+    public void Dispose()
+    {
+        _debounceTimer?.Dispose();
     }
 }

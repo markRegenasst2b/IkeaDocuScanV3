@@ -58,10 +58,11 @@
             <h5 class="mb-0">3. Counter Party Search Component</h5>
         </div>
         <div class="card-body">
-            <h6>Modal dialog with search functionality:</h6>
+            <h6>Modal dialog with auto-search as you type:</h6>
             <CounterPartySearch
                 SelectedCounterParty="@selectedCounterParty"
-                SelectedCounterPartyChanged="@OnCounterPartySelected" />
+                SelectedCounterPartyChanged="@OnCounterPartySelected"
+                MinSearchLength="3" />
 
             @if (selectedCounterParty != null)
             {
@@ -155,7 +156,8 @@
 
 &lt;CounterPartySearch
     SelectedCounterParty="@@selectedCounterParty"
-    SelectedCounterPartyChanged="@@OnCounterPartySelected" /&gt;
+    SelectedCounterPartyChanged="@@OnCounterPartySelected"
+    MinSearchLength="3" /&gt;
 
 @@code {
     private CounterPartyDto? selectedCounterParty;
@@ -169,10 +171,14 @@
             <h6 class="mt-4">Counter Party Search Features:</h6>
             <ul>
                 <li>Search by Name, CounterPartyNoAlpha, City, or Country</li>
+                <li><strong>Auto-search as you type</strong> (500ms debounce delay)</li>
+                <li><strong>Configurable minimum search length</strong> (MinSearchLength parameter, default: 3)</li>
+                <li>Visual feedback when typing (shows minimum character requirement)</li>
                 <li>Results displayed in a modal dialog</li>
                 <li>Shows CounterPartyNoAlpha and Name when selected</li>
                 <li>Two-way binding with SelectedCounterParty parameter</li>
-                <li>Press Enter to search or click Search button</li>
+                <li>Press Enter for immediate search (bypasses debounce)</li>
+                <li>Manual search button still available</li>
                 <li>Results limited to 100 for performance</li>
             </ul>
         </div>
