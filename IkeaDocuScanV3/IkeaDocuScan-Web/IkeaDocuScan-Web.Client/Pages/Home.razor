@@ -1,29 +1,67 @@
 ﻿@page "/"
+@attribute [Authorize]
 @using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Authorization
 @using System.Security.Claims
 
-<PageTitle>Home</PageTitle>
+<PageTitle>Home - IKEA DocuScan</PageTitle>
 
-<h1>Hello, world!</h1>
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-12">
+            <h1>Welcome to IKEA DocuScan</h1>
 
-Welcome to your new app.
+            <AuthorizeView>
+                <Authorized>
+                    <div class="alert alert-info mt-3">
+                        <p class="mb-0">
+                            <strong>Logged in as:</strong> @context.User.Identity?.Name
+                        </p>
+                    </div>
 
-<AuthorizeView>
-    <Authorized>
-        <p style="color: green; font-weight: bold;">Hello, @context.User.Identity?.Name!</p>
-        <div style="background: #f0f0f0; padding: 10px; margin: 10px 0;">
-            <h3>Debug Info:</h3>
-            <p>Username: @context.User.Identity?.Name</p>
-            <p>Is Authenticated: @context.User.Identity?.IsAuthenticated</p>
-            <p>Authentication Type: @context.User.Identity?.AuthenticationType</p>
-            <p>Claims Count: @context.User.Claims.Count()</p>
-            @foreach (var claim in context.User.Claims)
-            {
-                <p>- @claim.Type: @claim.Value</p>
-            }
+                    @{
+                        var hasAccessClaim = context.User.FindFirst("HasAccess");
+                        var hasAccess = hasAccessClaim != null && bool.TryParse(hasAccessClaim.Value, out bool access) && access;
+                    }
+
+                    @if (hasAccess)
+                    {
+                        <div class="card mt-4">
+                            <div class="card-body">
+                                <h5 class="card-title">System Access Granted</h5>
+                                <p class="card-text">
+                                    You have access to the IKEA DocuScan document management system.
+                                </p>
+                                <ul>
+                                    <li><a href="/documents">Manage Documents</a></li>
+                                    <li><a href="/checkin-scanned">Check-in Scanned Files</a></li>
+                                </ul>
+                            </div>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="card mt-4 border-warning">
+                            <div class="card-header bg-warning text-dark">
+                                <h5 class="mb-0">Limited Access</h5>
+                            </div>
+                            <div class="card-body">
+                                <p>
+                                    You are authenticated, but you do not have permissions to access the document management system.
+                                </p>
+                                <p>
+                                    <a href="/access-denied" class="btn btn-primary">Request Access</a>
+                                </p>
+                            </div>
+                        </div>
+                    }
+                </Authorized>
+                <NotAuthorized>
+                    <div class="alert alert-danger mt-3">
+                        <p class="mb-0">You are not authenticated. Please log in to access this system.</p>
+                    </div>
+                </NotAuthorized>
+            </AuthorizeView>
         </div>
-    </Authorized>
-    <NotAuthorized>
-        <p style="color: red;">You are not authorized</p>
-    </NotAuthorized>
-</AuthorizeView>
+    </div>
+</div>

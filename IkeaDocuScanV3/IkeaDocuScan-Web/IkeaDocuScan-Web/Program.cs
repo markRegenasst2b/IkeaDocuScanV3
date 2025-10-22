@@ -109,6 +109,7 @@ builder.Services.AddScoped<IAuditTrailService, AuditTrailService>();
 builder.Services.AddScoped<IScannedFileService, ScannedFileService>();
 builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
 builder.Services.AddScoped<IEmailService, EmailService>();
+builder.Services.AddScoped<ICounterPartyService, CounterPartyService>();
 
 // SignalR for real-time updates
 builder.Services.AddSignalR();
@@ -154,5 +155,6 @@ app.MapHub<DataUpdateHub>("/hubs/data-updates");
 
 // Map API endpoints
 app.MapDocumentEndpoints();
+app.MapCounterPartyEndpoints();
 
 app.Run();

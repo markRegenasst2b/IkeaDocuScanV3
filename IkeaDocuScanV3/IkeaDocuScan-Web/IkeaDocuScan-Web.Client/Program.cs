@@ -29,6 +29,7 @@ builder.Services
 
 // Data services
 builder.Services.AddScoped<IDocumentService, DocumentHttpService>();
+builder.Services.AddScoped<ICounterPartyService, CounterPartyHttpService>();
 
 await builder.Build().RunAsync();
 

@@ -1,0 +1,210 @@
+@using IkeaDocuScan.Shared.DTOs.CounterParties
+@using IkeaDocuScan.Shared.Interfaces
+@inject ICounterPartyService CounterPartyService
+@inject ILogger<CounterPartySearch> Logger
+
+<div class="counter-party-search-component">
+    @if (SelectedCounterParty != null)
+    {
+        <div class="selected-counterparty mb-3">
+            <div class="card">
+                <div class="card-body">
+                    <h6 class="card-subtitle mb-2 text-muted">Selected Counter Party</h6>
+                    <p class="mb-1">
+                        <strong>Number:</strong> @SelectedCounterParty.CounterPartyNoAlpha
+                    </p>
+                    <p class="mb-0">
+                        <strong>Name:</strong> @SelectedCounterParty.Name
+                    </p>
+                </div>
+            </div>
+        </div>
+    }
+
+    <button type="button" class="btn btn-primary" @onclick="OpenModal">
+        <i class="fa fa-search"></i> @(SelectedCounterParty != null ? "Change" : "Select") Counter Party
+    </button>
+
+    @if (showModal)
+    {
+        <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Search Counter Party</h5>
+                        <button type="button" class="btn-close" @onclick="CloseModal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label for="searchInput" class="form-label">Search by Name, Number, City, or Country</label>
+                            <div class="input-group">
+                                <input
+                                    type="text"
+                                    class="form-control"
+                                    id="searchInput"
+                                    placeholder="Type to search..."
+                                    @bind="searchTerm"
+                                    @bind:event="oninput"
+                                    @onkeyup="HandleKeyUp" />
+                                <button class="btn btn-outline-secondary" type="button" @onclick="SearchCounterParties">
+                                    <i class="fa fa-search"></i> Search
+                                </button>
+                            </div>
+                            <small class="form-text text-muted">
+                                Search filters Name, CounterPartyNoAlpha, City, and Country fields
+                            </small>
+                        </div>
+
+                        @if (isLoading)
+                        {
+                            <div class="text-center p-4">
+                                <div class="spinner-border text-primary" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                                <p class="mt-2">Searching...</p>
+                            </div>
+                        }
+                        else if (errorMessage != null)
+                        {
+                            <div class="alert alert-danger">
+                                @errorMessage
+                            </div>
+                        }
+                        else if (searchResults != null && searchResults.Count > 0)
+                        {
+                            <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                                <table class="table table-hover table-sm">
+                                    <thead class="table-light sticky-top">
+                                        <tr>
+                                            <th>Number</th>
+                                            <th>Name</th>
+                                            <th>City</th>
+                                            <th>Country</th>
+                                            <th style="width: 100px;">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var cp in searchResults)
+                                        {
+                                            <tr>
+                                                <td>@cp.CounterPartyNoAlpha</td>
+                                                <td>@cp.Name</td>
+                                                <td>@cp.City</td>
+                                                <td>@cp.Country</td>
+                                                <td>
+                                                    <button
+                                                        type="button"
+                                                        class="btn btn-sm btn-success"
+                                                        @onclick="() => SelectCounterParty(cp)">
+                                                        Select
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div class="mt-2">
+                                <small class="text-muted">
+                                    Showing @searchResults.Count result(s)
+                                    @if (searchResults.Count >= 100)
+                                    {
+                                        <span> - Results limited to 100. Please refine your search.</span>
+                                    }
+                                </small>
+                            </div>
+                        }
+                        else if (searchResults != null && searchResults.Count == 0)
+                        {
+                            <div class="alert alert-info">
+                                No counter parties found matching your search criteria.
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="alert alert-secondary">
+                                Enter a search term and click Search to find counter parties.
+                            </div>
+                        }
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" @onclick="CloseModal">Close</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public CounterPartyDto? SelectedCounterParty { get; set; }
+
+    [Parameter]
+    public EventCallback<CounterPartyDto> SelectedCounterPartyChanged { get; set; }
+
+    private bool showModal = false;
+    private string searchTerm = string.Empty;
+    private List<CounterPartyDto>? searchResults = null;
+    private bool isLoading = false;
+    private string? errorMessage = null;
+
+    private void OpenModal()
+    {
+        showModal = true;
+        searchTerm = string.Empty;
+        searchResults = null;
+        errorMessage = null;
+    }
+
+    private void CloseModal()
+    {
+        showModal = false;
+    }
+
+    private async Task HandleKeyUp(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            await SearchCounterParties();
+        }
+    }
+
+    private async Task SearchCounterParties()
+    {
+        if (string.IsNullOrWhiteSpace(searchTerm))
+        {
+            searchResults = null;
+            return;
+        }
+
+        isLoading = true;
+        errorMessage = null;
+
+        try
+        {
+            Logger.LogInformation("Searching counter parties with term: {SearchTerm}", searchTerm);
+
+            searchResults = await CounterPartyService.SearchAsync(searchTerm);
+            Logger.LogInformation("Found {Count} counter parties", searchResults?.Count ?? 0);
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"An error occurred: {ex.Message}";
+            Logger.LogError(ex, "Exception while searching counter parties");
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task SelectCounterParty(CounterPartyDto counterParty)
+    {
+        SelectedCounterParty = counterParty;
+        await SelectedCounterPartyChanged.InvokeAsync(counterParty);
+        Logger.LogInformation("Selected counter party: {Name} ({Number})",
+            counterParty.Name, counterParty.CounterPartyNoAlpha);
+        CloseModal();
+    }
+}

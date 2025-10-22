@@ -1,8 +1,10 @@
 @page "/access-denied"
 @rendermode InteractiveServer
+@attribute [Authorize]
 @using IkeaDocuScan.Shared.Interfaces
 @using IkeaDocuScan.Shared.DTOs.Authorization
 @using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Authorization
 @inject ICurrentUserService CurrentUserService
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject IConfiguration Configuration

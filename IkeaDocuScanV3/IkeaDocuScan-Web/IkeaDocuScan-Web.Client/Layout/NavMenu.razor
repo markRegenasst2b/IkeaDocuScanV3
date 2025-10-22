@@ -1,4 +1,6 @@
-﻿<div class="top-row ps-3 navbar navbar-dark">
+﻿@using Microsoft.AspNetCore.Components.Authorization
+
+<div class="top-row ps-3 navbar navbar-dark">
     <div class="container-fluid">
         <a class="navbar-brand" href="">IkeaDocuScan-Web</a>
     </div>
@@ -14,24 +16,35 @@
             </NavLink>
         </div>
 
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="documents">
-                <span class="bi bi-plus-square-fill-nav-menu" aria-hidden="true"></span> Documents
-            </NavLink>
-        </div>
+        <AuthorizeView Policy="HasAccess">
+            <Authorized>
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="documents">
+                        <span class="bi bi-plus-square-fill-nav-menu" aria-hidden="true"></span> Documents
+                    </NavLink>
+                </div>
 
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="checkin-scanned">
-                <span class="bi bi-folder-nav-menu" aria-hidden="true"></span> Check-in Scanned
-            </NavLink>
-        </div>
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="checkin-scanned">
+                        <span class="bi bi-folder-nav-menu" aria-hidden="true"></span> Check-in Scanned
+                    </NavLink>
+                </div>
+
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="counterparty-demo">
+                        <span class="bi bi-search-nav-menu" aria-hidden="true"></span> Counter Party Demo
+                    </NavLink>
+                </div>
+            </Authorized>
+        </AuthorizeView>
+
         <!--
         <div class="nav-item px-3">
             <NavLink class="nav-link" href="weather">
                 <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Weather
             </NavLink>
         </div>
-        -->      
+        -->
     </nav>
 </div>
 

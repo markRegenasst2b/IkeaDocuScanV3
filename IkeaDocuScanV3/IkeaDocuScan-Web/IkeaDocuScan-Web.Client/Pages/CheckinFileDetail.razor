@@ -1,8 +1,10 @@
 @page "/checkin-scanned/detail/{FileName}"
 @rendermode InteractiveAuto
+@attribute [Authorize(Policy = "HasAccess")]
 @using IkeaDocuScan.Shared.DTOs.ScannedFiles
 @using IkeaDocuScan.Shared.Interfaces
 @using IkeaDocuScan.Shared.Enums
+@using Microsoft.AspNetCore.Authorization
 @inject IScannedFileService ScannedFileService
 @inject IAuditTrailService AuditTrailService
 @inject NavigationManager Navigation

@@ -1,0 +1,86 @@
+@page "/counterparty-demo"
+@rendermode InteractiveAuto
+@attribute [Authorize(Policy = "HasAccess")]
+@using IkeaDocuScan.Shared.DTOs.CounterParties
+@using IkeaDocuScan_Web.Client.Components
+@using Microsoft.AspNetCore.Authorization
+
+<PageTitle>Counter Party Search Demo</PageTitle>
+
+<div class="container mt-4">
+    <h1>Counter Party Search Component Demo</h1>
+    <p class="text-muted">This page demonstrates how to use the CounterPartySearch component.</p>
+
+    <div class="card mt-4">
+        <div class="card-header">
+            <h5 class="mb-0">Example Usage</h5>
+        </div>
+        <div class="card-body">
+            <CounterPartySearch
+                SelectedCounterParty="@selectedCounterParty"
+                SelectedCounterPartyChanged="@OnCounterPartySelected" />
+
+            @if (selectedCounterParty != null)
+            {
+                <div class="alert alert-success mt-4">
+                    <h6>You selected:</h6>
+                    <ul class="mb-0">
+                        <li><strong>ID:</strong> @selectedCounterParty.CounterPartyId</li>
+                        <li><strong>Number:</strong> @selectedCounterParty.CounterPartyNoAlpha</li>
+                        <li><strong>Name:</strong> @selectedCounterParty.Name</li>
+                        <li><strong>City:</strong> @selectedCounterParty.City</li>
+                        <li><strong>Country:</strong> @selectedCounterParty.Country</li>
+                        @if (!string.IsNullOrEmpty(selectedCounterParty.Address))
+                        {
+                            <li><strong>Address:</strong> @selectedCounterParty.Address</li>
+                        }
+                    </ul>
+                </div>
+            }
+        </div>
+    </div>
+
+    <div class="card mt-4">
+        <div class="card-header">
+            <h5 class="mb-0">How to Use</h5>
+        </div>
+        <div class="card-body">
+            <h6>In your Razor component:</h6>
+            <pre class="bg-light p-3"><code>@@using IkeaDocuScan.Shared.DTOs.CounterParties
+@@using IkeaDocuScan_Web.Client.Components
+
+&lt;CounterPartySearch
+    SelectedCounterParty="@@selectedCounterParty"
+    SelectedCounterPartyChanged="@@OnCounterPartySelected" /&gt;
+
+@@code {
+    private CounterPartyDto? selectedCounterParty;
+
+    private void OnCounterPartySelected(CounterPartyDto counterParty)
+    {
+        selectedCounterParty = counterParty;
+        // Do something with the selected counter party
+    }
+}</code></pre>
+
+            <h6 class="mt-4">Features:</h6>
+            <ul>
+                <li>Search by Name, CounterPartyNoAlpha, City, or Country</li>
+                <li>Results displayed in a modal dialog</li>
+                <li>Shows CounterPartyNoAlpha and Name when selected</li>
+                <li>Two-way binding with SelectedCounterParty parameter</li>
+                <li>Press Enter to search or click Search button</li>
+                <li>Results limited to 100 for performance</li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+@code {
+    private CounterPartyDto? selectedCounterParty;
+
+    private void OnCounterPartySelected(CounterPartyDto counterParty)
+    {
+        selectedCounterParty = counterParty;
+    }
+}
