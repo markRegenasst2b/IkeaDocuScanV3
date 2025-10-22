@@ -86,6 +86,14 @@ builder.Services.AddDbContext<AppDbContext>(options =>
         sqlOptions => sqlOptions.EnableRetryOnFailure()
     ));
 
+// Add DbContextFactory for services that need concurrent database access
+// This uses a separate registration that doesn't conflict with AddDbContext
+builder.Services.AddDbContextFactory<AppDbContext>(options =>
+    options.UseSqlServer(
+        builder.Configuration.GetConnectionString("DefaultConnection"),
+        sqlOptions => sqlOptions.EnableRetryOnFailure()
+    ), ServiceLifetime.Scoped);
+
 // Configuration options
 builder.Services.Configure<IkeaDocuScanOptions>(
     builder.Configuration.GetSection(IkeaDocuScanOptions.SectionName));
@@ -110,6 +118,8 @@ builder.Services.AddScoped<IScannedFileService, ScannedFileService>();
 builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
 builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<ICounterPartyService, CounterPartyService>();
+builder.Services.AddScoped<ICountryService, CountryService>();
+builder.Services.AddScoped<IDocumentTypeService, DocumentTypeService>();
 
 // SignalR for real-time updates
 builder.Services.AddSignalR();
@@ -156,5 +166,7 @@ app.MapHub<DataUpdateHub>("/hubs/data-updates");
 // Map API endpoints
 app.MapDocumentEndpoints();
 app.MapCounterPartyEndpoints();
+app.MapCountryEndpoints();
+app.MapDocumentTypeEndpoints();
 
 app.Run();

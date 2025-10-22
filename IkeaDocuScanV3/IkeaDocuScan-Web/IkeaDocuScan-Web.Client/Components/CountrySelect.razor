@@ -1,0 +1,98 @@
+@using IkeaDocuScan.Shared.DTOs.Countries
+@using IkeaDocuScan.Shared.Interfaces
+@inject ICountryService CountryService
+@inject ILogger<CountrySelect> Logger
+
+<div class="country-select-component">
+    @if (!string.IsNullOrEmpty(Label))
+    {
+        <label class="form-label">@Label</label>
+    }
+
+    @if (isLoading)
+    {
+        <select class="form-select" disabled>
+            <option>Loading countries...</option>
+        </select>
+    }
+    else if (errorMessage != null)
+    {
+        <div class="alert alert-danger">
+            @errorMessage
+        </div>
+    }
+    else
+    {
+        <select class="form-select @CssClass"
+                value="@SelectedCountryCode"
+                @onchange="OnCountryChanged"
+                disabled="@Disabled">
+            <option value="">-- Select a country --</option>
+            @if (countries != null)
+            {
+                @foreach (var country in countries)
+                {
+                    <option value="@country.CountryCode">
+                        @country.Name (@country.CountryCode)
+                    </option>
+                }
+            }
+        </select>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public string? SelectedCountryCode { get; set; }
+
+    [Parameter]
+    public EventCallback<string?> SelectedCountryCodeChanged { get; set; }
+
+    [Parameter]
+    public string? Label { get; set; }
+
+    [Parameter]
+    public string? CssClass { get; set; }
+
+    [Parameter]
+    public bool Disabled { get; set; } = false;
+
+    private List<CountryDto>? countries;
+    private bool isLoading = true;
+    private string? errorMessage = null;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadCountries();
+    }
+
+    private async Task LoadCountries()
+    {
+        isLoading = true;
+        errorMessage = null;
+
+        try
+        {
+            Logger.LogInformation("Loading countries for dropdown");
+            countries = await CountryService.GetAllAsync();
+            Logger.LogInformation("Loaded {Count} countries", countries?.Count ?? 0);
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error loading countries: {ex.Message}";
+            Logger.LogError(ex, "Error loading countries");
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task OnCountryChanged(ChangeEventArgs e)
+    {
+        var value = e.Value?.ToString();
+        SelectedCountryCode = string.IsNullOrEmpty(value) ? null : value;
+        await SelectedCountryCodeChanged.InvokeAsync(SelectedCountryCode);
+        Logger.LogInformation("Country selection changed to: {CountryCode}", SelectedCountryCode ?? "None");
+    }
+}

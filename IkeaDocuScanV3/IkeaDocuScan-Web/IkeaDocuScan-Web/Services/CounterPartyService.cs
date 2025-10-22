@@ -10,14 +10,14 @@ namespace IkeaDocuScan_Web.Services;
 /// </summary>
 public class CounterPartyService : ICounterPartyService
 {
-    private readonly AppDbContext _context;
+    private readonly IDbContextFactory<AppDbContext> _contextFactory;
     private readonly ILogger<CounterPartyService> _logger;
 
     public CounterPartyService(
-        AppDbContext context,
+        IDbContextFactory<AppDbContext> contextFactory,
         ILogger<CounterPartyService> logger)
     {
-        _context = context;
+        _contextFactory = contextFactory;
         _logger = logger;
     }
 
@@ -32,7 +32,8 @@ public class CounterPartyService : ICounterPartyService
 
         var term = searchTerm.ToLower().Trim();
 
-        var counterParties = await _context.CounterParties
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        var counterParties = await context.CounterParties
             .AsNoTracking()
             .Where(cp =>
                 (cp.Name != null && cp.Name.ToLower().Contains(term)) ||
@@ -52,7 +53,8 @@ public class CounterPartyService : ICounterPartyService
     {
         _logger.LogInformation("Fetching all counter parties");
 
-        var counterParties = await _context.CounterParties
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        var counterParties = await context.CounterParties
             .AsNoTracking()
             .OrderBy(cp => cp.Name)
             .ToListAsync();
@@ -64,7 +66,8 @@ public class CounterPartyService : ICounterPartyService
     {
         _logger.LogInformation("Fetching counter party with ID: {Id}", id);
 
-        var counterParty = await _context.CounterParties
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        var counterParty = await context.CounterParties
             .AsNoTracking()
             .FirstOrDefaultAsync(cp => cp.CounterPartyId == id);
 

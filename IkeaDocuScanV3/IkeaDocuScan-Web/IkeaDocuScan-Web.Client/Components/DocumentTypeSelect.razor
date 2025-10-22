@@ -1,0 +1,96 @@
+@using IkeaDocuScan.Shared.DTOs.DocumentTypes
+@using IkeaDocuScan.Shared.Interfaces
+@inject IDocumentTypeService DocumentTypeService
+@inject ILogger<DocumentTypeSelect> Logger
+
+<div class="document-type-select-component">
+    @if (!string.IsNullOrEmpty(Label))
+    {
+        <label class="form-label">@Label</label>
+    }
+
+    @if (isLoading)
+    {
+        <select class="form-select" disabled>
+            <option>Loading document types...</option>
+        </select>
+    }
+    else if (errorMessage != null)
+    {
+        <div class="alert alert-danger">
+            @errorMessage
+        </div>
+    }
+    else
+    {
+        <select class="form-select @CssClass"
+                value="@SelectedDocumentTypeId"
+                @onchange="OnDocumentTypeChanged"
+                disabled="@Disabled">
+            <option value="">-- Select a document type --</option>
+            @if (documentTypes != null)
+            {
+                @foreach (var dt in documentTypes)
+                {
+                    <option value="@dt.DtId">@dt.DtName</option>
+                }
+            }
+        </select>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public int? SelectedDocumentTypeId { get; set; }
+
+    [Parameter]
+    public EventCallback<int?> SelectedDocumentTypeIdChanged { get; set; }
+
+    [Parameter]
+    public string? Label { get; set; }
+
+    [Parameter]
+    public string? CssClass { get; set; }
+
+    [Parameter]
+    public bool Disabled { get; set; } = false;
+
+    private List<DocumentTypeDto>? documentTypes;
+    private bool isLoading = true;
+    private string? errorMessage = null;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDocumentTypes();
+    }
+
+    private async Task LoadDocumentTypes()
+    {
+        isLoading = true;
+        errorMessage = null;
+
+        try
+        {
+            Logger.LogInformation("Loading document types for dropdown");
+            documentTypes = await DocumentTypeService.GetAllAsync();
+            Logger.LogInformation("Loaded {Count} document types", documentTypes?.Count ?? 0);
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error loading document types: {ex.Message}";
+            Logger.LogError(ex, "Error loading document types");
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task OnDocumentTypeChanged(ChangeEventArgs e)
+    {
+        var value = e.Value?.ToString();
+        SelectedDocumentTypeId = string.IsNullOrEmpty(value) ? null : int.Parse(value);
+        await SelectedDocumentTypeIdChanged.InvokeAsync(SelectedDocumentTypeId);
+        Logger.LogInformation("Document type selection changed to: {DocumentTypeId}", SelectedDocumentTypeId?.ToString() ?? "None");
+    }
+}

@@ -5,17 +5,60 @@
 @using IkeaDocuScan_Web.Client.Components
 @using Microsoft.AspNetCore.Authorization
 
-<PageTitle>Counter Party Search Demo</PageTitle>
+<PageTitle>Component Demo</PageTitle>
 
 <div class="container mt-4">
-    <h1>Counter Party Search Component Demo</h1>
-    <p class="text-muted">This page demonstrates how to use the CounterPartySearch component.</p>
+    <h1>Reusable Components Demo</h1>
+    <p class="text-muted">This page demonstrates how to use the reusable components.</p>
 
     <div class="card mt-4">
         <div class="card-header">
-            <h5 class="mb-0">Example Usage</h5>
+            <h5 class="mb-0">1. Country Select Component</h5>
         </div>
         <div class="card-body">
+            <h6>Simple dropdown for country selection:</h6>
+            <CountrySelect
+                Label="Select Country"
+                SelectedCountryCode="@selectedCountryCode"
+                SelectedCountryCodeChanged="@OnCountrySelected"
+                CssClass="mb-3" />
+
+            @if (!string.IsNullOrEmpty(selectedCountryCode))
+            {
+                <div class="alert alert-success">
+                    <strong>Selected Country Code:</strong> @selectedCountryCode
+                </div>
+            }
+        </div>
+    </div>
+
+    <div class="card mt-4">
+        <div class="card-header">
+            <h5 class="mb-0">2. Document Type Select Component</h5>
+        </div>
+        <div class="card-body">
+            <h6>Simple dropdown for document type selection:</h6>
+            <DocumentTypeSelect
+                Label="Select Document Type"
+                SelectedDocumentTypeId="@selectedDocumentTypeId"
+                SelectedDocumentTypeIdChanged="@OnDocumentTypeSelected"
+                CssClass="mb-3" />
+
+            @if (selectedDocumentTypeId.HasValue)
+            {
+                <div class="alert alert-success">
+                    <strong>Selected Document Type ID:</strong> @selectedDocumentTypeId.Value
+                </div>
+            }
+        </div>
+    </div>
+
+    <div class="card mt-4">
+        <div class="card-header">
+            <h5 class="mb-0">3. Counter Party Search Component</h5>
+        </div>
+        <div class="card-body">
+            <h6>Modal dialog with search functionality:</h6>
             <CounterPartySearch
                 SelectedCounterParty="@selectedCounterParty"
                 SelectedCounterPartyChanged="@OnCounterPartySelected" />
@@ -45,7 +88,68 @@
             <h5 class="mb-0">How to Use</h5>
         </div>
         <div class="card-body">
-            <h6>In your Razor component:</h6>
+            <h6>Country Select Component:</h6>
+            <pre class="bg-light p-3"><code>@@using IkeaDocuScan_Web.Client.Components
+
+&lt;CountrySelect
+    Label="Select Country"
+    SelectedCountryCode="@@selectedCountryCode"
+    SelectedCountryCodeChanged="@@OnCountrySelected"
+    CssClass="mb-3" /&gt;
+
+@@code {
+    private string? selectedCountryCode;
+
+    private void OnCountrySelected(string? countryCode)
+    {
+        selectedCountryCode = countryCode;
+    }
+}</code></pre>
+
+            <h6 class="mt-4">Country Select Features:</h6>
+            <ul>
+                <li>Simple dropdown with all countries</li>
+                <li>Displays Name and Code (e.g., "Sweden (SE)")</li>
+                <li>Optional label parameter</li>
+                <li>Optional CSS class parameter</li>
+                <li>Can be disabled with Disabled parameter</li>
+                <li>Two-way binding with SelectedCountryCode</li>
+            </ul>
+
+            <hr class="my-4" />
+
+            <h6>Document Type Select Component:</h6>
+            <pre class="bg-light p-3"><code>@@using IkeaDocuScan_Web.Client.Components
+
+&lt;DocumentTypeSelect
+    Label="Select Document Type"
+    SelectedDocumentTypeId="@@selectedDocumentTypeId"
+    SelectedDocumentTypeIdChanged="@@OnDocumentTypeSelected"
+    CssClass="mb-3" /&gt;
+
+@@code {
+    private int? selectedDocumentTypeId;
+
+    private void OnDocumentTypeSelected(int? documentTypeId)
+    {
+        selectedDocumentTypeId = documentTypeId;
+    }
+}</code></pre>
+
+            <h6 class="mt-4">Document Type Select Features:</h6>
+            <ul>
+                <li>Simple dropdown with all enabled document types</li>
+                <li>Displays document type name</li>
+                <li>Optional label parameter</li>
+                <li>Optional CSS class parameter</li>
+                <li>Can be disabled with Disabled parameter</li>
+                <li>Two-way binding with SelectedDocumentTypeId</li>
+                <li>Automatically filters to show only enabled document types</li>
+            </ul>
+
+            <hr class="my-4" />
+
+            <h6>Counter Party Search Component:</h6>
             <pre class="bg-light p-3"><code>@@using IkeaDocuScan.Shared.DTOs.CounterParties
 @@using IkeaDocuScan_Web.Client.Components
 
@@ -59,11 +163,10 @@
     private void OnCounterPartySelected(CounterPartyDto counterParty)
     {
         selectedCounterParty = counterParty;
-        // Do something with the selected counter party
     }
 }</code></pre>
 
-            <h6 class="mt-4">Features:</h6>
+            <h6 class="mt-4">Counter Party Search Features:</h6>
             <ul>
                 <li>Search by Name, CounterPartyNoAlpha, City, or Country</li>
                 <li>Results displayed in a modal dialog</li>
@@ -77,7 +180,19 @@
 </div>
 
 @code {
+    private string? selectedCountryCode;
+    private int? selectedDocumentTypeId;
     private CounterPartyDto? selectedCounterParty;
+
+    private void OnCountrySelected(string? countryCode)
+    {
+        selectedCountryCode = countryCode;
+    }
+
+    private void OnDocumentTypeSelected(int? documentTypeId)
+    {
+        selectedDocumentTypeId = documentTypeId;
+    }
 
     private void OnCounterPartySelected(CounterPartyDto counterParty)
     {
