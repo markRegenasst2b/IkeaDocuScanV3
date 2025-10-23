@@ -1,0 +1,252 @@
+@using IkeaDocuScan.Shared.DTOs.CounterParties
+@using IkeaDocuScan.Shared.Interfaces
+@inject ICounterPartyService CounterPartyService
+@inject ILogger<ThirdPartySelector> Logger
+
+<div class="third-party-selector">
+    <div class="row g-3">
+        <!-- Available Counter Parties -->
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h6 class="mb-0">Available Counter Parties</h6>
+                </div>
+                <div class="card-body p-0">
+                    @if (isLoading)
+                    {
+                        <div class="text-center p-4">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <p class="mt-2">Loading counter parties...</p>
+                        </div>
+                    }
+                    else if (errorMessage != null)
+                    {
+                        <div class="alert alert-danger m-3 mb-0">
+                            @errorMessage
+                        </div>
+                    }
+                    else if (availableCounterParties.Count == 0)
+                    {
+                        <div class="alert alert-info m-3 mb-0">
+                            No available counter parties found.
+                        </div>
+                    }
+                    else
+                    {
+                        <select
+                            @bind="selectedAvailableId"
+                            class="form-select border-0 rounded-0"
+                            size="8"
+                            style="min-height: 200px;">
+                            @foreach (var cp in availableCounterParties)
+                            {
+                                <option value="@cp.CounterPartyId">
+                                    @cp.Name
+                                </option>
+                            }
+                        </select>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="col-12">
+            <div class="d-flex justify-content-center gap-2">
+                <button
+                    type="button"
+                    class="btn btn-success"
+                    @onclick="AddSelected"
+                    disabled="@(!selectedAvailableId.HasValue || isLoading)">
+                    <i class="fa fa-arrow-down"></i> Add to Selected
+                </button>
+                <button
+                    type="button"
+                    class="btn btn-warning"
+                    @onclick="RemoveSelected"
+                    disabled="@(!selectedSelectedId.HasValue || isLoading)">
+                    <i class="fa fa-arrow-up"></i> Remove from Selected
+                </button>
+            </div>
+        </div>
+
+        <!-- Selected Counter Parties -->
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h6 class="mb-0">Selected Counter Parties (@selectedCounterParties.Count)</h6>
+                </div>
+                <div class="card-body p-0">
+                    <select
+                        @bind="selectedSelectedId"
+                        class="form-select border-0 rounded-0"
+                        size="8"
+                        style="min-height: 200px;"
+                        disabled="@(selectedCounterParties.Count == 0)">
+                        @if (selectedCounterParties.Count == 0)
+                        {
+                            <option disabled>No counter parties selected</option>
+                        }
+                        else
+                        {
+                            @foreach (var cp in selectedCounterParties)
+                            {
+                                <option value="@cp.CounterPartyId">
+                                    @cp.Name
+                                </option>
+                            }
+                        }
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public string? SelectedIds { get; set; }
+
+    [Parameter]
+    public EventCallback<string> SelectedIdsChanged { get; set; }
+
+    private List<CounterPartyDto> allCounterParties = new();
+    private List<CounterPartyDto> availableCounterParties = new();
+    private List<CounterPartyDto> selectedCounterParties = new();
+
+    private int? selectedAvailableId = null;
+    private int? selectedSelectedId = null;
+
+    private bool isLoading = false;
+    private string? errorMessage = null;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadCounterPartiesAsync();
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        // When SelectedIds changes from parent, update the selected list
+        await UpdateSelectedListFromIdsAsync();
+    }
+
+    private async Task LoadCounterPartiesAsync()
+    {
+        isLoading = true;
+        errorMessage = null;
+
+        try
+        {
+            Logger.LogInformation("Loading counter parties for ThirdPartySelector");
+
+            // Get all counter parties
+            var all = await CounterPartyService.GetAllAsync();
+
+            // Filter to only those with DisplayAtCheckIn = true
+            allCounterParties = all.Where(cp => cp.DisplayAtCheckIn).ToList();
+
+            Logger.LogInformation("Loaded {Count} counter parties with DisplayAtCheckIn=true", allCounterParties.Count);
+
+            // Initialize selected list from SelectedIds parameter
+            await UpdateSelectedListFromIdsAsync();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error loading counter parties: {ex.Message}";
+            Logger.LogError(ex, "Error loading counter parties for ThirdPartySelector");
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task UpdateSelectedListFromIdsAsync()
+    {
+        selectedCounterParties.Clear();
+
+        if (!string.IsNullOrWhiteSpace(SelectedIds))
+        {
+            // Parse the semicolon-separated IDs
+            var ids = SelectedIds.Split(';', StringSplitOptions.RemoveEmptyEntries)
+                .Select(id => int.TryParse(id.Trim(), out var parsedId) ? parsedId : (int?)null)
+                .Where(id => id.HasValue)
+                .Select(id => id!.Value)
+                .ToList();
+
+            // Find the counter parties matching these IDs
+            selectedCounterParties = allCounterParties
+                .Where(cp => ids.Contains(cp.CounterPartyId))
+                .ToList();
+
+            Logger.LogInformation("Initialized {Count} selected counter parties from IDs: {Ids}",
+                selectedCounterParties.Count, SelectedIds);
+        }
+
+        UpdateAvailableList();
+        await Task.CompletedTask;
+    }
+
+    private void UpdateAvailableList()
+    {
+        // Available = all counter parties minus selected ones
+        var selectedIds = selectedCounterParties.Select(cp => cp.CounterPartyId).ToHashSet();
+        availableCounterParties = allCounterParties
+            .Where(cp => !selectedIds.Contains(cp.CounterPartyId))
+            .OrderBy(cp => cp.Name)
+            .ToList();
+    }
+
+    private async Task AddSelected()
+    {
+        if (!selectedAvailableId.HasValue) return;
+
+        var counterParty = availableCounterParties.FirstOrDefault(cp => cp.CounterPartyId == selectedAvailableId.Value);
+        if (counterParty != null)
+        {
+            selectedCounterParties.Add(counterParty);
+            UpdateAvailableList();
+            await UpdateSelectedIdsParameterAsync();
+
+            Logger.LogInformation("Added counter party {Name} (ID: {Id}) to selected",
+                counterParty.Name, counterParty.CounterPartyId);
+
+            // Clear selection
+            selectedAvailableId = null;
+        }
+    }
+
+    private async Task RemoveSelected()
+    {
+        if (!selectedSelectedId.HasValue) return;
+
+        var counterParty = selectedCounterParties.FirstOrDefault(cp => cp.CounterPartyId == selectedSelectedId.Value);
+        if (counterParty != null)
+        {
+            selectedCounterParties.Remove(counterParty);
+            UpdateAvailableList();
+            await UpdateSelectedIdsParameterAsync();
+
+            Logger.LogInformation("Removed counter party {Name} (ID: {Id}) from selected",
+                counterParty.Name, counterParty.CounterPartyId);
+
+            // Clear selection
+            selectedSelectedId = null;
+        }
+    }
+
+    private async Task UpdateSelectedIdsParameterAsync()
+    {
+        // Create semicolon-separated string of IDs
+        var idsString = string.Join(";", selectedCounterParties.Select(cp => cp.CounterPartyId));
+
+        // Update the parameter
+        SelectedIds = idsString;
+        await SelectedIdsChanged.InvokeAsync(idsString);
+
+        Logger.LogInformation("Updated SelectedIds to: {Ids}", idsString);
+    }
+}

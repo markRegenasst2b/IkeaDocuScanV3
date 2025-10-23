@@ -86,6 +86,33 @@
 
     <div class="card mt-4">
         <div class="card-header">
+            <h5 class="mb-0">4. Third Party Selector Component</h5>
+        </div>
+        <div class="card-body">
+            <h6>Multi-select listboxes for associating multiple counter parties to a document:</h6>
+            <ThirdPartySelector @bind-SelectedIds="selectedCounterPartyIds" />
+
+            @if (!string.IsNullOrWhiteSpace(selectedCounterPartyIds))
+            {
+                <div class="alert alert-success mt-4">
+                    <h6>Selected Counter Party IDs:</h6>
+                    <p class="mb-0"><strong>@selectedCounterPartyIds</strong></p>
+                    <small class="text-muted">
+                        (Count: @(selectedCounterPartyIds.Split(';', StringSplitOptions.RemoveEmptyEntries).Length))
+                    </small>
+                </div>
+            }
+            else
+            {
+                <div class="alert alert-secondary mt-4">
+                    <p class="mb-0">No counter parties selected yet.</p>
+                </div>
+            }
+        </div>
+    </div>
+
+    <div class="card mt-4">
+        <div class="card-header">
             <h5 class="mb-0">How to Use</h5>
         </div>
         <div class="card-body">
@@ -181,6 +208,37 @@
                 <li>Manual search button still available</li>
                 <li>Results limited to 100 for performance</li>
             </ul>
+
+            <hr class="my-4" />
+
+            <h6>Third Party Selector Component:</h6>
+            <pre class="bg-light p-3"><code>@@using IkeaDocuScan_Web.Client.Components
+
+&lt;ThirdPartySelector @@bind-SelectedIds="selectedCounterPartyIds" /&gt;
+
+@@code {
+    private string selectedCounterPartyIds = ""; // Or initialize with existing IDs: "1;5;12"
+
+    private async Task SaveDocument()
+    {
+        // Use selectedCounterPartyIds when saving
+        // It will be a semicolon-separated string like "1;5;12"
+    }
+}</code></pre>
+
+            <h6 class="mt-4">Third Party Selector Features:</h6>
+            <ul>
+                <li>Two listboxes: Available (top) and Selected (bottom)</li>
+                <li>Only shows counter parties with <strong>DisplayAtCheckIn = true</strong></li>
+                <li>Add and Remove buttons to move items between lists</li>
+                <li>Single-select mode (click to select, then click button to move)</li>
+                <li>Persists selections as semicolon-separated IDs (e.g., "1;5;12")</li>
+                <li>Two-way binding with SelectedIds parameter</li>
+                <li>Automatically initializes from existing ID string</li>
+                <li>Responsive layout using Bootstrap grid</li>
+                <li>Displays counter party names only (clean, simple display)</li>
+                <li>Shows count of selected counter parties</li>
+            </ul>
         </div>
     </div>
 </div>
@@ -189,6 +247,7 @@
     private string? selectedCountryCode;
     private int? selectedDocumentTypeId;
     private CounterPartyDto? selectedCounterParty;
+    private string selectedCounterPartyIds = ""; // For ThirdPartySelector
 
     private void OnCountrySelected(string? countryCode)
     {

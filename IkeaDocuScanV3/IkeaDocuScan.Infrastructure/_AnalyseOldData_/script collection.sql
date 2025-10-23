@@ -128,6 +128,11 @@ select * from Document where SendingOutDate is not null
 	select counterpartynoalpha from CounterParty group by CounterPartyNoAlpha having COUNT(*) > 1)
 	order by CounterPartyNoAlpha;
 
+-- check uniqueness of counterpartyno
+	select * from CounterParty where counterpartyno in (
+	select counterpartyno from CounterParty group by CounterPartyNo having COUNT(*) > 1)
+	order by CounterPartyNo;
+
 -- check if counterpartyrelation references a non unique counterpartynoalpha
 select * from CounterPartyRelation cpr where ParentCounterPartyNoAlpha in (select counterpartynoalpha from CounterParty group by CounterPartyNoAlpha having COUNT(*) > 1)
 select * from CounterPartyRelation cpr where ChildCounterPartyNoAlpha in (select counterpartynoalpha from CounterParty group by CounterPartyNoAlpha having COUNT(*) > 1)
