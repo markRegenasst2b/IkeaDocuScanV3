@@ -9,6 +9,7 @@
 @inject IAuditTrailService AuditTrailService
 @inject NavigationManager Navigation
 @inject ILogger<CheckinFileDetail> Logger
+@inject IJSRuntime JS
 
 <PageTitle>File Details - @FileName</PageTitle>
 
@@ -70,32 +71,108 @@
             <div class="col-lg-8">
                 <div class="card mb-3">
                     <div class="card-header bg-dark text-white">
-                        <h5 class="mb-0"><i class="fa fa-eye"></i> File Preview</h5>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0"><i class="fa fa-eye"></i> File Preview</h5>
+                            @if ((file.Extension.ToLower() == ".pdf" || IsImageFile(file.Extension)) && !previewError)
+                            {
+                                <button class="btn btn-sm btn-light" @onclick="ToggleFullScreen" title="Full Screen">
+                                    <i class="fa @(isFullScreen ? "fa-compress" : "fa-expand")"></i>
+                                    @(isFullScreen ? "Exit Full Screen" : "Full Screen")
+                                </button>
+                            }
+                        </div>
                     </div>
-                    <div class="card-body text-center" style="min-height: 500px; background-color: #f5f5f5;">
-                        @if (file.Extension.ToLower() == ".pdf")
+                    <div class="card-body" style="min-height: 500px; background-color: #f5f5f5; padding: 0;" id="preview-container">
+                        @* File Size Warning *@
+                        @if (file.SizeBytes > 10 * 1024 * 1024 && !previewError)
                         {
-                            <div class="alert alert-info">
-                                <i class="fa fa-file-pdf"></i>
-                                PDF Preview requires additional implementation (PDF.js library)
+                            <div class="alert alert-warning m-3 mb-0">
+                                <i class="fa fa-exclamation-triangle"></i>
+                                <strong>Large File:</strong> This file is @file.SizeFormatted.
+                                Loading may take a moment depending on your connection speed.
                             </div>
-                            <p><strong>@file.FileName</strong></p>
                         }
-                        else if (IsImageFile(file.Extension))
+
+                        @* Loading Spinner *@
+                        @if (isLoadingPreview && !previewError)
                         {
-                            <div class="alert alert-info">
-                                <i class="fa fa-image"></i>
-                                Image Preview: @file.FileName
+                            <div class="text-center p-5" style="position: absolute; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background-color: rgba(255,255,255,0.9); z-index: 10;">
+                                <div>
+                                    <div class="spinner-border text-primary" role="status" style="width: 4rem; height: 4rem;">
+                                        <span class="visually-hidden">Loading preview...</span>
+                                    </div>
+                                    <p class="mt-3 text-muted">Loading preview...</p>
+                                    @if (file.SizeBytes > 5 * 1024 * 1024)
+                                    {
+                                        <p class="text-muted"><small>File size: @file.SizeFormatted</small></p>
+                                    }
+                                </div>
                             </div>
-                            <p class="text-muted">Image preview requires serving file content via API endpoint</p>
+                        }
+
+                        @* Error Display *@
+                        @if (previewError)
+                        {
+                            <div class="alert alert-danger m-3 text-center" style="margin-top: 200px !important;">
+                                <i class="fa fa-exclamation-circle fa-3x mb-3"></i>
+                                <h5>Preview Error</h5>
+                                <p>Unable to load the file preview. The file may be corrupted or in an unsupported format.</p>
+                                <p class="mb-3"><strong>File:</strong> @file.FileName (@file.SizeFormatted)</p>
+                                <div>
+                                    <button class="btn btn-primary me-2" @onclick="RetryPreview">
+                                        <i class="fa fa-refresh"></i> Retry
+                                    </button>
+                                    <button class="btn btn-secondary" @onclick="DownloadFile">
+                                        <i class="fa fa-download"></i> Download File
+                                    </button>
+                                </div>
+                            </div>
                         }
                         else
                         {
-                            <div class="alert alert-secondary">
-                                <i class="@file.GetIconClass() fa-5x"></i>
-                                <p class="mt-3"><strong>@file.FileName</strong></p>
-                                <p>Preview not available for this file type</p>
-                            </div>
+                            @* PDF Preview *@
+                            @if (file.Extension.ToLower() == ".pdf")
+                            {
+                                <iframe
+                                    id="pdf-preview-iframe"
+                                    src="/api/scannedfiles/@Uri.EscapeDataString(file.FileName)/stream"
+                                    style="width: 100%; height: 700px; border: none; display: @(isLoadingPreview ? "none" : "block");"
+                                    title="PDF Preview - @file.FileName"
+                                    @onload="OnPreviewLoaded"
+                                    @onerror="OnPreviewError">
+                                </iframe>
+                            }
+                            @* Image Preview *@
+                            else if (IsImageFile(file.Extension))
+                            {
+                                <div class="text-center p-3">
+                                    <img
+                                        id="image-preview"
+                                        src="/api/scannedfiles/@Uri.EscapeDataString(file.FileName)/stream"
+                                        alt="@file.FileName"
+                                        style="max-width: 100%; max-height: 700px; object-fit: contain; display: @(isLoadingPreview ? "none" : "block");"
+                                        class="img-fluid"
+                                        @onload="OnPreviewLoaded"
+                                        @onerror="OnPreviewError" />
+                                    @if (!isLoadingPreview)
+                                    {
+                                        <p class="mt-2 text-muted"><small>@file.FileName</small></p>
+                                    }
+                                </div>
+                            }
+                            @* Unsupported File Type *@
+                            else
+                            {
+                                <div class="alert alert-secondary m-3 text-center" style="margin-top: 200px !important;">
+                                    <i class="@file.GetIconClass() fa-5x"></i>
+                                    <p class="mt-3"><strong>@file.FileName</strong></p>
+                                    <p>Preview not available for this file type</p>
+                                    <p class="text-muted"><small>Supported preview formats: PDF, JPG, JPEG, PNG, BMP, TIF, TIFF</small></p>
+                                    <button class="btn btn-primary mt-3" @onclick="DownloadFile">
+                                        <i class="fa fa-download"></i> Download File
+                                    </button>
+                                </div>
+                            }
                         }
                     </div>
                 </div>
@@ -134,6 +211,14 @@
                                 <tr>
                                     <td><strong>Extension:</strong></td>
                                     <td><code>@file.Extension</code></td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2">
+                                        <strong>Debug Info:</strong><br />
+                                        <small class="text-muted" style="word-break: break-all;">
+                                            URL: /api/scannedfiles/@Uri.EscapeDataString(file.FileName)/stream
+                                        </small>
+                                    </td>
                                 </tr>
                             </tbody>
                         </table>
@@ -193,9 +278,24 @@
     private string? errorMessage;
     private string? successMessage;
 
+    // Preview enhancement states
+    private bool isLoadingPreview = true;
+    private bool previewError = false;
+    private bool isFullScreen = false;
+
     protected override async Task OnInitializedAsync()
     {
         await LoadFileDetails();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && file != null)
+        {
+            // Start showing loading spinner for preview
+            isLoadingPreview = true;
+            StateHasChanged();
+        }
     }
 
     private async Task LoadFileDetails()
@@ -281,12 +381,11 @@
         {
             Logger.LogInformation("Download requested for file: {FileName}", file.FileName);
 
-            // TODO: Implement file download
-            // This requires:
-            // 1. An API endpoint that serves file content
-            // 2. JSInterop to trigger download in browser
+            // Use JSInterop to trigger download
+            var downloadUrl = $"/api/scannedfiles/{Uri.EscapeDataString(file.FileName)}/stream";
+            await JS.InvokeVoidAsync("open", downloadUrl, "_blank");
 
-            errorMessage = "Download functionality requires API endpoint implementation";
+            Logger.LogInformation("Download initiated for file: {FileName}", file.FileName);
         }
         catch (Exception ex)
         {
@@ -300,9 +399,55 @@
         Navigation.NavigateTo("/checkin-scanned");
     }
 
+    // Preview enhancement methods
+    private void OnPreviewLoaded()
+    {
+        isLoadingPreview = false;
+        previewError = false;
+        Logger.LogInformation("Preview loaded successfully for: {FileName}", file?.FileName);
+        StateHasChanged();
+    }
+
+    private void OnPreviewError()
+    {
+        isLoadingPreview = false;
+        previewError = true;
+        Logger.LogError("Preview failed to load for: {FileName}", file?.FileName);
+        StateHasChanged();
+    }
+
+    private void RetryPreview()
+    {
+        previewError = false;
+        isLoadingPreview = true;
+        StateHasChanged();
+    }
+
+    private async Task ToggleFullScreen()
+    {
+        try
+        {
+            isFullScreen = await JS.InvokeAsync<bool>("filePreview.toggleFullScreen", "preview-container");
+            Logger.LogInformation("Full screen toggled: {IsFullScreen}", isFullScreen);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error toggling full screen");
+            errorMessage = "Full screen mode is not supported in your browser.";
+        }
+    }
+
+    [JSInvokable]
+    public void OnFullscreenChanged(bool isFullscreen)
+    {
+        isFullScreen = isFullscreen;
+        StateHasChanged();
+    }
+
     private bool IsImageFile(string extension)
     {
         var imageExtensions = new[] { ".jpg", ".jpeg", ".png", ".bmp", ".tif", ".tiff" };
         return imageExtensions.Contains(extension.ToLowerInvariant());
     }
 }
+

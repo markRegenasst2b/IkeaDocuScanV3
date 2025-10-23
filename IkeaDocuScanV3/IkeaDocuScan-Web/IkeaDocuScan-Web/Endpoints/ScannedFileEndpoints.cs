@@ -87,7 +87,8 @@ public static class ScannedFileEndpoints
                 _ => "application/octet-stream"
             };
 
-            return Results.Stream(stream, contentType, fileName, enableRangeProcessing: true);
+            // Don't pass fileName to display inline instead of triggering download
+            return Results.Stream(stream, contentType, fileDownloadName: null, enableRangeProcessing: true);
         })
         .WithName("GetScannedFileStream")
         .Produces(200)
