@@ -162,6 +162,15 @@
                     </div>
                 </div>
 
+                <div class="alert alert-info d-flex justify-content-between align-items-center">
+                    <div>
+                        <i class="fa fa-info-circle"></i> <strong>User Management:</strong> Delete this user and all their permissions
+                    </div>
+                    <button type="button" class="btn btn-danger" @onclick="InitiateDeleteUser">
+                        <i class="fa fa-user-times"></i> Delete User
+                    </button>
+                </div>
+
                 <hr />
 
                 @if (!showPermissionForm)
@@ -192,7 +201,8 @@
                                         <th>Document Type</th>
                                         <th>Counter Party</th>
                                         <th>Country</th>
-                                        <th style="width: 150px;">Actions</th>
+                                        <th style="width: 80px;">Edit</th>
+                                        <th style="width: 80px;">Delete</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -226,9 +236,11 @@
                                                 }
                                             </td>
                                             <td>
-                                                <button class="btn btn-sm btn-primary me-1" @onclick="() => EditPermission(permission)">
+                                                <button class="btn btn-sm btn-primary" @onclick="() => EditPermission(permission)">
                                                     <i class="fa fa-edit"></i> Edit
                                                 </button>
+                                            </td>
+                                            <td>
                                                 <button class="btn btn-sm btn-danger" @onclick="() => DeletePermission(permission)">
                                                     <i class="fa fa-trash"></i> Delete
                                                 </button>
@@ -300,6 +312,119 @@
             </div>
         </div>
     }
+
+    @* Delete Confirmation Modal *@
+    @if (showDeleteConfirmation && permissionToDelete != null)
+    {
+        <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header bg-danger text-white">
+                        <h5 class="modal-title">
+                            <i class="fa fa-exclamation-triangle"></i> Confirm Delete
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" @onclick="CancelDelete"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p><strong>Are you sure you want to delete this permission?</strong></p>
+                        <div class="alert alert-warning">
+                            <p class="mb-2"><strong>Permission Details:</strong></p>
+                            <ul class="mb-0">
+                                <li><strong>ID:</strong> @permissionToDelete.Id</li>
+                                <li><strong>User:</strong> @permissionToDelete.AccountName</li>
+                                @if (!string.IsNullOrEmpty(permissionToDelete.DocumentTypeName))
+                                {
+                                    <li><strong>Document Type:</strong> @permissionToDelete.DocumentTypeName</li>
+                                }
+                                @if (!string.IsNullOrEmpty(permissionToDelete.CounterPartyName))
+                                {
+                                    <li><strong>Counter Party:</strong> @permissionToDelete.CounterPartyName</li>
+                                }
+                                @if (!string.IsNullOrEmpty(permissionToDelete.CountryName))
+                                {
+                                    <li><strong>Country:</strong> @permissionToDelete.CountryName</li>
+                                }
+                            </ul>
+                        </div>
+                        <p class="text-danger mb-0">
+                            <i class="fa fa-warning"></i> This action cannot be undone.
+                        </p>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" @onclick="CancelDelete">
+                            <i class="fa fa-times"></i> Cancel
+                        </button>
+                        <button type="button" class="btn btn-danger" @onclick="ConfirmDeleteAction">
+                            <i class="fa fa-trash"></i> Delete Permission
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+
+    @* Delete User Confirmation Modal *@
+    @if (showDeleteUserConfirmation && userToDelete != null)
+    {
+        <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header bg-danger text-white">
+                        <h5 class="modal-title">
+                            <i class="fa fa-exclamation-triangle"></i> Confirm Delete User
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" @onclick="CancelDeleteUser"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="alert alert-danger">
+                            <h5><i class="fa fa-warning"></i> WARNING: This action is IRREVERSIBLE!</h5>
+                            <p class="mb-0">You are about to permanently delete this user and ALL their permissions.</p>
+                        </div>
+
+                        <p><strong>User to be deleted:</strong></p>
+                        <div class="card mb-3">
+                            <div class="card-body">
+                                <ul class="mb-0">
+                                    <li><strong>User ID:</strong> @userToDelete.UserId</li>
+                                    <li><strong>Account Name:</strong> @userToDelete.AccountName</li>
+                                    <li><strong>User Identifier:</strong> @userToDelete.UserIdentifier</li>
+                                    <li><strong>Super User:</strong> @(userToDelete.IsSuperUser ? "Yes" : "No")</li>
+                                    <li><strong>Total Permissions:</strong> @userToDelete.PermissionCount</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="alert alert-warning">
+                            <p class="mb-2"><strong>The following will be deleted:</strong></p>
+                            <ul class="mb-0">
+                                <li>The user account (@userToDelete.AccountName)</li>
+                                <li>All @userToDelete.PermissionCount permission(s) assigned to this user</li>
+                            </ul>
+                        </div>
+
+                        <p class="text-danger">
+                            <i class="fa fa-exclamation-circle"></i> <strong>This action cannot be undone!</strong>
+                        </p>
+
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="confirmDeleteCheck" @bind="deleteUserConfirmed">
+                            <label class="form-check-label" for="confirmDeleteCheck">
+                                <strong>I understand this action is permanent and cannot be undone</strong>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" @onclick="CancelDeleteUser">
+                            <i class="fa fa-times"></i> Cancel
+                        </button>
+                        <button type="button" class="btn btn-danger" @onclick="ConfirmDeleteUserAction" disabled="@(!deleteUserConfirmed)">
+                            <i class="fa fa-user-times"></i> Delete User & All Permissions
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
 </div>
 
 @code {
@@ -320,6 +445,17 @@
     private bool isLoading = false;
     private bool isLoadingPermissions = false;
     private bool isSaving = false;
+
+    // Delete confirmation
+    private bool showDeleteConfirmation = false;
+    private UserPermissionDto? permissionToDelete = null;
+    private TaskCompletionSource<bool>? deleteConfirmationTcs = null;
+
+    // Delete user confirmation
+    private bool showDeleteUserConfirmation = false;
+    private DocuScanUserDto? userToDelete = null;
+    private bool deleteUserConfirmed = false;
+    private TaskCompletionSource<bool>? deleteUserConfirmationTcs = null;
 
     // Messages
     private string? errorMessage = null;
@@ -572,8 +708,90 @@
 
     private async Task<bool> ConfirmDelete(UserPermissionDto permission)
     {
-        // Simple confirmation - in production, use a proper modal
-        return await Task.FromResult(true); // TODO: Add proper confirmation dialog
+        permissionToDelete = permission;
+        showDeleteConfirmation = true;
+        deleteConfirmationTcs = new TaskCompletionSource<bool>();
+
+        StateHasChanged();
+
+        return await deleteConfirmationTcs.Task;
+    }
+
+    private void ConfirmDeleteAction()
+    {
+        showDeleteConfirmation = false;
+        deleteConfirmationTcs?.SetResult(true);
+        permissionToDelete = null;
+    }
+
+    private void CancelDelete()
+    {
+        showDeleteConfirmation = false;
+        deleteConfirmationTcs?.SetResult(false);
+        permissionToDelete = null;
+    }
+
+    private async Task InitiateDeleteUser()
+    {
+        if (selectedUser == null) return;
+
+        userToDelete = selectedUser;
+        showDeleteUserConfirmation = true;
+        deleteUserConfirmed = false;
+        deleteUserConfirmationTcs = new TaskCompletionSource<bool>();
+
+        StateHasChanged();
+
+        var confirmed = await deleteUserConfirmationTcs.Task;
+
+        if (confirmed)
+        {
+            await ExecuteDeleteUser();
+        }
+    }
+
+    private async Task ExecuteDeleteUser()
+    {
+        if (userToDelete == null) return;
+
+        saveErrorMessage = null;
+        saveSuccessMessage = null;
+
+        try
+        {
+            Logger.LogInformation("Deleting user {UserId} and all permissions", userToDelete.UserId);
+            await UserPermissionService.DeleteUserAsync(userToDelete.UserId);
+
+            saveSuccessMessage = $"User '{userToDelete.AccountName}' and all their permissions have been deleted successfully!";
+            Logger.LogInformation("User {UserId} deleted successfully", userToDelete.UserId);
+
+            // Wait a moment to show success message
+            await Task.Delay(1500);
+
+            // Go back to user list and reload
+            selectedUser = null;
+            userToDelete = null;
+            await LoadUsers();
+        }
+        catch (Exception ex)
+        {
+            saveErrorMessage = $"Error deleting user: {ex.Message}";
+            Logger.LogError(ex, "Error deleting user {UserId}", userToDelete.UserId);
+        }
+    }
+
+    private void ConfirmDeleteUserAction()
+    {
+        showDeleteUserConfirmation = false;
+        deleteUserConfirmationTcs?.SetResult(true);
+    }
+
+    private void CancelDeleteUser()
+    {
+        showDeleteUserConfirmation = false;
+        deleteUserConfirmationTcs?.SetResult(false);
+        userToDelete = null;
+        deleteUserConfirmed = false;
     }
 
     private void OnDocumentTypeSelected(int? documentTypeId)

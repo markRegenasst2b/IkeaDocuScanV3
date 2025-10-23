@@ -77,5 +77,14 @@ public static class UserPermissionEndpoints
         .WithName("DeleteUserPermission")
         .Produces(204)
         .Produces(404);
+
+        group.MapDelete("/user/{userId}", async (int userId, IUserPermissionService service) =>
+        {
+            await service.DeleteUserAsync(userId);
+            return Results.NoContent();
+        })
+        .WithName("DeleteDocuScanUser")
+        .Produces(204)
+        .Produces(404);
     }
 }

@@ -139,4 +139,19 @@ public class UserPermissionHttpService : IUserPermissionService
             throw;
         }
     }
+
+    public async Task DeleteUserAsync(int userId)
+    {
+        try
+        {
+            _logger.LogInformation("Deleting user {UserId} and all their permissions via API", userId);
+            var response = await _http.DeleteAsync($"/api/userpermissions/user/{userId}");
+            response.EnsureSuccessStatusCode();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error deleting user {UserId}", userId);
+            throw;
+        }
+    }
 }

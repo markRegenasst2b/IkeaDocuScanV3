@@ -194,6 +194,36 @@ public class UserPermissionService : IUserPermissionService
         _logger.LogInformation("Deleted user permission with ID: {Id}", id);
     }
 
+    public async Task DeleteUserAsync(int userId)
+    {
+        _logger.LogInformation("Deleting user with ID: {UserId} and all their permissions", userId);
+
+        await using var context = await _contextFactory.CreateDbContextAsync();
+
+        // Check if user exists
+        var user = await context.DocuScanUsers
+            .Include(u => u.UserPermissions)
+            .FirstOrDefaultAsync(u => u.UserId == userId);
+
+        if (user == null)
+        {
+            throw new ValidationException($"User with ID {userId} not found");
+        }
+
+        // Delete all user permissions first (cascade delete should handle this, but being explicit)
+        if (user.UserPermissions.Any())
+        {
+            context.UserPermissions.RemoveRange(user.UserPermissions);
+            _logger.LogInformation("Deleting {Count} permissions for user {UserId}", user.UserPermissions.Count, userId);
+        }
+
+        // Delete the user
+        context.DocuScanUsers.Remove(user);
+        await context.SaveChangesAsync();
+
+        _logger.LogInformation("Deleted user with ID: {UserId} and all their permissions", userId);
+    }
+
     private static UserPermissionDto MapToDto(UserPermission entity)
     {
         return new UserPermissionDto

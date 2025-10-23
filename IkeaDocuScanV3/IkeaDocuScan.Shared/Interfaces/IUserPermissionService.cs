@@ -41,4 +41,10 @@ public interface IUserPermissionService
     /// Delete a user permission
     /// </summary>
     Task DeleteAsync(int id);
+
+    /// <summary>
+    /// Delete a user and all their permissions
+    /// </summary>
+    /// <param name="userId">The ID of the user to delete</param>
+    Task DeleteUserAsync(int userId);
 }
