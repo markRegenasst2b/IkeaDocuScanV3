@@ -33,6 +33,8 @@ builder.Services.AddScoped<ICounterPartyService, CounterPartyHttpService>();
 builder.Services.AddScoped<ICountryService, CountryHttpService>();
 builder.Services.AddScoped<IDocumentTypeService, DocumentTypeHttpService>();
 builder.Services.AddScoped<IUserPermissionService, UserPermissionHttpService>();
+builder.Services.AddScoped<IScannedFileService, ScannedFileHttpService>();
+builder.Services.AddScoped<IAuditTrailService, AuditTrailHttpService>();
 
 await builder.Build().RunAsync();
 

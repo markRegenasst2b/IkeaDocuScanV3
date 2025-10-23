@@ -159,7 +159,7 @@ app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode()
     .AddInteractiveWebAssemblyRenderMode()
     .AddAdditionalAssemblies(typeof(IkeaDocuScan_Web.Client._Imports).Assembly)
-    ;
+   ;
 
 // Map SignalR hub
 app.MapHub<DataUpdateHub>("/hubs/data-updates");
@@ -170,5 +170,7 @@ app.MapCounterPartyEndpoints();
 app.MapCountryEndpoints();
 app.MapDocumentTypeEndpoints();
 app.MapUserPermissionEndpoints();
+app.MapScannedFileEndpoints();
+app.MapAuditTrailEndpoints();
 
 app.Run();

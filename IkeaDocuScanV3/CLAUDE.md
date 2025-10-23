@@ -64,7 +64,11 @@ SQL Server Database
 
 ### Key Architectural Patterns
 
-1. **Hybrid Blazor Rendering**
+1. **Hybrid Blazor Rendering (SSR Disabled)**
+   - **Render Mode**: InteractiveAuto with prerendering disabled globally
+   - **SSR Decision**: Server-side pre-rendering (SSR) is disabled to avoid component ID conflicts during navigation
+   - **Configuration**: `Program.cs` lines 159-160 set `prerender: false` for both Server and WebAssembly modes
+   - **Rationale**: Full page navigation with InteractiveAuto caused "No root component exists with SSR component ID" errors
    - Server-side components in `IkeaDocuScan-Web/Pages/` (Identity.razor, ServerHome.razor, Error.razor)
    - Client-side components in `IkeaDocuScan-Web.Client/Pages/` (Documents.razor, CheckinScanned.razor, etc.)
    - Components communicate via HTTP API endpoints and SignalR
@@ -109,7 +113,18 @@ SQL Server Database
   - `EmailService.cs`: SMTP email notifications (MailKit)
   - `UserIdentityService.cs`: AD user resolution
   - `CurrentUserService.cs`: Scoped user context (caches DB lookups)
+  - `UserPermissionService.cs`: User permission CRUD operations
+  - `CounterPartyService.cs`: Counter party management
+  - `CountryService.cs`: Country data
+  - `DocumentTypeService.cs`: Document type management
 - **Endpoints/**: RESTful API definitions
+  - `DocumentEndpoints.cs`: Document CRUD API
+  - `CounterPartyEndpoints.cs`: Counter party API
+  - `CountryEndpoints.cs`: Country API
+  - `DocumentTypeEndpoints.cs`: Document type API
+  - `UserPermissionEndpoints.cs`: User permission and DocuScanUser API
+  - `ScannedFileEndpoints.cs`: Scanned file access API
+  - `AuditTrailEndpoints.cs`: Audit trail logging and retrieval API
 - **Middleware/**: Custom middleware (Windows auth, exception handling)
 - **Authorization/**: Custom authorization policies and handlers
 - **Hubs/**: SignalR hubs for real-time updates
@@ -120,9 +135,16 @@ SQL Server Database
   - `Documents.razor`: Main document management UI
   - `CheckinScanned.razor`: Scanned file listing
   - `CheckinFileDetail.razor`: File detail view
-- **Services/**: Client-side HTTP services
-  - `DocumentHttpService.cs`: Calls server API endpoints
-- **Program.cs**: WebAssembly host configuration
+  - `EditUserPermissions.razor`: User permissions management
+- **Services/**: Client-side HTTP services (all implement corresponding interfaces)
+  - `DocumentHttpService.cs`: Document API client
+  - `CounterPartyHttpService.cs`: Counter party API client
+  - `CountryHttpService.cs`: Country API client
+  - `DocumentTypeHttpService.cs`: Document type API client
+  - `UserPermissionHttpService.cs`: User permission API client
+  - `ScannedFileHttpService.cs`: Scanned file API client
+  - `AuditTrailHttpService.cs`: Audit trail API client
+- **Program.cs**: WebAssembly host configuration (registers all HTTP services)
 
 ### IkeaDocuScan.Infrastructure
 - **Data/AppDbContext.cs**: EF Core DbContext with all entity configurations

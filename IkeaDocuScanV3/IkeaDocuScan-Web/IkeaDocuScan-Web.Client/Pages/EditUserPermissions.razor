@@ -19,7 +19,7 @@
     @if (selectedUser == null)
     {
         <!-- User List View -->
-        <div class="card mt-4">
+        <div @key="@("user-list-view")" class="card mt-4">
             <div class="card-header">
                 <h5 class="mb-0">Search Users</h5>
             </div>
@@ -124,7 +124,7 @@
     else
     {
         <!-- User Permissions Detail View -->
-        <div class="card mt-4">
+        <div @key="@($"user-detail-view-{selectedUser.UserId}")" class="card mt-4">
             <div class="card-header bg-primary text-white">
                 <div class="d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">Permissions for @selectedUser.AccountName</h5>
@@ -388,8 +388,13 @@
     private async Task SelectUser(DocuScanUserDto user)
     {
         selectedUser = user;
+        permissions = null;
+        showPermissionForm = false;
+        editingPermission = null;
         saveErrorMessage = null;
         saveSuccessMessage = null;
+        ClearFormFields();
+        StateHasChanged();
         await LoadUserPermissions();
     }
 
@@ -400,6 +405,7 @@
         showPermissionForm = false;
         editingPermission = null;
         ClearFormFields();
+        StateHasChanged();
     }
 
     private async Task LoadUserPermissions()

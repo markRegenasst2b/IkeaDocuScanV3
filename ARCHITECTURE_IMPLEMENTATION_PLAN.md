@@ -31,6 +31,41 @@ IkeaDocuScanV3/
 - Client pages (Counter, Weather) are placeholder demos to be removed
 - No real-time update capability
 
+### Architecture Decisions
+
+#### Blazor Rendering Mode - SSR Disabled
+**Decision Date:** 2025-01-23
+
+**Decision:** Disable server-side pre-rendering (SSR) globally while keeping InteractiveAuto render mode.
+
+**Configuration:**
+```csharp
+// Program.cs lines 159-160
+app.MapRazorComponents<App>()
+    .AddInteractiveServerRenderMode(prerender: false)
+    .AddInteractiveWebAssemblyRenderMode(prerender: false)
+```
+
+**Problem Solved:**
+- "No root component exists with SSR component ID X" errors during page navigation
+- Component event handlers becoming unresponsive after navigation
+- Component tree desynchronization between server and client
+
+**Technical Details:**
+- InteractiveAuto with SSR enabled caused component ID mismatches during full page navigation
+- Server pre-rendered components with IDs that client couldn't match during hydration
+- After error, Blazor's event handler registration broke, making buttons unresponsive
+
+**Trade-offs:**
+- ✅ Eliminates SSR component ID errors
+- ✅ Maintains InteractiveAuto benefits (automatic server/client switching)
+- ✅ Preserves full page navigation functionality
+- ❌ Slightly slower initial page load (no pre-rendered HTML)
+- ❌ Blank screen during initial WebAssembly download
+
+**Alternative Considered:**
+Single-page approach with conditional rendering was rejected to maintain natural browser navigation patterns and URL-based routing.
+
 ---
 
 ## Target Architecture
