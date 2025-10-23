@@ -10,7 +10,14 @@
         <div class="selected-counterparty mb-3">
             <div class="card">
                 <div class="card-body">
-                    <h6 class="card-subtitle mb-2 text-muted">Selected Counter Party</h6>
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <h6 class="card-subtitle mb-2 text-muted">Selected Counter Party</h6>
+                        </div>
+                        <button type="button" class="btn btn-sm btn-outline-danger" @onclick="ClearSelection" title="Remove counter party">
+                            <i class="fa fa-times"></i>
+                        </button>
+                    </div>
                     <p class="mb-1">
                         <strong>Number:</strong> @SelectedCounterParty.CounterPartyNoAlpha
                     </p>
@@ -25,6 +32,12 @@
     <button type="button" class="btn btn-primary" @onclick="OpenModal">
         <i class="fa fa-search"></i> @(SelectedCounterParty != null ? "Change" : "Select") Counter Party
     </button>
+    @if (SelectedCounterParty != null)
+    {
+        <button type="button" class="btn btn-outline-secondary ms-2" @onclick="ClearSelection">
+            <i class="fa fa-times"></i> Clear Selection
+        </button>
+    }
 
     @if (showModal)
     {
@@ -247,6 +260,13 @@
         Logger.LogInformation("Selected counter party: {Name} ({Number})",
             counterParty.Name, counterParty.CounterPartyNoAlpha);
         CloseModal();
+    }
+
+    private async Task ClearSelection()
+    {
+        Logger.LogInformation("Clearing counter party selection");
+        SelectedCounterParty = null;
+        await SelectedCounterPartyChanged.InvokeAsync(null!);
     }
 
     public void Dispose()
