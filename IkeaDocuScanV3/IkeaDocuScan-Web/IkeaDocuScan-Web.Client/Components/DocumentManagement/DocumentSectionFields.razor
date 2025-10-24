@@ -55,19 +55,11 @@
 @* Affiliated To (Read-only) *@
 <ReadOnlyField Label="Affiliated to" Value="@Model.AffiliatedTo" />
 
-@* Third Parties Selector (Placeholder) *@
-<Field>
-    <FieldLabel>Third Parties</FieldLabel>
-    <FieldBody>
-        <Small TextColor="TextColor.Muted">[Third Party Selector - To be implemented]</Small>
-        @if (Model.SelectedThirdPartyNames.Any())
-        {
-            <div class="mt-2">
-                <Small>Selected: @string.Join(", ", Model.SelectedThirdPartyNames)</Small>
-            </div>
-        }
-    </FieldBody>
-</Field>
+@* Third Parties Selector *@
+<ThirdPartySelector @bind-SelectedThirdPartyIds="@Model.SelectedThirdPartyIds"
+                   @bind-SelectedThirdPartyNames="@Model.SelectedThirdPartyNames"
+                   Disabled="@IsReadOnly"
+                   FilterByCounterPartyId="@Model.CounterPartyId" />
 
 @* Date of Contract *@
 <Field>

@@ -1,6 +1,9 @@
 @using Blazorise
 
-<Select TValue="bool?" @bind-SelectedValue="@Value" Disabled="@Disabled">
+<Select TValue="bool?"
+        SelectedValue="@Value"
+        SelectedValueChanged="@OnValueChanged"
+        Disabled="@Disabled">
     <SelectItem Value="@((bool?)null)">-- Select --</SelectItem>
     <SelectItem Value="@true">Yes</SelectItem>
     <SelectItem Value="@false">No</SelectItem>
@@ -31,4 +34,10 @@
     /// </summary>
     [Parameter]
     public string? Label { get; set; }
+
+    private async Task OnValueChanged(bool? newValue)
+    {
+        Value = newValue;
+        await ValueChanged.InvokeAsync(newValue);
+    }
 }

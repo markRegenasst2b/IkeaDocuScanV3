@@ -1,0 +1,287 @@
+@using Blazorise
+@using IkeaDocuScan_Web.Client.Models
+@using IkeaDocuScan.Shared.DTOs.CounterParties
+@using IkeaDocuScan.Shared.Interfaces
+@inject ICounterPartyService CounterPartyService
+@inject ILogger<ThirdPartySelector> Logger
+
+<div class="third-party-selector">
+    <Row>
+        @* Available Third Parties (Left) *@
+        <Column ColumnSize="ColumnSize.Is5">
+            <FieldLabel>Available Third Parties</FieldLabel>
+            <select multiple
+                    size="7"
+                    class="form-select third-party-listbox"
+                    @ondblclick="AddSelectedItems"
+                    disabled="@Disabled">
+                @foreach (var item in availableItems)
+                {
+                    <option value="@item.Id"
+                            selected="@selectedAvailableIds.Contains(item.Id)"
+                            @onclick="@(() => ToggleAvailableSelection(item.Id))">
+                        @item.DisplayText
+                    </option>
+                }
+            </select>
+            <Small TextColor="TextColor.Muted">
+                @availableItems.Count available | Double-click or use buttons to move
+            </Small>
+        </Column>
+
+        @* Add/Remove Buttons (Middle) *@
+        <Column ColumnSize="ColumnSize.Is2" Class="d-flex flex-column justify-content-center align-items-center">
+            <Button Color="Color.Primary"
+                    Size="Size.Small"
+                    Clicked="AddSelectedItems"
+                    Disabled="@(Disabled || !selectedAvailableIds.Any())"
+                    Margin="Margin.Is2.FromBottom"
+                    Title="Add selected items">
+                <Icon Name="IconName.ChevronRight" />
+                <Icon Name="IconName.ChevronRight" />
+            </Button>
+            <Button Color="Color.Primary"
+                    Size="Size.Small"
+                    Clicked="RemoveSelectedItems"
+                    Disabled="@(Disabled || !selectedSelectedIds.Any())"
+                    Title="Remove selected items">
+                <Icon Name="IconName.ChevronLeft" />
+                <Icon Name="IconName.ChevronLeft" />
+            </Button>
+        </Column>
+
+        @* Selected Third Parties (Right) *@
+        <Column ColumnSize="ColumnSize.Is5">
+            <FieldLabel>Selected Third Parties</FieldLabel>
+            <select multiple
+                    size="5"
+                    class="form-select third-party-listbox"
+                    @ondblclick="RemoveSelectedItems"
+                    disabled="@Disabled">
+                @foreach (var item in selectedItems)
+                {
+                    <option value="@item.Id"
+                            selected="@selectedSelectedIds.Contains(item.Id)"
+                            @onclick="@(() => ToggleSelectedSelection(item.Id))">
+                        @item.DisplayText
+                    </option>
+                }
+            </select>
+            <Small TextColor="TextColor.Success">
+                @selectedItems.Count selected
+            </Small>
+        </Column>
+    </Row>
+</div>
+
+<style>
+    .third-party-selector {
+        width: 100%;
+    }
+
+    .third-party-listbox {
+        width: 100%;
+        font-family: Tahoma, sans-serif;
+        font-size: 11px;
+        border: solid 1px gray;
+    }
+
+    .third-party-listbox option {
+        padding: 2px 4px;
+        cursor: pointer;
+    }
+
+    .third-party-listbox option:hover {
+        background-color: #f0f0f0;
+    }
+</style>
+
+@code {
+    /// <summary>
+    /// List of selected third party IDs (bound to ViewModel)
+    /// </summary>
+    [Parameter]
+    public List<string> SelectedThirdPartyIds { get; set; } = new();
+
+    /// <summary>
+    /// Event callback when selected IDs change
+    /// </summary>
+    [Parameter]
+    public EventCallback<List<string>> SelectedThirdPartyIdsChanged { get; set; }
+
+    /// <summary>
+    /// List of selected third party names (bound to ViewModel)
+    /// </summary>
+    [Parameter]
+    public List<string> SelectedThirdPartyNames { get; set; } = new();
+
+    /// <summary>
+    /// Event callback when selected names change
+    /// </summary>
+    [Parameter]
+    public EventCallback<List<string>> SelectedThirdPartyNamesChanged { get; set; }
+
+    /// <summary>
+    /// Whether the selector is disabled
+    /// </summary>
+    [Parameter]
+    public bool Disabled { get; set; }
+
+    /// <summary>
+    /// Optional filter by CounterPartyId (to show only related third parties)
+    /// </summary>
+    [Parameter]
+    public string? FilterByCounterPartyId { get; set; }
+
+    // Internal state
+    private List<ThirdPartyItem> allThirdParties = new();
+    private List<ThirdPartyItem> availableItems = new();
+    private List<ThirdPartyItem> selectedItems = new();
+    private HashSet<string> selectedAvailableIds = new();
+    private HashSet<string> selectedSelectedIds = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadThirdParties();
+        UpdateLists();
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        // If SelectedThirdPartyIds changed externally, update our lists
+        UpdateLists();
+    }
+
+    private async Task LoadThirdParties()
+    {
+        try
+        {
+            var counterParties = await CounterPartyService.GetAllAsync();
+
+            allThirdParties = counterParties
+                .Where(cp => cp.DisplayAtCheckIn == true) // Only show third parties marked for display
+                .Select(cp => new ThirdPartyItem
+                {
+                    Id = cp.CounterPartyId.ToString(),
+                    Name = cp.Name ?? string.Empty,
+                    CounterPartyNoAlpha = cp.CounterPartyNoAlpha,
+                    City = cp.City,
+                    Country = cp.Country
+                })
+                .OrderBy(tp => tp.Name)
+                .ToList();
+
+            Logger.LogInformation("Loaded {Count} third parties for selector", allThirdParties.Count);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading third parties");
+        }
+    }
+
+    private void UpdateLists()
+    {
+        // Split all third parties into available and selected based on SelectedThirdPartyIds
+        selectedItems = allThirdParties
+            .Where(tp => SelectedThirdPartyIds.Contains(tp.Id))
+            .ToList();
+
+        availableItems = allThirdParties
+            .Where(tp => !SelectedThirdPartyIds.Contains(tp.Id))
+            .ToList();
+
+        // Apply filter if specified
+        if (!string.IsNullOrEmpty(FilterByCounterPartyId))
+        {
+            // TODO: Filter by relationship to main CounterParty if needed
+            // For now, show all
+        }
+    }
+
+    private void ToggleAvailableSelection(string id)
+    {
+        if (selectedAvailableIds.Contains(id))
+            selectedAvailableIds.Remove(id);
+        else
+            selectedAvailableIds.Add(id);
+    }
+
+    private void ToggleSelectedSelection(string id)
+    {
+        if (selectedSelectedIds.Contains(id))
+            selectedSelectedIds.Remove(id);
+        else
+            selectedSelectedIds.Add(id);
+    }
+
+    private async Task AddSelectedItems()
+    {
+        if (Disabled)
+            return;
+
+        // If no items selected in available list, select all highlighted items
+        if (!selectedAvailableIds.Any())
+        {
+            // On double-click, get the item that was double-clicked
+            // For now, we'll move all selected items
+            return;
+        }
+
+        // Move selected items from available to selected
+        foreach (var id in selectedAvailableIds.ToList())
+        {
+            var item = availableItems.FirstOrDefault(i => i.Id == id);
+            if (item != null)
+            {
+                SelectedThirdPartyIds.Add(item.Id);
+                SelectedThirdPartyNames.Add(item.Name);
+            }
+        }
+
+        // Clear selection
+        selectedAvailableIds.Clear();
+
+        // Update lists
+        UpdateLists();
+
+        // Notify parent
+        await SelectedThirdPartyIdsChanged.InvokeAsync(SelectedThirdPartyIds);
+        await SelectedThirdPartyNamesChanged.InvokeAsync(SelectedThirdPartyNames);
+
+        Logger.LogInformation("Added {Count} third parties, total selected: {Total}",
+            selectedAvailableIds.Count, SelectedThirdPartyIds.Count);
+    }
+
+    private async Task RemoveSelectedItems()
+    {
+        if (Disabled)
+            return;
+
+        if (!selectedSelectedIds.Any())
+            return;
+
+        // Move selected items from selected back to available
+        foreach (var id in selectedSelectedIds.ToList())
+        {
+            var item = selectedItems.FirstOrDefault(i => i.Id == id);
+            if (item != null)
+            {
+                SelectedThirdPartyIds.Remove(item.Id);
+                SelectedThirdPartyNames.Remove(item.Name);
+            }
+        }
+
+        // Clear selection
+        selectedSelectedIds.Clear();
+
+        // Update lists
+        UpdateLists();
+
+        // Notify parent
+        await SelectedThirdPartyIdsChanged.InvokeAsync(SelectedThirdPartyIds);
+        await SelectedThirdPartyNamesChanged.InvokeAsync(SelectedThirdPartyNames);
+
+        Logger.LogInformation("Removed {Count} third parties, total selected: {Total}",
+            selectedSelectedIds.Count, SelectedThirdPartyIds.Count);
+    }
+}
