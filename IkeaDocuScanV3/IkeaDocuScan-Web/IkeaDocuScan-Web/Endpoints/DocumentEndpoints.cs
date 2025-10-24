@@ -28,6 +28,18 @@ public static class DocumentEndpoints
         .Produces<DocumentDto>(200)
         .Produces(404);
 
+        group.MapGet("/barcode/{barCode}", async (string barCode, IDocumentService service) =>
+        {
+            var document = await service.GetByBarCodeAsync(barCode);
+            if (document == null)
+                return Results.NotFound(new { error = $"Document with barcode '{barCode}' not found" });
+
+            return Results.Ok(document);
+        })
+        .WithName("GetDocumentByBarCode")
+        .Produces<DocumentDto>(200)
+        .Produces(404);
+
         group.MapPost("/", async (CreateDocumentDto dto, IDocumentService service) =>
         {
             var created = await service.CreateAsync(dto);

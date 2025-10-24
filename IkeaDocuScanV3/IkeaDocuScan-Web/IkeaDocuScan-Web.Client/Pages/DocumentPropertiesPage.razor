@@ -1,0 +1,285 @@
+@page "/documents/edit/{BarCode:int}"
+@page "/documents/register"
+@page "/documents/checkin/{FileName}"
+@using Blazorise
+@using IkeaDocuScan_Web.Client.Models
+@using IkeaDocuScan.Shared.Interfaces
+@using IkeaDocuScan.Shared.DTOs.Documents
+@inject IDocumentService DocumentService
+@inject ICounterPartyService CounterPartyService
+@inject IDocumentTypeService DocumentTypeService
+@inject NavigationManager NavigationManager
+@inject IJSRuntime JSRuntime
+
+<PageTitle>@GetPageTitle()</PageTitle>
+
+<Container Fluid>
+    <Div Background="Background.Light" Padding="Padding.Is3" class="document-properties-page">
+
+        @if (isLoading)
+        {
+            <Div TextAlignment="TextAlignment.Center" Padding="Padding.Is5">
+                <Spinner />
+                <Paragraph>Loading...</Paragraph>
+            </Div>
+        }
+        else if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <Alert Color="Color.Danger" Visible="true">
+                <AlertMessage>Error</AlertMessage>
+                <AlertDescription>@errorMessage</AlertDescription>
+            </Alert>
+        }
+        else
+        {
+            @* Header Section *@
+            <Row MarginBottom="Margin.Is3">
+                <Column>
+                    <Card>
+                        <CardBody>
+                            <Row>
+                                <Column ColumnSize="ColumnSize.Is12.Is6.OnTablet">
+                                    <Field Horizontal>
+                                        <FieldLabel ColumnSize="ColumnSize.Is4">Bar Code:</FieldLabel>
+                                        <FieldBody ColumnSize="ColumnSize.Is8">
+                                            @if (Model.Mode == DocumentPropertyMode.Register)
+                                            {
+                                                <TextEdit @bind-Text="@Model.BarCode"
+                                                          ElementId="barcodeInput"
+                                                          Placeholder="Enter barcode number" />
+                                            }
+                                            else
+                                            {
+                                                <div><strong>@Model.BarCode</strong></div>
+                                            }
+                                        </FieldBody>
+                                    </Field>
+                                </Column>
+                                <Column ColumnSize="ColumnSize.Is12.Is6.OnTablet">
+                                    <Field Horizontal>
+                                        <FieldLabel ColumnSize="ColumnSize.Is4">File Name:</FieldLabel>
+                                        <FieldBody ColumnSize="ColumnSize.Is8">
+                                            @if (Model.HasFile)
+                                            {
+                                                <Button Color="Color.Link" Clicked="@ViewDocument">
+                                                    @Model.FileName
+                                                </Button>
+                                            }
+                                            else
+                                            {
+                                                <TextEdit ReadOnly="true" TextColor="TextColor.Muted">(none)</TextEdit>
+                                            }
+                                        </FieldBody>
+                                    </Field>
+                                </Column>
+                            </Row>
+                        </CardBody>
+                    </Card>
+                </Column>
+            </Row>
+
+            @* Validation Summary *@
+            @if (validationErrors.Any())
+            {
+                <Row MarginBottom="Margin.Is3">
+                    <Column>
+                        <Alert Color="Color.Danger" Visible="true">
+                            <AlertMessage>Please correct the following errors:</AlertMessage>
+                            <AlertDescription>
+                                <UnorderedList>
+                                    @foreach (var error in validationErrors)
+                                    {
+                                        <UnorderedListItem>@error</UnorderedListItem>
+                                    }
+                                </UnorderedList>
+                            </AlertDescription>
+                        </Alert>
+                    </Column>
+                </Row>
+            }
+
+            @* Success Message *@
+            @if (!string.IsNullOrEmpty(successMessage))
+            {
+                <Row MarginBottom="Margin.Is3">
+                    <Column>
+                        <Alert Color="Color.Success" Visible="true">
+                            <AlertMessage>Success</AlertMessage>
+                            <AlertDescription>@successMessage</AlertDescription>
+                        </Alert>
+                    </Column>
+                </Row>
+            }
+
+            @* Action Buttons *@
+            <Row MarginBottom="Margin.Is3">
+                <Column>
+                    <Buttons>
+                        <Button Color="Color.Primary" Clicked="@SaveDocument" Loading="@isSaving">
+                            <Icon Name="IconName.Save" />
+                            @Model.SaveButtonText
+                        </Button>
+                        @if (Model.CanCompareWithStandard)
+                        {
+                            <Button Color="Color.Secondary"
+                                    Clicked="@CompareWithStandard"
+                                    Disabled="@(!Model.DocumentTypeId.HasValue)">
+                                <Icon Name="IconName.File" />
+                                Compare with Standard Contract
+                            </Button>
+                        }
+                        <Button Color="Color.Light" Clicked="@Cancel">
+                            <Icon Name="IconName.Times" />
+                            Cancel
+                        </Button>
+                    </Buttons>
+                </Column>
+            </Row>
+
+            @* Main Form - Two Column Layout *@
+            <Row>
+                @* Left Column: Document Section *@
+                <Column ColumnSize="ColumnSize.Is12.Is6.OnTablet">
+                    <Card MarginBottom="Margin.Is3">
+                        <CardHeader>
+                            <CardTitle>Document Information</CardTitle>
+                        </CardHeader>
+                        <CardBody>
+                            @* Document section fields will go here *@
+                            <Paragraph TextColor="TextColor.Muted">
+                                [Document section fields - To be implemented]
+                            </Paragraph>
+                        </CardBody>
+                    </Card>
+                </Column>
+
+                @* Right Column: Action, Flags, Additional Info Sections *@
+                <Column ColumnSize="ColumnSize.Is12.Is6.OnTablet">
+                    @* Action Section *@
+                    <Card MarginBottom="Margin.Is3">
+                        <CardHeader>
+                            <CardTitle>Action Information</CardTitle>
+                        </CardHeader>
+                        <CardBody>
+                            @* Action section fields will go here *@
+                            <Paragraph TextColor="TextColor.Muted">
+                                [Action section fields - To be implemented]
+                            </Paragraph>
+                        </CardBody>
+                    </Card>
+
+                    @* Flags Section *@
+                    <Card MarginBottom="Margin.Is3">
+                        <CardHeader>
+                            <CardTitle>Flags</CardTitle>
+                        </CardHeader>
+                        <CardBody>
+                            @* Flags section fields will go here *@
+                            <Paragraph TextColor="TextColor.Muted">
+                                [Flags section fields - To be implemented]
+                            </Paragraph>
+                        </CardBody>
+                    </Card>
+
+                    @* Additional Info Section *@
+                    <Card MarginBottom="Margin.Is3">
+                        <CardHeader>
+                            <CardTitle>Additional Information</CardTitle>
+                        </CardHeader>
+                        <CardBody>
+                            @* Additional info fields will go here *@
+                            <Paragraph TextColor="TextColor.Muted">
+                                [Additional info fields - To be implemented]
+                            </Paragraph>
+                        </CardBody>
+                    </Card>
+                </Column>
+            </Row>
+
+            @* Form Data Actions (Copy/Paste) *@
+            <Row MarginBottom="Margin.Is3">
+                <Column>
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Form Data</CardTitle>
+                        </CardHeader>
+                        <CardBody>
+                            <Buttons>
+                                <Button Color="Color.Info" Clicked="@CopyFormData">
+                                    <Icon Name="IconName.Copy" />
+                                    Copy
+                                </Button>
+                                <Button Color="Color.Info" Clicked="@PasteFormData" Disabled="@(!hasCopiedData)">
+                                    <Icon Name="IconName.Paste" />
+                                    Paste
+                                </Button>
+                                @if (hasCopiedData)
+                                {
+                                    <TextEdit ReadOnly="true" TextColor="TextColor.Muted" Margin="Margin.Is2.FromStart">
+                                        Copied data available (expires @copiedDataExpiration?.ToString("MMM dd, yyyy"))
+                                    </TextEdit>
+                                }
+                            </Buttons>
+                        </CardBody>
+                    </Card>
+                </Column>
+            </Row>
+
+            @* Audit Information (Edit mode only) *@
+            @if (Model.Mode == DocumentPropertyMode.Edit && Model.CreatedOn.HasValue)
+            {
+                <Row>
+                    <Column>
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>Audit Information</CardTitle>
+                            </CardHeader>
+                            <CardBody>
+                                <Row>
+                                    <Column ColumnSize="ColumnSize.Is6">
+                                        <Small TextColor="TextColor.Muted">
+                                            Created: @Model.CreatedOn?.ToString("yyyy-MM-dd HH:mm") by @Model.CreatedBy
+                                        </Small>
+                                    </Column>
+                                    <Column ColumnSize="ColumnSize.Is6">
+                                        <Small TextColor="TextColor.Muted">
+                                            Modified: @Model.ModifiedOn?.ToString("yyyy-MM-dd HH:mm") by @Model.ModifiedBy
+                                        </Small>
+                                    </Column>
+                                </Row>
+                            </CardBody>
+                        </Card>
+                    </Column>
+                </Row>
+            }
+        }
+    </Div>
+</Container>
+
+@* Duplicate Detection Modal *@
+<Modal @ref="duplicateModal">
+    <ModalContent Centered>
+        <ModalHeader>
+            <ModalTitle>Duplicate Documents Found</ModalTitle>
+            <CloseButton />
+        </ModalHeader>
+        <ModalBody>
+            <Paragraph>
+                Similar documents with the same Document Type, Document No, and Version No already exist:
+            </Paragraph>
+            <UnorderedList>
+                @foreach (var barcode in similarDocumentBarcodes)
+                {
+                    <UnorderedListItem><strong>Barcode: @barcode</strong></UnorderedListItem>
+                }
+            </UnorderedList>
+            <Paragraph Margin="Margin.Is3.FromTop">
+                Do you want to continue anyway?
+            </Paragraph>
+        </ModalBody>
+        <ModalFooter>
+            <Button Color="Color.Primary" Clicked="@ConfirmDuplicate">Continue Anyway</Button>
+            <Button Color="Color.Secondary" Clicked="@CancelDuplicate">Cancel</Button>
+        </ModalFooter>
+    </ModalContent>
+</Modal>

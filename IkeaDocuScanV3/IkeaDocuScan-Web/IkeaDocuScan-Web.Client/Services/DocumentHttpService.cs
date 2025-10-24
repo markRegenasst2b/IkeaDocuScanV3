@@ -53,6 +53,25 @@ public class DocumentHttpService : IDocumentService
         }
     }
 
+    public async Task<DocumentDto?> GetByBarCodeAsync(string barCode)
+    {
+        try
+        {
+            _logger.LogInformation("Fetching document by BarCode {BarCode} from API", barCode);
+            return await _http.GetFromJsonAsync<DocumentDto>($"/api/documents/barcode/{barCode}");
+        }
+        catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
+        {
+            _logger.LogWarning("Document with BarCode {BarCode} not found", barCode);
+            return null;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error fetching document by BarCode {BarCode}", barCode);
+            throw;
+        }
+    }
+
     public async Task<DocumentDto> CreateAsync(CreateDocumentDto dto)
     {
         try

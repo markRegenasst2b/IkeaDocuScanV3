@@ -3,6 +3,7 @@ namespace IkeaDocuScan.Shared.DTOs.Documents;
 public class CreateDocumentDto
 {
     public string Name { get; set; } = string.Empty;
+    public string? BarCode { get; set; } // User-provided in Register mode, or extracted from filename in Check-in mode
 
     // Related entities
     public int? DocumentTypeId { get; set; }

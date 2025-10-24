@@ -4,6 +4,7 @@ public class UpdateDocumentDto
 {
     public int Id { get; set; }
     public string Name { get; set; } = string.Empty;
+    public string? BarCode { get; set; } // BarCode should be immutable, but included for completeness
 
     // Related entities
     public int? DocumentTypeId { get; set; }
