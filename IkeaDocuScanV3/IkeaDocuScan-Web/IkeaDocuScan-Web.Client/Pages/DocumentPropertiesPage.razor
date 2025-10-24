@@ -3,6 +3,7 @@
 @page "/documents/checkin/{FileName}"
 @using Blazorise
 @using IkeaDocuScan_Web.Client.Models
+@using IkeaDocuScan_Web.Client.Components.DocumentManagement
 @using IkeaDocuScan.Shared.Interfaces
 @using IkeaDocuScan.Shared.DTOs.Documents
 @inject IDocumentService DocumentService
@@ -145,10 +146,7 @@
                             <CardTitle>Document Information</CardTitle>
                         </CardHeader>
                         <CardBody>
-                            @* Document section fields will go here *@
-                            <Paragraph TextColor="TextColor.Muted">
-                                [Document section fields - To be implemented]
-                            </Paragraph>
+                            <DocumentSectionFields @bind-Model="@Model" />
                         </CardBody>
                     </Card>
                 </Column>
@@ -161,10 +159,7 @@
                             <CardTitle>Action Information</CardTitle>
                         </CardHeader>
                         <CardBody>
-                            @* Action section fields will go here *@
-                            <Paragraph TextColor="TextColor.Muted">
-                                [Action section fields - To be implemented]
-                            </Paragraph>
+                            <ActionSectionFields @bind-Model="@Model" />
                         </CardBody>
                     </Card>
 
@@ -174,10 +169,7 @@
                             <CardTitle>Flags</CardTitle>
                         </CardHeader>
                         <CardBody>
-                            @* Flags section fields will go here *@
-                            <Paragraph TextColor="TextColor.Muted">
-                                [Flags section fields - To be implemented]
-                            </Paragraph>
+                            <FlagsSectionFields @bind-Model="@Model" />
                         </CardBody>
                     </Card>
 
@@ -187,10 +179,7 @@
                             <CardTitle>Additional Information</CardTitle>
                         </CardHeader>
                         <CardBody>
-                            @* Additional info fields will go here *@
-                            <Paragraph TextColor="TextColor.Muted">
-                                [Additional info fields - To be implemented]
-                            </Paragraph>
+                            <AdditionalInfoFields @bind-Model="@Model" />
                         </CardBody>
                     </Card>
                 </Column>

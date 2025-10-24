@@ -1,0 +1,46 @@
+@using Blazorise
+
+<Field Horizontal="@Horizontal">
+    <FieldLabel ColumnSize="@LabelColumnSize">@Label:</FieldLabel>
+    <FieldBody ColumnSize="@BodyColumnSize">
+        <TextEdit Text="@Value" ReadOnly="true" Plaintext="@Plaintext" />
+    </FieldBody>
+</Field>
+
+@code {
+    /// <summary>
+    /// Field label
+    /// </summary>
+    [Parameter]
+    public string Label { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Field value to display
+    /// </summary>
+    [Parameter]
+    public string? Value { get; set; }
+
+    /// <summary>
+    /// Whether to use horizontal layout
+    /// </summary>
+    [Parameter]
+    public bool Horizontal { get; set; } = true;
+
+    /// <summary>
+    /// Label column size (for horizontal layout)
+    /// </summary>
+    [Parameter]
+    public IFluentColumn? LabelColumnSize { get; set; }
+
+    /// <summary>
+    /// Body column size (for horizontal layout)
+    /// </summary>
+    [Parameter]
+    public IFluentColumn? BodyColumnSize { get; set; }
+
+    /// <summary>
+    /// Whether to display as plaintext (no border)
+    /// </summary>
+    [Parameter]
+    public bool Plaintext { get; set; } = true;
+}

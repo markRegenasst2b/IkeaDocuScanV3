@@ -1,0 +1,257 @@
+@using Blazorise
+@using IkeaDocuScan_Web.Client.Models
+@using IkeaDocuScan_Web.Client.Components.Shared
+@using IkeaDocuScan.Shared.DTOs.DocumentTypes
+@using IkeaDocuScan.Shared.DTOs.CounterParties
+@using IkeaDocuScan.Shared.Interfaces
+@inject IDocumentTypeService DocumentTypeService
+@inject ICounterPartyService CounterPartyService
+@inject ILogger<DocumentSectionFields> Logger
+
+@* Document Type *@
+<Field>
+    <FieldLabel>Document Type <span class="required">*</span></FieldLabel>
+    <FieldBody>
+        <Select TValue="int?" @bind-SelectedValue="@Model.DocumentTypeId" Disabled="@IsReadOnly">
+            <SelectItem Value="@((int?)null)">-- Select Document Type --</SelectItem>
+            @foreach (var dt in documentTypes)
+            {
+                <SelectItem Value="@dt.DtId">@dt.DtName</SelectItem>
+            }
+        </Select>
+    </FieldBody>
+</Field>
+
+@* Counterparty No. (Alpha) *@
+<Field>
+    <FieldLabel>Counterparty No.</FieldLabel>
+    <FieldBody>
+        <TextEdit @bind-Text="@Model.CounterPartyNoAlpha"
+                  Disabled="@IsReadOnly"
+                  Placeholder="Enter counterparty number"
+                  @onblur="OnCounterPartyNoBlur" />
+    </FieldBody>
+</Field>
+
+@* Counterparty Dropdown *@
+<Field>
+    <FieldLabel>Counterparty <span class="required">*</span></FieldLabel>
+    <FieldBody>
+        <Select TValue="string?" @bind-SelectedValue="@Model.CounterPartyId"
+                Disabled="@IsReadOnly"
+                @bind-SelectedValue:after="OnCounterPartyChanged">
+            <SelectItem Value="@((string?)null)">-- Select Counterparty --</SelectItem>
+            @foreach (var cp in counterParties)
+            {
+                <SelectItem Value="@cp.CounterPartyId">@cp.Name</SelectItem>
+            }
+        </Select>
+    </FieldBody>
+</Field>
+
+@* Location (Read-only) *@
+<ReadOnlyField Label="Location" Value="@Model.Location" />
+
+@* Affiliated To (Read-only) *@
+<ReadOnlyField Label="Affiliated to" Value="@Model.AffiliatedTo" />
+
+@* Third Parties Selector (Placeholder) *@
+<Field>
+    <FieldLabel>Third Parties</FieldLabel>
+    <FieldBody>
+        <Small TextColor="TextColor.Muted">[Third Party Selector - To be implemented]</Small>
+        @if (Model.SelectedThirdPartyNames.Any())
+        {
+            <div class="mt-2">
+                <Small>Selected: @string.Join(", ", Model.SelectedThirdPartyNames)</Small>
+            </div>
+        }
+    </FieldBody>
+</Field>
+
+@* Date of Contract *@
+<Field>
+    <FieldLabel>Date of Contract <span class="required">*</span></FieldLabel>
+    <FieldBody>
+        <DocumentDatePicker @bind-Value="@Model.DateOfContract"
+                           Disabled="@IsReadOnly"
+                           Label="Date of Contract" />
+    </FieldBody>
+</Field>
+
+@* Receiving Date *@
+<Field>
+    <FieldLabel>Receiving Date <span class="required">*</span></FieldLabel>
+    <FieldBody>
+        <DocumentDatePicker @bind-Value="@Model.ReceivingDate"
+                           Disabled="@IsReadOnly"
+                           Label="Receiving Date" />
+    </FieldBody>
+</Field>
+
+@* Sending Out Date - NEW FIELD *@
+<Field>
+    <FieldLabel>Sending Out Date <span class="required">*</span></FieldLabel>
+    <FieldBody>
+        <DocumentDatePicker @bind-Value="@Model.SendingOutDate"
+                           Disabled="@IsReadOnly"
+                           Label="Sending Out Date" />
+    </FieldBody>
+</Field>
+
+@* Forwarded To Signatories Date - NEW FIELD *@
+<Field>
+    <FieldLabel>Forwarded To Signatories Date <span class="required">*</span></FieldLabel>
+    <FieldBody>
+        <DocumentDatePicker @bind-Value="@Model.ForwardedToSignatoriesDate"
+                           Disabled="@IsReadOnly"
+                           Label="Forwarded To Signatories Date" />
+    </FieldBody>
+</Field>
+
+@* Dispatch Date (Conditional) *@
+<Field>
+    <FieldLabel>
+        Dispatch Date
+        @if (Model.IsDispatchDateEnabled)
+        {
+            <span class="required">*</span>
+        }
+    </FieldLabel>
+    <FieldBody>
+        <DocumentDatePicker @bind-Value="@Model.DispatchDate"
+                           Disabled="@(!Model.IsDispatchDateEnabled || IsReadOnly)"
+                           Label="Dispatch Date" />
+        @if (!Model.IsDispatchDateEnabled)
+        {
+            <Small TextColor="TextColor.Muted">(Disabled in Register mode)</Small>
+        }
+    </FieldBody>
+</Field>
+
+@* Comment *@
+<Field>
+    <FieldLabel>Comment <span class="required">*</span></FieldLabel>
+    <FieldBody>
+        <MemoEdit @bind-Text="@Model.Comment"
+                  Rows="3"
+                  MaxLength="255"
+                  Disabled="@IsReadOnly"
+                  Placeholder="Enter comment (max 255 characters)" />
+        @if (!string.IsNullOrEmpty(Model.Comment))
+        {
+            <Small TextColor="TextColor.Muted">@Model.Comment.Length / 255 characters</Small>
+        }
+    </FieldBody>
+</Field>
+
+<style>
+    .required {
+        color: red;
+    }
+</style>
+
+@code {
+    /// <summary>
+    /// The document properties model
+    /// </summary>
+    [Parameter, EditorRequired]
+    public DocumentPropertiesViewModel Model { get; set; } = new();
+
+    /// <summary>
+    /// Event callback when model changes
+    /// </summary>
+    [Parameter]
+    public EventCallback<DocumentPropertiesViewModel> ModelChanged { get; set; }
+
+    /// <summary>
+    /// Whether the fields are read-only
+    /// </summary>
+    [Parameter]
+    public bool IsReadOnly { get; set; }
+
+    private List<DocumentTypeDto> documentTypes = new();
+    private List<CounterPartyDto> counterParties = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadLookupData();
+    }
+
+    private async Task LoadLookupData()
+    {
+        try
+        {
+            // Load document types
+            documentTypes = await DocumentTypeService.GetAllAsync();
+            Logger.LogInformation("Loaded {Count} document types", documentTypes.Count);
+
+            // Load counter parties
+            counterParties = await CounterPartyService.GetAllAsync();
+            Logger.LogInformation("Loaded {Count} counter parties", counterParties.Count);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading lookup data");
+        }
+    }
+
+    private async Task OnCounterPartyNoBlur()
+    {
+        if (string.IsNullOrWhiteSpace(Model.CounterPartyNoAlpha))
+            return;
+
+        try
+        {
+            // Search for counter party by alpha-numeric code
+            var results = await CounterPartyService.SearchAsync(Model.CounterPartyNoAlpha);
+            var counterParty = results.FirstOrDefault(cp =>
+                cp.CounterPartyNoAlpha?.Equals(Model.CounterPartyNoAlpha, StringComparison.OrdinalIgnoreCase) == true);
+
+            if (counterParty != null)
+            {
+                Model.CounterPartyId = counterParty.CounterPartyId.ToString();
+                Model.CounterPartyName = counterParty.Name;
+                Model.Location = $"{counterParty.City}, {counterParty.Country}";
+                Model.AffiliatedTo = counterParty.AffiliatedTo;
+
+                Logger.LogInformation("Auto-populated counter party: {Name}", counterParty.Name);
+                await ModelChanged.InvokeAsync(Model);
+            }
+            else
+            {
+                Logger.LogWarning("Counter party not found for code: {Code}", Model.CounterPartyNoAlpha);
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error looking up counter party by code: {Code}", Model.CounterPartyNoAlpha);
+        }
+    }
+
+    private async Task OnCounterPartyChanged()
+    {
+        if (string.IsNullOrWhiteSpace(Model.CounterPartyId))
+        {
+            Model.CounterPartyNoAlpha = null;
+            Model.CounterPartyName = null;
+            Model.Location = null;
+            Model.AffiliatedTo = null;
+        }
+        else
+        {
+            var counterParty = counterParties.FirstOrDefault(cp => cp.CounterPartyId == int.Parse(Model.CounterPartyId ?? "-1"));
+            if (counterParty != null)
+            {
+                Model.CounterPartyNoAlpha = counterParty.CounterPartyNoAlpha;
+                Model.CounterPartyName = counterParty.Name;
+                Model.Location = $"{counterParty.City}, {counterParty.Country}";
+                Model.AffiliatedTo = counterParty.AffiliatedTo;
+
+                Logger.LogInformation("Counter party changed to: {Name}", counterParty.Name);
+            }
+        }
+
+        await ModelChanged.InvokeAsync(Model);
+    }
+}

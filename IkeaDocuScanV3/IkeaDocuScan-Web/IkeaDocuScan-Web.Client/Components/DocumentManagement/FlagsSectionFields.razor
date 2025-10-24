@@ -1,0 +1,69 @@
+@using Blazorise
+@using IkeaDocuScan_Web.Client.Models
+@using IkeaDocuScan_Web.Client.Components.Shared
+
+@* Fax *@
+<Field>
+    <FieldLabel>Fax <span class="required">*</span></FieldLabel>
+    <FieldBody>
+        <TriStateDropdown @bind-Value="@Model.Fax"
+                         Disabled="@IsReadOnly"
+                         Label="Fax" />
+    </FieldBody>
+</Field>
+
+@* Original Received *@
+<Field>
+    <FieldLabel>Original Received <span class="required">*</span></FieldLabel>
+    <FieldBody>
+        <TriStateDropdown @bind-Value="@Model.OriginalReceived"
+                         Disabled="@IsReadOnly"
+                         Label="Original Received" />
+    </FieldBody>
+</Field>
+
+@* Translation Received *@
+<Field>
+    <FieldLabel>Translation Received <span class="required">*</span></FieldLabel>
+    <FieldBody>
+        <TriStateDropdown @bind-Value="@Model.TranslationReceived"
+                         Disabled="@IsReadOnly"
+                         Label="Translation Received" />
+    </FieldBody>
+</Field>
+
+@* Confidential *@
+<Field>
+    <FieldLabel>Confidential <span class="required">*</span></FieldLabel>
+    <FieldBody>
+        <TriStateDropdown @bind-Value="@Model.Confidential"
+                         Disabled="@IsReadOnly"
+                         Label="Confidential" />
+    </FieldBody>
+</Field>
+
+<style>
+    .required {
+        color: red;
+    }
+</style>
+
+@code {
+    /// <summary>
+    /// The document properties model
+    /// </summary>
+    [Parameter, EditorRequired]
+    public DocumentPropertiesViewModel Model { get; set; } = new();
+
+    /// <summary>
+    /// Event callback when model changes
+    /// </summary>
+    [Parameter]
+    public EventCallback<DocumentPropertiesViewModel> ModelChanged { get; set; }
+
+    /// <summary>
+    /// Whether the fields are read-only
+    /// </summary>
+    [Parameter]
+    public bool IsReadOnly { get; set; }
+}

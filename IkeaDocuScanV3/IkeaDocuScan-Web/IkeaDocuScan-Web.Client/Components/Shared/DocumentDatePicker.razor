@@ -1,0 +1,47 @@
+@using Blazorise
+
+<DateEdit TValue="DateTime?"
+          Date="@Value"
+          DateChanged="@OnDateChanged"
+          Disabled="@Disabled"
+          Placeholder="@Placeholder"
+          InputMode="DateInputMode.Date">
+</DateEdit>
+
+@code {
+    /// <summary>
+    /// The bound nullable DateTime value
+    /// </summary>
+    [Parameter]
+    public DateTime? Value { get; set; }
+
+    /// <summary>
+    /// Event callback when date changes
+    /// </summary>
+    [Parameter]
+    public EventCallback<DateTime?> ValueChanged { get; set; }
+
+    /// <summary>
+    /// Whether the date picker is disabled
+    /// </summary>
+    [Parameter]
+    public bool Disabled { get; set; }
+
+    /// <summary>
+    /// Placeholder text
+    /// </summary>
+    [Parameter]
+    public string Placeholder { get; set; } = "Select date...";
+
+    /// <summary>
+    /// Field label for validation messages
+    /// </summary>
+    [Parameter]
+    public string? Label { get; set; }
+
+    private async Task OnDateChanged(DateTime? newDate)
+    {
+        Value = newDate;
+        await ValueChanged.InvokeAsync(newDate);
+    }
+}

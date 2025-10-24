@@ -1,0 +1,141 @@
+@using Blazorise
+@inject ILogger<FileUploadButton> Logger
+
+<Field>
+    @if (!string.IsNullOrEmpty(Label))
+    {
+        <FieldLabel>@Label</FieldLabel>
+    }
+    <FieldBody>
+        <FileEdit Changed="@OnFileChanged"
+                  Filter="@AllowedExtensions"
+                  MaxFileSize="@MaxFileSizeBytes"
+                  Disabled="@Disabled">
+            <Feedback>
+                @if (!string.IsNullOrEmpty(errorMessage))
+                {
+                    <ValidationError>@errorMessage</ValidationError>
+                }
+            </Feedback>
+        </FileEdit>
+        @if (FileBytes != null && FileBytes.Length > 0)
+        {
+            <Small TextColor="TextColor.Success">
+                <Icon Name="IconName.Check" />
+                File loaded: @FileName (@GetFileSizeKB() KB)
+            </Small>
+        }
+    </FieldBody>
+</Field>
+
+@code {
+    private string? errorMessage;
+
+    /// <summary>
+    /// Field label
+    /// </summary>
+    [Parameter]
+    public string? Label { get; set; }
+
+    /// <summary>
+    /// The uploaded file bytes
+    /// </summary>
+    [Parameter]
+    public byte[]? FileBytes { get; set; }
+
+    /// <summary>
+    /// Event callback when file is selected
+    /// </summary>
+    [Parameter]
+    public EventCallback<byte[]?> FileBytesChanged { get; set; }
+
+    /// <summary>
+    /// The uploaded file name
+    /// </summary>
+    [Parameter]
+    public string? FileName { get; set; }
+
+    /// <summary>
+    /// Event callback when file name changes
+    /// </summary>
+    [Parameter]
+    public EventCallback<string?> FileNameChanged { get; set; }
+
+    /// <summary>
+    /// Whether the file upload is disabled
+    /// </summary>
+    [Parameter]
+    public bool Disabled { get; set; }
+
+    /// <summary>
+    /// Allowed file extensions (e.g., ".pdf,.jpg,.png")
+    /// Default: .pdf only
+    /// </summary>
+    [Parameter]
+    public string AllowedExtensions { get; set; } = ".pdf";
+
+    /// <summary>
+    /// Maximum file size in bytes
+    /// Default: 50MB
+    /// </summary>
+    [Parameter]
+    public long MaxFileSizeBytes { get; set; } = 50 * 1024 * 1024; // 50MB
+
+    private async Task OnFileChanged(FileChangedEventArgs e)
+    {
+        errorMessage = null;
+
+        try
+        {
+            if (e.Files.Length == 0)
+            {
+                FileBytes = null;
+                FileName = null;
+                await FileBytesChanged.InvokeAsync(null);
+                await FileNameChanged.InvokeAsync(null);
+                return;
+            }
+
+            var file = e.Files[0];
+
+            // Validate file size
+            if (file.Size > MaxFileSizeBytes)
+            {
+                errorMessage = $"File size exceeds maximum allowed size of {MaxFileSizeBytes / 1024 / 1024}MB";
+                Logger.LogWarning("File upload failed: size {Size} exceeds maximum {MaxSize}", file.Size, MaxFileSizeBytes);
+                return;
+            }
+
+            // Validate file extension
+            var extension = Path.GetExtension(file.Name).ToLowerInvariant();
+            var allowedExtArray = AllowedExtensions.Split(',').Select(e => e.Trim().ToLowerInvariant()).ToArray();
+            if (!allowedExtArray.Contains(extension))
+            {
+                errorMessage = $"File type '{extension}' is not allowed. Allowed types: {AllowedExtensions}";
+                Logger.LogWarning("File upload failed: extension {Extension} not in allowed list {Allowed}", extension, AllowedExtensions);
+                return;
+            }
+
+            // Read file bytes
+            using var stream = new MemoryStream();
+            await file.OpenReadStream(MaxFileSizeBytes).CopyToAsync(stream);
+            FileBytes = stream.ToArray();
+            FileName = file.Name;
+
+            await FileBytesChanged.InvokeAsync(FileBytes);
+            await FileNameChanged.InvokeAsync(FileName);
+
+            Logger.LogInformation("File uploaded successfully: {FileName}, {Size} bytes", FileName, FileBytes.Length);
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error uploading file: {ex.Message}";
+            Logger.LogError(ex, "Error uploading file");
+        }
+    }
+
+    private long GetFileSizeKB()
+    {
+        return FileBytes != null ? FileBytes.Length / 1024 : 0;
+    }
+}

@@ -1,0 +1,38 @@
+@using Blazorise
+
+@if (Errors != null && Errors.Any())
+{
+    <Alert Color="Color.Danger" Visible="true" Dismisable="@Dismissable">
+        <AlertMessage>@Title</AlertMessage>
+        <AlertDescription>
+            <UnorderedList>
+                @foreach (var error in Errors)
+                {
+                    <UnorderedListItem>@error</UnorderedListItem>
+                }
+            </UnorderedList>
+        </AlertDescription>
+    </Alert>
+}
+
+@code {
+    /// <summary>
+    /// List of validation errors to display
+    /// </summary>
+    [Parameter]
+    public List<string>? Errors { get; set; }
+
+    /// <summary>
+    /// Alert title
+    /// Default: "Please correct the following errors:"
+    /// </summary>
+    [Parameter]
+    public string Title { get; set; } = "Please correct the following errors:";
+
+    /// <summary>
+    /// Whether the alert can be dismissed
+    /// Default: false
+    /// </summary>
+    [Parameter]
+    public bool Dismissable { get; set; } = false;
+}
