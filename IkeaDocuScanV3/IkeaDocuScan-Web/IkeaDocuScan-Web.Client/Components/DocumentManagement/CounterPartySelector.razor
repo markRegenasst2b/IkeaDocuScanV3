@@ -1,0 +1,256 @@
+@using IkeaDocuScan.Shared.DTOs.CounterParties
+@using IkeaDocuScan.Shared.Interfaces
+@inject ICounterPartyService CounterPartyService
+@inject ILogger<CounterPartySelector> Logger
+
+<div class="counterparty-selector">
+    <div class="row">
+        @* Search Box *@
+        <div class="col-12 mb-2">
+            <input type="text"
+                   class="form-control"
+                   placeholder="Search counterparty by name, code, city, or country..."
+                   value="@searchTerm"
+                   @oninput="OnSearchChanged"
+                   disabled="@Disabled" />
+        </div>
+
+        @* Available Counterparties (Left) *@
+        <div class="col-6">
+            <label class="form-label">Available Counterparties</label>
+            <select size="10"
+                    class="form-select counterparty-listbox"
+                    @ondblclick="SelectCounterParty"
+                    disabled="@Disabled">
+                @foreach (var cp in filteredCounterParties)
+                {
+                    <option value="@cp.CounterPartyId"
+                            selected="@(selectedCounterPartyId == cp.CounterPartyId.ToString())"
+                            @onclick="@(() => OnCounterPartyClick(cp))">
+                        @cp.Name (@cp.CounterPartyNoAlpha)
+                    </option>
+                }
+            </select>
+            <small class="text-muted">
+                @filteredCounterParties.Count available | Double-click to select
+            </small>
+        </div>
+
+        @* Selected Counterparty (Right) *@
+        <div class="col-6">
+            <label class="form-label">Selected Counterparty<span class="required">*</span></label>
+            <div class="selected-counterparty-box">
+                @if (!string.IsNullOrEmpty(SelectedCounterPartyId))
+                {
+                    var selected = allCounterParties.FirstOrDefault(cp => cp.CounterPartyId.ToString() == SelectedCounterPartyId);
+                    if (selected != null)
+                    {
+                        <div class="selected-item">
+                            <div class="selected-item-header">
+                                <strong>@selected.Name</strong>
+                                <button class="btn btn-sm btn-link text-danger"
+                                        @onclick="ClearSelection"
+                                        disabled="@Disabled"
+                                        title="Clear selection">
+                                    <i class="fa fa-times"></i>
+                                </button>
+                            </div>
+                            <div class="selected-item-details">
+                                <small class="text-muted">
+                                    Code: @selected.CounterPartyNoAlpha<br />
+                                    Location: @selected.City, @selected.Country<br />
+                                    @if (!string.IsNullOrEmpty(selected.AffiliatedTo))
+                                    {
+                                        <span>Affiliated: @selected.AffiliatedTo</span>
+                                    }
+                                </small>
+                            </div>
+                        </div>
+                    }
+                }
+                else
+                {
+                    <div class="no-selection">
+                        <small class="text-muted">No counterparty selected</small>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .counterparty-selector {
+        width: 100%;
+    }
+
+    .counterparty-listbox {
+        width: 100%;
+        font-family: Tahoma, sans-serif;
+        font-size: 11px;
+        border: solid 1px gray;
+        min-height: 250px;
+    }
+
+    .counterparty-listbox option {
+        padding: 4px 6px;
+        cursor: pointer;
+    }
+
+    .counterparty-listbox option:hover {
+        background-color: #f0f0f0;
+    }
+
+    .selected-counterparty-box {
+        border: solid 1px #dee2e6;
+        border-radius: 4px;
+        padding: 12px;
+        min-height: 250px;
+        background-color: #f8f9fa;
+    }
+
+    .selected-item {
+        background-color: white;
+        border: solid 1px #0d6efd;
+        border-radius: 4px;
+        padding: 10px;
+    }
+
+    .selected-item-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 8px;
+    }
+
+    .selected-item-details {
+        padding-left: 4px;
+    }
+
+    .no-selection {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 200px;
+    }
+
+    .required {
+        color: red;
+        margin-left: 2px;
+    }
+</style>
+
+@code {
+    /// <summary>
+    /// The selected counterparty ID
+    /// </summary>
+    [Parameter]
+    public string? SelectedCounterPartyId { get; set; }
+
+    /// <summary>
+    /// Event callback when selected ID changes
+    /// </summary>
+    [Parameter]
+    public EventCallback<string?> SelectedCounterPartyIdChanged { get; set; }
+
+    /// <summary>
+    /// Event callback when counterparty changes (provides full DTO)
+    /// </summary>
+    [Parameter]
+    public EventCallback<CounterPartyDto?> OnCounterPartySelected { get; set; }
+
+    /// <summary>
+    /// Whether the selector is disabled
+    /// </summary>
+    [Parameter]
+    public bool Disabled { get; set; }
+
+    // Internal state
+    private List<CounterPartyDto> allCounterParties = new();
+    private List<CounterPartyDto> filteredCounterParties = new();
+    private string searchTerm = string.Empty;
+    private string? selectedCounterPartyId = null;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadCounterParties();
+        ApplyFilter();
+    }
+
+    protected override void OnParametersSet()
+    {
+        selectedCounterPartyId = SelectedCounterPartyId;
+    }
+
+    private async Task LoadCounterParties()
+    {
+        try
+        {
+            allCounterParties = await CounterPartyService.GetAllAsync();
+            Logger.LogInformation("Loaded {Count} counterparties for selector", allCounterParties.Count);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading counterparties");
+        }
+    }
+
+    private void OnSearchChanged(ChangeEventArgs e)
+    {
+        searchTerm = e.Value?.ToString() ?? string.Empty;
+        ApplyFilter();
+    }
+
+    private void ApplyFilter()
+    {
+        if (string.IsNullOrWhiteSpace(searchTerm))
+        {
+            filteredCounterParties = allCounterParties;
+        }
+        else
+        {
+            var term = searchTerm.ToLower().Trim();
+            filteredCounterParties = allCounterParties
+                .Where(cp =>
+                    (cp.Name != null && cp.Name.ToLower().Contains(term)) ||
+                    (cp.CounterPartyNoAlpha != null && cp.CounterPartyNoAlpha.ToLower().Contains(term)) ||
+                    cp.City.ToLower().Contains(term) ||
+                    cp.Country.ToLower().Contains(term))
+                .ToList();
+        }
+    }
+
+    private void OnCounterPartyClick(CounterPartyDto counterParty)
+    {
+        selectedCounterPartyId = counterParty.CounterPartyId.ToString();
+    }
+
+    private async Task SelectCounterParty()
+    {
+        if (Disabled || selectedCounterPartyId == null)
+            return;
+
+        var selected = allCounterParties.FirstOrDefault(cp => cp.CounterPartyId.ToString() == selectedCounterPartyId);
+        if (selected != null)
+        {
+            SelectedCounterPartyId = selected.CounterPartyId.ToString();
+            await SelectedCounterPartyIdChanged.InvokeAsync(SelectedCounterPartyId);
+            await OnCounterPartySelected.InvokeAsync(selected);
+
+            Logger.LogInformation("Counterparty selected: {Name} (ID: {Id})", selected.Name, selected.CounterPartyId);
+        }
+    }
+
+    private async Task ClearSelection()
+    {
+        if (Disabled)
+            return;
+
+        SelectedCounterPartyId = null;
+        selectedCounterPartyId = null;
+        await SelectedCounterPartyIdChanged.InvokeAsync(null);
+        await OnCounterPartySelected.InvokeAsync(null);
+
+        Logger.LogInformation("Counterparty selection cleared");
+    }
+}

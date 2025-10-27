@@ -4,7 +4,6 @@
 @using IkeaDocuScan.Shared.DTOs.CounterParties
 @using IkeaDocuScan.Shared.Interfaces
 @inject IDocumentTypeService DocumentTypeService
-@inject ICounterPartyService CounterPartyService
 @inject ILogger<DocumentSectionFields> Logger
 
 @* Document Type *@
@@ -21,41 +20,12 @@
     </div>
 </div>
 
-@* Counterparty No. (Alpha) *@
-<div class="row mb-3 field-horizontal">
-    <label class="col-sm-3 col-form-label text-end">Counterparty No.</label>
-    <div class="col-sm-9">
-        <input type="text"
-               class="form-control compact-input"
-               @bind="Model.CounterPartyNoAlpha"
-               disabled="@IsReadOnly"
-               placeholder="Enter counterparty number"
-               @onblur="OnCounterPartyNoBlur" />
-    </div>
+@* Counterparty Selector *@
+<div class="mb-3">
+    <CounterPartySelector @bind-SelectedCounterPartyId="@Model.CounterPartyId"
+                         OnCounterPartySelected="@OnCounterPartySelectedFromSelector"
+                         Disabled="@IsReadOnly" />
 </div>
-
-@* Counterparty Dropdown *@
-<div class="row mb-3 field-horizontal">
-    <label class="col-sm-3 col-form-label text-end">Counterparty<span class="required">*</span></label>
-    <div class="col-sm-9">
-        <select class="form-select compact-dropdown"
-                @bind="Model.CounterPartyId"
-                @bind:after="OnCounterPartyChanged"
-                disabled="@IsReadOnly">
-            <option value="">-- Select Counterparty --</option>
-            @foreach (var cp in counterParties)
-            {
-                <option value="@cp.CounterPartyId">@cp.Name</option>
-            }
-        </select>
-    </div>
-</div>
-
-@* Location (Read-only) *@
-<ReadOnlyField Label="Location" Value="@Model.Location" />
-
-@* Affiliated To (Read-only) *@
-<ReadOnlyField Label="Affiliated to" Value="@Model.AffiliatedTo" />
 
 @* Third Parties Selector *@
 <ThirdPartySelector @bind-SelectedThirdPartyIds="@Model.SelectedThirdPartyIds"
@@ -169,68 +139,31 @@
     public bool IsReadOnly { get; set; }
 
     private List<DocumentTypeDto> documentTypes = new();
-    private List<CounterPartyDto> counterParties = new();
 
     protected override async Task OnInitializedAsync()
     {
-        await LoadLookupData();
+        await LoadDocumentTypes();
     }
 
-    private async Task LoadLookupData()
+    private async Task LoadDocumentTypes()
     {
         try
         {
             // Load document types
             documentTypes = await DocumentTypeService.GetAllAsync();
             Logger.LogInformation("Loaded {Count} document types", documentTypes.Count);
-
-            // Load counter parties
-            counterParties = await CounterPartyService.GetAllAsync();
-            Logger.LogInformation("Loaded {Count} counter parties", counterParties.Count);
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Error loading lookup data");
+            Logger.LogError(ex, "Error loading document types");
         }
     }
 
-    private async Task OnCounterPartyNoBlur()
+    private async Task OnCounterPartySelectedFromSelector(CounterPartyDto? counterParty)
     {
-        if (string.IsNullOrWhiteSpace(Model.CounterPartyNoAlpha))
-            return;
-
-        try
+        if (counterParty == null)
         {
-            // Search for counter party by alpha-numeric code
-            var results = await CounterPartyService.SearchAsync(Model.CounterPartyNoAlpha);
-            var counterParty = results.FirstOrDefault(cp =>
-                cp.CounterPartyNoAlpha?.Equals(Model.CounterPartyNoAlpha, StringComparison.OrdinalIgnoreCase) == true);
-
-            if (counterParty != null)
-            {
-                Model.CounterPartyId = counterParty.CounterPartyId.ToString();
-                Model.CounterPartyName = counterParty.Name;
-                Model.Location = $"{counterParty.City}, {counterParty.Country}";
-                Model.AffiliatedTo = counterParty.AffiliatedTo;
-
-                Logger.LogInformation("Auto-populated counter party: {Name}", counterParty.Name);
-                await ModelChanged.InvokeAsync(Model);
-            }
-            else
-            {
-                Logger.LogWarning("Counter party not found for code: {Code}", Model.CounterPartyNoAlpha);
-            }
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Error looking up counter party by code: {Code}", Model.CounterPartyNoAlpha);
-        }
-    }
-
-    private async Task OnCounterPartyChanged()
-    {
-        if (string.IsNullOrWhiteSpace(Model.CounterPartyId))
-        {
+            Model.CounterPartyId = null;
             Model.CounterPartyNoAlpha = null;
             Model.CounterPartyName = null;
             Model.Location = null;
@@ -238,16 +171,13 @@
         }
         else
         {
-            var counterParty = counterParties.FirstOrDefault(cp => cp.CounterPartyId == int.Parse(Model.CounterPartyId ?? "-1"));
-            if (counterParty != null)
-            {
-                Model.CounterPartyNoAlpha = counterParty.CounterPartyNoAlpha;
-                Model.CounterPartyName = counterParty.Name;
-                Model.Location = $"{counterParty.City}, {counterParty.Country}";
-                Model.AffiliatedTo = counterParty.AffiliatedTo;
+            Model.CounterPartyId = counterParty.CounterPartyId.ToString();
+            Model.CounterPartyNoAlpha = counterParty.CounterPartyNoAlpha;
+            Model.CounterPartyName = counterParty.Name;
+            Model.Location = $"{counterParty.City}, {counterParty.Country}";
+            Model.AffiliatedTo = counterParty.AffiliatedTo;
 
-                Logger.LogInformation("Counter party changed to: {Name}", counterParty.Name);
-            }
+            Logger.LogInformation("Counter party selected: {Name}", counterParty.Name);
         }
 
         await ModelChanged.InvokeAsync(Model);
