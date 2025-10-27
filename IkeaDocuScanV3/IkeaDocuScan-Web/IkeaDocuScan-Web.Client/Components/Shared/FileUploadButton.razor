@@ -1,32 +1,29 @@
-@using Blazorise
+@using Microsoft.AspNetCore.Components.Forms
 @inject ILogger<FileUploadButton> Logger
 
-<Field>
+<div class="mb-3">
     @if (!string.IsNullOrEmpty(Label))
     {
-        <FieldLabel>@Label</FieldLabel>
+        <label class="form-label">@Label</label>
     }
-    <FieldBody>
-        <FileEdit Changed="@OnFileChanged"
-                  Filter="@AllowedExtensions"
-                  MaxFileSize="@MaxFileSizeBytes"
-                  Disabled="@Disabled">
-            <Feedback>
-                @if (!string.IsNullOrEmpty(errorMessage))
-                {
-                    <ValidationError>@errorMessage</ValidationError>
-                }
-            </Feedback>
-        </FileEdit>
+    <div>
+        <InputFile OnChange="@OnFileChanged"
+                   accept="@AllowedExtensions"
+                   disabled="@Disabled"
+                   class="form-control" />
+        @if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <div class="invalid-feedback d-block">@errorMessage</div>
+        }
         @if (FileBytes != null && FileBytes.Length > 0)
         {
-            <Small TextColor="TextColor.Success">
-                <Icon Name="IconName.Check" />
+            <small class="text-success">
+                <i class="fa fa-check"></i>
                 File loaded: @FileName (@GetFileSizeKB() KB)
-            </Small>
+            </small>
         }
-    </FieldBody>
-</Field>
+    </div>
+</div>
 
 @code {
     private string? errorMessage;
@@ -81,13 +78,15 @@
     [Parameter]
     public long MaxFileSizeBytes { get; set; } = 50 * 1024 * 1024; // 50MB
 
-    private async Task OnFileChanged(FileChangedEventArgs e)
+    private async Task OnFileChanged(InputFileChangeEventArgs e)
     {
         errorMessage = null;
 
         try
         {
-            if (e.Files.Length == 0)
+            var file = e.File;
+
+            if (file == null)
             {
                 FileBytes = null;
                 FileName = null;
@@ -95,8 +94,6 @@
                 await FileNameChanged.InvokeAsync(null);
                 return;
             }
-
-            var file = e.Files[0];
 
             // Validate file size
             if (file.Size > MaxFileSizeBytes)

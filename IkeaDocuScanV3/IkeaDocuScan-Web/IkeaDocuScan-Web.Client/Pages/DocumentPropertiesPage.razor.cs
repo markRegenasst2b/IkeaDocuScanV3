@@ -2,7 +2,6 @@ using Microsoft.AspNetCore.Components;
 using IkeaDocuScan_Web.Client.Models;
 using IkeaDocuScan.Shared.DTOs.Documents;
 using IkeaDocuScan.Shared.Interfaces;
-using Blazorise;
 using Microsoft.JSInterop;
 
 namespace IkeaDocuScan_Web.Client.Pages;
@@ -39,7 +38,7 @@ public partial class DocumentPropertiesPage : ComponentBase
     private DateTime? copiedDataExpiration;
 
     // Duplicate detection
-    private Modal duplicateModal = new();
+    private bool showDuplicateModal = false;
     private List<int> similarDocumentBarcodes = new();
     private bool duplicateConfirmed = false;
 
@@ -353,7 +352,8 @@ public partial class DocumentPropertiesPage : ComponentBase
         // if (similar.Any())
         // {
         //     similarDocumentBarcodes = similar.Take(5).ToList();
-        //     await duplicateModal.Show();
+        //     showDuplicateModal = true;
+        //     StateHasChanged();
         //     return true; // Wait for user confirmation
         // }
 
@@ -363,13 +363,13 @@ public partial class DocumentPropertiesPage : ComponentBase
     private async Task ConfirmDuplicate()
     {
         duplicateConfirmed = true;
-        await duplicateModal.Hide();
+        showDuplicateModal = false;
         await SaveDocument(); // Retry save with confirmation
     }
 
-    private async Task CancelDuplicate()
+    private void CancelDuplicate()
     {
-        await duplicateModal.Hide();
+        showDuplicateModal = false;
     }
 
     // ========================================

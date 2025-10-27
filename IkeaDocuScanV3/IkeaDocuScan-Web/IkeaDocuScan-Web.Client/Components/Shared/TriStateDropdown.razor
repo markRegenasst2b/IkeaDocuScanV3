@@ -1,13 +1,11 @@
-@using Blazorise
-
-<Select TValue="bool?"
-        SelectedValue="@Value"
-        SelectedValueChanged="@OnValueChanged"
-        Disabled="@Disabled">
-    <SelectItem Value="@((bool?)null)">-- Select --</SelectItem>
-    <SelectItem Value="@true">Yes</SelectItem>
-    <SelectItem Value="@false">No</SelectItem>
-</Select>
+<select class="form-select"
+        value="@GetStringValue()"
+        disabled="@Disabled"
+        @onchange="OnValueChanged">
+    <option value="">-- Select --</option>
+    <option value="true">Yes</option>
+    <option value="false">No</option>
+</select>
 
 @code {
     /// <summary>
@@ -35,8 +33,23 @@
     [Parameter]
     public string? Label { get; set; }
 
-    private async Task OnValueChanged(bool? newValue)
+    private string GetStringValue()
     {
+        if (!Value.HasValue) return "";
+        return Value.Value ? "true" : "false";
+    }
+
+    private async Task OnValueChanged(ChangeEventArgs e)
+    {
+        var stringValue = e.Value?.ToString();
+
+        bool? newValue = stringValue switch
+        {
+            "true" => true,
+            "false" => false,
+            _ => null
+        };
+
         Value = newValue;
         await ValueChanged.InvokeAsync(newValue);
     }

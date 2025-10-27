@@ -1,18 +1,18 @@
-@using Blazorise
-
 @if (Errors != null && Errors.Any())
 {
-    <Alert Color="Color.Danger" Visible="true" Dismisable="@Dismissable">
-        <AlertMessage>@Title</AlertMessage>
-        <AlertDescription>
-            <UnorderedList>
-                @foreach (var error in Errors)
-                {
-                    <UnorderedListItem>@error</UnorderedListItem>
-                }
-            </UnorderedList>
-        </AlertDescription>
-    </Alert>
+    <div class="alert alert-danger @(Dismissable ? "alert-dismissible fade show" : "")" role="alert">
+        <h5 class="alert-heading">@Title</h5>
+        <ul class="mb-0">
+            @foreach (var error in Errors)
+            {
+                <li>@error</li>
+            }
+        </ul>
+        @if (Dismissable)
+        {
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        }
+    </div>
 }
 
 @code {

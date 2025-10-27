@@ -1,13 +1,9 @@
-@using Blazorise
-
-<DateEdit TValue="DateTime?"
-          Date="@Value"
-          DateChanged="@OnDateChanged"
-          Disabled="@Disabled"
-          Placeholder="@Placeholder"
-          InputMode="DateInputMode.Date"
-          Class="@Class">
-</DateEdit>
+<input type="date"
+       class="form-control @Class"
+       value="@(Value?.ToString("yyyy-MM-dd"))"
+       disabled="@Disabled"
+       placeholder="@Placeholder"
+       @onchange="OnDateChanged" />
 
 @code {
     /// <summary>
@@ -46,9 +42,20 @@
     [Parameter]
     public string? Class { get; set; }
 
-    private async Task OnDateChanged(DateTime? newDate)
+    private async Task OnDateChanged(ChangeEventArgs e)
     {
-        Value = newDate;
-        await ValueChanged.InvokeAsync(newDate);
+        if (e.Value is string dateString && !string.IsNullOrWhiteSpace(dateString))
+        {
+            if (DateTime.TryParse(dateString, out var parsedDate))
+            {
+                Value = parsedDate;
+                await ValueChanged.InvokeAsync(parsedDate);
+            }
+        }
+        else
+        {
+            Value = null;
+            await ValueChanged.InvokeAsync(null);
+        }
     }
 }

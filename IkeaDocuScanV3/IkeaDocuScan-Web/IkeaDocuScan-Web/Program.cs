@@ -12,9 +12,6 @@ using Microsoft.AspNetCore.Authentication.Negotiate;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.EntityFrameworkCore;
-using Blazorise;
-using Blazorise.Bootstrap5;
-using Blazorise.Icons.FontAwesome;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -32,12 +29,6 @@ builder.AddServiceDefaults();
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents()
     .AddInteractiveWebAssemblyComponents();
-
-// Add Blazorise
-builder.Services
-    .AddBlazorise()
-    .AddBootstrap5Providers()
-    .AddFontAwesomeIcons();
 
 // Add Authentication Services
 // Note: Negotiate (Windows Auth) only works on Windows with IIS

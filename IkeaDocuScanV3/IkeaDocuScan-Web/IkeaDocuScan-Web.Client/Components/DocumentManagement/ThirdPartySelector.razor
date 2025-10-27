@@ -1,4 +1,3 @@
-@using Blazorise
 @using IkeaDocuScan_Web.Client.Models
 @using IkeaDocuScan.Shared.DTOs.CounterParties
 @using IkeaDocuScan.Shared.Interfaces
@@ -6,10 +5,10 @@
 @inject ILogger<ThirdPartySelector> Logger
 
 <div class="third-party-selector">
-    <Row>
+    <div class="row">
         @* Available Third Parties (Left) *@
-        <Column ColumnSize="ColumnSize.Is5">
-            <FieldLabel>Available Third Parties</FieldLabel>
+        <div class="col-5">
+            <label class="form-label">Available Third Parties</label>
             <select multiple
                     size="7"
                     class="form-select third-party-listbox"
@@ -24,35 +23,30 @@
                     </option>
                 }
             </select>
-            <Small TextColor="TextColor.Muted">
+            <small class="text-muted">
                 @availableItems.Count available | Double-click or use buttons to move
-            </Small>
-        </Column>
+            </small>
+        </div>
 
         @* Add/Remove Buttons (Middle) *@
-        <Column ColumnSize="ColumnSize.Is2" Class="d-flex flex-column justify-content-center align-items-center">
-            <Button Color="Color.Primary"
-                    Size="Size.Small"
-                    Clicked="AddSelectedItems"
-                    Disabled="@(Disabled || !selectedAvailableIds.Any())"
-                    Margin="Margin.Is2.FromBottom"
-                    Title="Add selected items">
-                <Icon Name="IconName.ChevronRight" />
-                <Icon Name="IconName.ChevronRight" />
-            </Button>
-            <Button Color="Color.Primary"
-                    Size="Size.Small"
-                    Clicked="RemoveSelectedItems"
-                    Disabled="@(Disabled || !selectedSelectedIds.Any())"
-                    Title="Remove selected items">
-                <Icon Name="IconName.ChevronLeft" />
-                <Icon Name="IconName.ChevronLeft" />
-            </Button>
-        </Column>
+        <div class="col-2 d-flex flex-column justify-content-center align-items-center">
+            <button class="btn btn-primary btn-sm mb-2"
+                    @onclick="AddSelectedItems"
+                    disabled="@(Disabled || !selectedAvailableIds.Any())"
+                    title="Add selected items">
+                &raquo;
+            </button>
+            <button class="btn btn-primary btn-sm"
+                    @onclick="RemoveSelectedItems"
+                    disabled="@(Disabled || !selectedSelectedIds.Any())"
+                    title="Remove selected items">
+                &laquo;
+            </button>
+        </div>
 
         @* Selected Third Parties (Right) *@
-        <Column ColumnSize="ColumnSize.Is5">
-            <FieldLabel>Selected Third Parties</FieldLabel>
+        <div class="col-5">
+            <label class="form-label">Selected Third Parties</label>
             <select multiple
                     size="5"
                     class="form-select third-party-listbox"
@@ -67,11 +61,11 @@
                     </option>
                 }
             </select>
-            <Small TextColor="TextColor.Success">
+            <small class="text-success">
                 @selectedItems.Count selected
-            </Small>
-        </Column>
-    </Row>
+            </small>
+        </div>
+    </div>
 </div>
 
 <style>

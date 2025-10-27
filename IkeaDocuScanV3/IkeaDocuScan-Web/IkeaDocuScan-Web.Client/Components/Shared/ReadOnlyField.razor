@@ -1,11 +1,33 @@
-@using Blazorise
-
-<Field Horizontal="@Horizontal">
-    <FieldLabel ColumnSize="@LabelColumnSize">@Label:</FieldLabel>
-    <FieldBody ColumnSize="@BodyColumnSize">
-        <TextEdit Text="@Value" ReadOnly="true" Plaintext="@Plaintext" />
-    </FieldBody>
-</Field>
+@if (Horizontal)
+{
+    <div class="row mb-3">
+        <label class="col-sm-3 col-form-label">@Label:</label>
+        <div class="col-sm-9">
+            @if (Plaintext)
+            {
+                <input type="text" readonly class="form-control-plaintext" value="@Value" />
+            }
+            else
+            {
+                <input type="text" readonly class="form-control" value="@Value" />
+            }
+        </div>
+    </div>
+}
+else
+{
+    <div class="mb-3">
+        <label class="form-label">@Label:</label>
+        @if (Plaintext)
+        {
+            <input type="text" readonly class="form-control-plaintext" value="@Value" />
+        }
+        else
+        {
+            <input type="text" readonly class="form-control" value="@Value" />
+        }
+    </div>
+}
 
 @code {
     /// <summary>
@@ -25,18 +47,6 @@
     /// </summary>
     [Parameter]
     public bool Horizontal { get; set; } = true;
-
-    /// <summary>
-    /// Label column size (for horizontal layout)
-    /// </summary>
-    [Parameter]
-    public IFluentColumn? LabelColumnSize { get; set; }
-
-    /// <summary>
-    /// Body column size (for horizontal layout)
-    /// </summary>
-    [Parameter]
-    public IFluentColumn? BodyColumnSize { get; set; }
 
     /// <summary>
     /// Whether to display as plaintext (no border)

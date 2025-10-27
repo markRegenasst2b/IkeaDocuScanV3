@@ -10,14 +10,14 @@ namespace IkeaDocuScan_Web.Services;
 /// </summary>
 public class CurrencyService : ICurrencyService
 {
-    private readonly AppDbContext _context;
+    private readonly IDbContextFactory<AppDbContext> _contextFactory;
     private readonly ILogger<CurrencyService> _logger;
 
     public CurrencyService(
-        AppDbContext context,
+        IDbContextFactory<AppDbContext> contextFactory,
         ILogger<CurrencyService> logger)
     {
-        _context = context;
+        _contextFactory = contextFactory;
         _logger = logger;
     }
 
@@ -28,7 +28,9 @@ public class CurrencyService : ICurrencyService
     {
         _logger.LogInformation("Retrieving all currencies");
 
-        var currencies = await _context.Currencies
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        var currencies = await context.Currencies
+            .AsNoTracking()
             .OrderBy(c => c.CurrencyCode)
             .Select(c => new CurrencyDto
             {
@@ -49,7 +51,9 @@ public class CurrencyService : ICurrencyService
     {
         _logger.LogInformation("Retrieving currency with code {CurrencyCode}", currencyCode);
 
-        var currency = await _context.Currencies
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        var currency = await context.Currencies
+            .AsNoTracking()
             .Where(c => c.CurrencyCode == currencyCode)
             .Select(c => new CurrencyDto
             {

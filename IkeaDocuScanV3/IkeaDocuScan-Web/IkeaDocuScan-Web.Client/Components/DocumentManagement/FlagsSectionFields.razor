@@ -1,46 +1,45 @@
-@using Blazorise
 @using IkeaDocuScan_Web.Client.Models
 @using IkeaDocuScan_Web.Client.Components.Shared
 
 @* Fax *@
-<Field Horizontal Class="field-horizontal">
-    <FieldLabel>Fax<span class="required">*</span></FieldLabel>
-    <FieldBody>
+<div class="row mb-3 field-horizontal">
+    <label class="col-sm-3 col-form-label text-end">Fax<span class="required">*</span></label>
+    <div class="col-sm-9">
         <TriStateDropdown @bind-Value="@Model.Fax"
                          Disabled="@IsReadOnly"
                          Label="Fax" />
-    </FieldBody>
-</Field>
+    </div>
+</div>
 
 @* Original Received *@
-<Field Horizontal Class="field-horizontal">
-    <FieldLabel>Original Received<span class="required">*</span></FieldLabel>
-    <FieldBody>
+<div class="row mb-3 field-horizontal">
+    <label class="col-sm-3 col-form-label text-end">Original Received<span class="required">*</span></label>
+    <div class="col-sm-9">
         <TriStateDropdown @bind-Value="@Model.OriginalReceived"
                          Disabled="@IsReadOnly"
                          Label="Original Received" />
-    </FieldBody>
-</Field>
+    </div>
+</div>
 
 @* Translation Received *@
-<Field Horizontal Class="field-horizontal">
-    <FieldLabel>Translation Received<span class="required">*</span></FieldLabel>
-    <FieldBody>
+<div class="row mb-3 field-horizontal">
+    <label class="col-sm-3 col-form-label text-end">Translation Received<span class="required">*</span></label>
+    <div class="col-sm-9">
         <TriStateDropdown @bind-Value="@Model.TranslationReceived"
                          Disabled="@IsReadOnly"
                          Label="Translation Received" />
-    </FieldBody>
-</Field>
+    </div>
+</div>
 
 @* Confidential *@
-<Field Horizontal Class="field-horizontal">
-    <FieldLabel>Confidential<span class="required">*</span></FieldLabel>
-    <FieldBody>
+<div class="row mb-3 field-horizontal">
+    <label class="col-sm-3 col-form-label text-end">Confidential<span class="required">*</span></label>
+    <div class="col-sm-9">
         <TriStateDropdown @bind-Value="@Model.Confidential"
                          Disabled="@IsReadOnly"
                          Label="Confidential" />
-    </FieldBody>
-</Field>
+    </div>
+</div>
 
 <style>
     .required {

@@ -12,16 +12,16 @@ namespace IkeaDocuScan_Web.Services;
 /// </summary>
 public class DocumentNameService : IDocumentNameService
 {
-    private readonly AppDbContext _context;
+    private readonly IDbContextFactory<AppDbContext> _contextFactory;
     private readonly ILogger<DocumentNameService> _logger;
     private readonly ICurrentUserService _currentUserService;
 
     public DocumentNameService(
-        AppDbContext context,
+        IDbContextFactory<AppDbContext> contextFactory,
         ILogger<DocumentNameService> logger,
         ICurrentUserService currentUserService)
     {
-        _context = context;
+        _contextFactory = contextFactory;
         _logger = logger;
         _currentUserService = currentUserService;
     }
@@ -33,7 +33,9 @@ public class DocumentNameService : IDocumentNameService
     {
         _logger.LogInformation("Retrieving all document names");
 
-        var documentNames = await _context.DocumentNames
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        var documentNames = await context.DocumentNames
+            .AsNoTracking()
             .Include(dn => dn.DocumentType)
             .OrderBy(dn => dn.Name)
             .Select(dn => new DocumentNameDto
@@ -56,7 +58,9 @@ public class DocumentNameService : IDocumentNameService
     {
         _logger.LogInformation("Retrieving document names for DocumentTypeId {DocumentTypeId}", documentTypeId);
 
-        var documentNames = await _context.DocumentNames
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        var documentNames = await context.DocumentNames
+            .AsNoTracking()
             .Where(dn => dn.DocumentTypeId == documentTypeId)
             .Include(dn => dn.DocumentType)
             .OrderBy(dn => dn.Name)
@@ -82,7 +86,9 @@ public class DocumentNameService : IDocumentNameService
     {
         _logger.LogInformation("Retrieving document name with ID {Id}", id);
 
-        var documentName = await _context.DocumentNames
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        var documentName = await context.DocumentNames
+            .AsNoTracking()
             .Include(dn => dn.DocumentType)
             .Where(dn => dn.Id == id)
             .Select(dn => new DocumentNameDto
