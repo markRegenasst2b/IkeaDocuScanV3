@@ -121,6 +121,8 @@ builder.Services.AddScoped<ICounterPartyService, CounterPartyService>();
 builder.Services.AddScoped<ICountryService, CountryService>();
 builder.Services.AddScoped<IDocumentTypeService, DocumentTypeService>();
 builder.Services.AddScoped<IUserPermissionService, UserPermissionService>();
+builder.Services.AddScoped<IDocumentNameService, DocumentNameService>();
+builder.Services.AddScoped<ICurrencyService, CurrencyService>();
 
 // SignalR for real-time updates
 builder.Services.AddSignalR();
@@ -172,5 +174,7 @@ app.MapDocumentTypeEndpoints();
 app.MapUserPermissionEndpoints();
 app.MapScannedFileEndpoints();
 app.MapAuditTrailEndpoints();
+app.MapDocumentNameEndpoints();
+app.MapCurrencyEndpoints();
 
 app.Run();

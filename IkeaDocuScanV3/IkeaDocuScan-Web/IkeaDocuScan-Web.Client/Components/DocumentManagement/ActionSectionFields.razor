@@ -3,12 +3,13 @@
 @using IkeaDocuScan_Web.Client.Components.Shared
 
 @* Action Date *@
-<Field>
+<Field Horizontal Class="field-horizontal">
     <FieldLabel>Action Date</FieldLabel>
     <FieldBody>
         <DocumentDatePicker @bind-Value="@Model.ActionDate"
                            Disabled="@IsReadOnly"
-                           Label="Action Date" />
+                           Label="Action Date"
+                           Class="compact-date" />
         <Small TextColor="TextColor.Muted">If any action field is filled, all must be filled</Small>
     </FieldBody>
 </Field>
@@ -18,7 +19,7 @@
     <FieldLabel>Action Description</FieldLabel>
     <FieldBody>
         <MemoEdit @bind-Text="@Model.ActionDescription"
-                  Rows="4"
+                  Rows="3"
                   MaxLength="255"
                   Disabled="@IsReadOnly"
                   Placeholder="Enter action description (max 255 characters)" />
@@ -30,10 +31,10 @@
 </Field>
 
 @* Email Reminder Group (Hidden by default, can be enabled via DocumentType) *@
-<Field Display="Display.None">
+<Field Horizontal Class="field-horizontal" Display="Display.None">
     <FieldLabel>E-Mail Reminder Group</FieldLabel>
     <FieldBody>
-        <Select TValue="string?" @bind-SelectedValue="@Model.EmailReminderGroup" Disabled="@IsReadOnly">
+        <Select TValue="string?" @bind-SelectedValue="@Model.EmailReminderGroup" Disabled="@IsReadOnly" Class="compact-dropdown">
             <SelectItem Value="@((string?)null)">-- Select Group --</SelectItem>
             @* TODO: Load from LDAP/Active Directory *@
         </Select>

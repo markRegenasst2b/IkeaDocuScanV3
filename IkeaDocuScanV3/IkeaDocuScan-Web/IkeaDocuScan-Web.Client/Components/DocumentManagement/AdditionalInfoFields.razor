@@ -2,89 +2,110 @@
 @using IkeaDocuScan_Web.Client.Models
 @using IkeaDocuScan_Web.Client.Components.Shared
 @using IkeaDocuScan.Shared.DTOs.Documents
+@using IkeaDocuScan.Shared.DTOs.DocumentNames
+@using IkeaDocuScan.Shared.DTOs.Currencies
 @using IkeaDocuScan.Shared.Interfaces
 @inject ILogger<AdditionalInfoFields> Logger
+@inject IDocumentNameService DocumentNameService
+@inject ICurrencyService CurrencyService
 
 @* Document Name *@
-<Field>
+<Field Horizontal Class="field-horizontal">
     <FieldLabel>Document Name</FieldLabel>
     <FieldBody>
-        <Select TValue="int?" @bind-SelectedValue="@Model.DocumentNameId" Disabled="@IsReadOnly">
+        <Select TValue="int?" @bind-SelectedValue="@Model.DocumentNameId" Disabled="@IsReadOnly" Class="compact-dropdown">
             <SelectItem Value="@((int?)null)">-- Select Document Name --</SelectItem>
-            @* TODO: Load DocumentNames filtered by DocumentTypeId *@
+            @foreach (var docName in documentNames)
+            {
+                <SelectItem Value="@docName.Id">@docName.Name</SelectItem>
+            }
         </Select>
+        @if (isLoadingDocumentNames)
+        {
+            <Small TextColor="TextColor.Muted">Loading document names...</Small>
+        }
+        else if (Model.DocumentTypeId.HasValue && !documentNames.Any())
+        {
+            <Small TextColor="TextColor.Muted">No document names available for this type</Small>
+        }
     </FieldBody>
 </Field>
 
 @* Document No. *@
-<Field>
-    <FieldLabel>Document No. <span class="required">*</span></FieldLabel>
+<Field Horizontal Class="field-horizontal">
+    <FieldLabel>Document No.<span class="required">*</span></FieldLabel>
     <FieldBody>
         <TextEdit @bind-Text="@Model.DocumentNo"
                   MaxLength="255"
                   Disabled="@IsReadOnly"
-                  Placeholder="Enter document number" />
+                  Placeholder="Enter document number"
+                  Class="compact-input" />
     </FieldBody>
 </Field>
 
 @* Version No. *@
-<Field>
-    <FieldLabel>Version No. <span class="required">*</span></FieldLabel>
+<Field Horizontal Class="field-horizontal">
+    <FieldLabel>Version No.<span class="required">*</span></FieldLabel>
     <FieldBody>
         <TextEdit @bind-Text="@Model.VersionNo"
                   MaxLength="255"
                   Disabled="@IsReadOnly"
-                  Placeholder="Enter version number" />
+                  Placeholder="Enter version number"
+                  Class="compact-input" />
     </FieldBody>
 </Field>
 
 @* Associated to PUA/Agreement No. *@
-<Field>
-    <FieldLabel>Associated to PUA/Agreement No.</FieldLabel>
+<Field Horizontal Class="field-horizontal">
+    <FieldLabel>Assoc. to PUA/Agr. No.</FieldLabel>
     <FieldBody>
         <TextEdit @bind-Text="@Model.AssociatedToPUA"
                   MaxLength="255"
                   Disabled="@IsReadOnly"
-                  Placeholder="Enter PUA/Agreement number" />
+                  Placeholder="Enter PUA/Agreement number"
+                  Class="compact-input" />
     </FieldBody>
 </Field>
 
 @* Associated to Appendix No. *@
-<Field>
-    <FieldLabel>Associated to Appendix No.</FieldLabel>
+<Field Horizontal Class="field-horizontal">
+    <FieldLabel>Assoc. to Appendix No.</FieldLabel>
     <FieldBody>
         <TextEdit @bind-Text="@Model.AssociatedToAppendix"
                   MaxLength="255"
                   Disabled="@IsReadOnly"
-                  Placeholder="Enter appendix number" />
+                  Placeholder="Enter appendix number"
+                  Class="compact-input" />
     </FieldBody>
 </Field>
 
 @* Valid Until/As Of *@
-<Field>
+<Field Horizontal Class="field-horizontal">
     <FieldLabel>Valid Until/As Of</FieldLabel>
     <FieldBody>
         <DocumentDatePicker @bind-Value="@Model.ValidUntil"
                            Disabled="@IsReadOnly"
-                           Label="Valid Until/As Of" />
+                           Label="Valid Until/As Of"
+                           Class="compact-date" />
     </FieldBody>
 </Field>
 
 @* Amount *@
-<Field>
+<Field Horizontal Class="field-horizontal">
     <FieldLabel>Amount</FieldLabel>
     <FieldBody>
         <NumericEdit TValue="decimal?"
                      @bind-Value="@Model.Amount"
                      Disabled="@IsReadOnly"
                      Placeholder="0.00"
-                     Decimals="2" />
+                     Decimals="2"
+                     Style="max-width: 10em;" />
         <Small TextColor="TextColor.Muted">If Amount is entered, Currency must be selected</Small>
     </FieldBody>
 </Field>
 
 @* Currency *@
-<Field>
+<Field Horizontal Class="field-horizontal">
     <FieldLabel>
         Currency
         @if (Model.Amount.HasValue)
@@ -93,30 +114,39 @@
         }
     </FieldLabel>
     <FieldBody>
-        <Select TValue="string?" @bind-SelectedValue="@Model.CurrencyCode" Disabled="@IsReadOnly">
+        <Select TValue="string?" @bind-SelectedValue="@Model.CurrencyCode" Disabled="@IsReadOnly" Class="compact-dropdown">
             <SelectItem Value="@((string?)null)">-- Select Currency --</SelectItem>
-            @* TODO: Load currencies from database *@
-            <SelectItem Value="@("USD")">USD - United States Dollar</SelectItem>
-            <SelectItem Value="@("EUR")">EUR - Euro</SelectItem>
-            <SelectItem Value="@("GBP")">GBP - British Pound</SelectItem>
+            @foreach (var currency in currencies)
+            {
+                <SelectItem Value="@currency.CurrencyCode">@currency.DisplayText</SelectItem>
+            }
         </Select>
+        @if (isLoadingCurrencies)
+        {
+            <Small TextColor="TextColor.Muted">Loading currencies...</Small>
+        }
+        else if (!currencies.Any())
+        {
+            <Small TextColor="TextColor.Warning">No currencies available</Small>
+        }
     </FieldBody>
 </Field>
 
 @* Authorisation to *@
-<Field>
+<Field Horizontal Class="field-horizontal">
     <FieldLabel>Authorisation to</FieldLabel>
     <FieldBody>
         <TextEdit @bind-Text="@Model.Authorisation"
                   MaxLength="255"
                   Disabled="@IsReadOnly"
-                  Placeholder="Enter authorisation" />
+                  Placeholder="Enter authorisation"
+                  Class="compact-input" />
     </FieldBody>
 </Field>
 
 @* Bank Confirmation *@
-<Field>
-    <FieldLabel>Bank Confirmation <span class="required">*</span></FieldLabel>
+<Field Horizontal Class="field-horizontal">
+    <FieldLabel>Bank Confirmation<span class="required">*</span></FieldLabel>
     <FieldBody>
         <TriStateDropdown @bind-Value="@Model.BankConfirmation"
                          Disabled="@IsReadOnly"
@@ -148,4 +178,80 @@
     /// </summary>
     [Parameter]
     public bool IsReadOnly { get; set; }
+
+    // Internal state for document names
+    private List<DocumentNameDto> documentNames = new();
+    private bool isLoadingDocumentNames = false;
+    private int? previousDocumentTypeId;
+
+    // Internal state for currencies
+    private List<CurrencyDto> currencies = new();
+    private bool isLoadingCurrencies = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Load dropdowns sequentially to avoid DbContext concurrency issues
+        await LoadCurrencies();
+        await LoadDocumentNames();
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        // Reload document names if DocumentTypeId changed
+        if (Model.DocumentTypeId != previousDocumentTypeId)
+        {
+            previousDocumentTypeId = Model.DocumentTypeId;
+            await LoadDocumentNames();
+        }
+    }
+
+    private async Task LoadDocumentNames()
+    {
+        if (!Model.DocumentTypeId.HasValue)
+        {
+            documentNames.Clear();
+            return;
+        }
+
+        try
+        {
+            isLoadingDocumentNames = true;
+            Logger.LogInformation("Loading document names for DocumentTypeId {DocumentTypeId}", Model.DocumentTypeId);
+
+            documentNames = await DocumentNameService.GetByDocumentTypeIdAsync(Model.DocumentTypeId.Value);
+
+            Logger.LogInformation("Loaded {Count} document names", documentNames.Count);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading document names for DocumentTypeId {DocumentTypeId}", Model.DocumentTypeId);
+            documentNames.Clear();
+        }
+        finally
+        {
+            isLoadingDocumentNames = false;
+        }
+    }
+
+    private async Task LoadCurrencies()
+    {
+        try
+        {
+            isLoadingCurrencies = true;
+            Logger.LogInformation("Loading currencies");
+
+            currencies = await CurrencyService.GetAllAsync();
+
+            Logger.LogInformation("Loaded {Count} currencies", currencies.Count);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading currencies");
+            currencies.Clear();
+        }
+        finally
+        {
+            isLoadingCurrencies = false;
+        }
+    }
 }

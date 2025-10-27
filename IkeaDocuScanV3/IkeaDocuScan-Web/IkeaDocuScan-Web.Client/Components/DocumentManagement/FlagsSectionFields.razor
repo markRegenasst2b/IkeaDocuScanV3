@@ -3,8 +3,8 @@
 @using IkeaDocuScan_Web.Client.Components.Shared
 
 @* Fax *@
-<Field>
-    <FieldLabel>Fax <span class="required">*</span></FieldLabel>
+<Field Horizontal Class="field-horizontal">
+    <FieldLabel>Fax<span class="required">*</span></FieldLabel>
     <FieldBody>
         <TriStateDropdown @bind-Value="@Model.Fax"
                          Disabled="@IsReadOnly"
@@ -13,8 +13,8 @@
 </Field>
 
 @* Original Received *@
-<Field>
-    <FieldLabel>Original Received <span class="required">*</span></FieldLabel>
+<Field Horizontal Class="field-horizontal">
+    <FieldLabel>Original Received<span class="required">*</span></FieldLabel>
     <FieldBody>
         <TriStateDropdown @bind-Value="@Model.OriginalReceived"
                          Disabled="@IsReadOnly"
@@ -23,8 +23,8 @@
 </Field>
 
 @* Translation Received *@
-<Field>
-    <FieldLabel>Translation Received <span class="required">*</span></FieldLabel>
+<Field Horizontal Class="field-horizontal">
+    <FieldLabel>Translation Received<span class="required">*</span></FieldLabel>
     <FieldBody>
         <TriStateDropdown @bind-Value="@Model.TranslationReceived"
                          Disabled="@IsReadOnly"
@@ -33,8 +33,8 @@
 </Field>
 
 @* Confidential *@
-<Field>
-    <FieldLabel>Confidential <span class="required">*</span></FieldLabel>
+<Field Horizontal Class="field-horizontal">
+    <FieldLabel>Confidential<span class="required">*</span></FieldLabel>
     <FieldBody>
         <TriStateDropdown @bind-Value="@Model.Confidential"
                          Disabled="@IsReadOnly"

@@ -1,7 +1,8 @@
 @page "/documents/edit/{BarCode:int}"
 @page "/documents/register"
 @page "/documents/checkin/{FileName}"
-@rendermode InteractiveAuto
+@using Microsoft.AspNetCore.Components.Web
+@rendermode @(new InteractiveAutoRenderMode(prerender: false))
 @using Blazorise
 @using IkeaDocuScan_Web.Client.Models
 @using IkeaDocuScan_Web.Client.Components.DocumentManagement
@@ -273,3 +274,78 @@
         </ModalFooter>
     </ModalContent>
 </Modal>
+
+<style>
+    /* Compact form styling - configurable widths for dropdowns and inputs */
+    :root {
+        --dropdown-max-width: 20em;
+        --input-max-width: 20em;
+        --date-max-width: 12em;
+        --label-width: 10em;
+    }
+
+    /* Limit dropdown widths */
+    .compact-dropdown select,
+    .compact-dropdown .b-is-select,
+    .field .b-is-select select {
+        max-width: var(--dropdown-max-width);
+    }
+
+    /* Limit text input widths */
+    .compact-input input[type="text"],
+    .compact-input input[type="number"],
+    .field input[type="text"]:not(.form-control-plaintext) {
+        max-width: var(--input-max-width);
+    }
+
+    /* Limit date picker widths */
+    .compact-date input,
+    .field input[type="date"] {
+        max-width: var(--date-max-width) !;
+    }
+
+    /* Horizontal field layout */
+    .field.field-horizontal {
+        display: flex;
+        align-items: center;
+        margin-bottom: 0.75rem;
+    }
+
+    .field.field-horizontal .field-label {
+        min-width: var(--label-width);
+        max-width: var(--label-width);
+        margin-bottom: 0;
+        margin-right: 0.5rem;
+        text-align: right;
+        padding-top: 0.375rem;
+    }
+
+    .field.field-horizontal .field-body {
+        flex: 1;
+        max-width: calc(100% - var(--label-width) - 0.5rem);
+    }
+
+    /* Required indicator */
+    .required {
+        color: red;
+        margin-left: 2px;
+    }
+
+    /* Responsive: stack vertically on small screens */
+    @@media (max-width: 768px) {
+        .field.field-horizontal {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .field.field-horizontal .field-label {
+            text-align: left;
+            margin-bottom: 0.25rem;
+            padding-top: 0;
+        }
+
+        .field.field-horizontal .field-body {
+            max-width: 100%;
+        }
+    }
+</style>

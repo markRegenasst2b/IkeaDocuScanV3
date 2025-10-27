@@ -9,10 +9,10 @@
 @inject ILogger<DocumentSectionFields> Logger
 
 @* Document Type *@
-<Field>
-    <FieldLabel>Document Type <span class="required">*</span></FieldLabel>
+<Field Horizontal Class="field-horizontal">
+    <FieldLabel>Document Type<span class="required">*</span></FieldLabel>
     <FieldBody>
-        <Select TValue="int?" @bind-SelectedValue="@Model.DocumentTypeId" Disabled="@IsReadOnly">
+        <Select TValue="int?" @bind-SelectedValue="@Model.DocumentTypeId" Disabled="@IsReadOnly" Class="compact-dropdown">
             <SelectItem Value="@((int?)null)">-- Select Document Type --</SelectItem>
             @foreach (var dt in documentTypes)
             {
@@ -23,23 +23,25 @@
 </Field>
 
 @* Counterparty No. (Alpha) *@
-<Field>
+<Field Horizontal Class="field-horizontal">
     <FieldLabel>Counterparty No.</FieldLabel>
     <FieldBody>
         <TextEdit @bind-Text="@Model.CounterPartyNoAlpha"
                   Disabled="@IsReadOnly"
                   Placeholder="Enter counterparty number"
-                  @onblur="OnCounterPartyNoBlur" />
+                  @onblur="OnCounterPartyNoBlur"
+                  Class="compact-input" />
     </FieldBody>
 </Field>
 
 @* Counterparty Dropdown *@
-<Field>
-    <FieldLabel>Counterparty <span class="required">*</span></FieldLabel>
+<Field Horizontal Class="field-horizontal">
+    <FieldLabel>Counterparty<span class="required">*</span></FieldLabel>
     <FieldBody>
         <Select TValue="string?" @bind-SelectedValue="@Model.CounterPartyId"
                 Disabled="@IsReadOnly"
-                @bind-SelectedValue:after="OnCounterPartyChanged">
+                @bind-SelectedValue:after="OnCounterPartyChanged"
+                Class="compact-dropdown">
             <SelectItem Value="@((string?)null)">-- Select Counterparty --</SelectItem>
             @foreach (var cp in counterParties)
             {
@@ -62,47 +64,51 @@
                    FilterByCounterPartyId="@Model.CounterPartyId" />
 
 @* Date of Contract *@
-<Field>
-    <FieldLabel>Date of Contract <span class="required">*</span></FieldLabel>
+<Field Horizontal Class="field-horizontal">
+    <FieldLabel>Date of Contract<span class="required">*</span></FieldLabel>
     <FieldBody>
         <DocumentDatePicker @bind-Value="@Model.DateOfContract"
                            Disabled="@IsReadOnly"
-                           Label="Date of Contract" />
+                           Label="Date of Contract"
+                           Class="compact-date" />
     </FieldBody>
 </Field>
 
 @* Receiving Date *@
-<Field>
-    <FieldLabel>Receiving Date <span class="required">*</span></FieldLabel>
+<Field Horizontal Class="field-horizontal">
+    <FieldLabel>Receiving Date<span class="required">*</span></FieldLabel>
     <FieldBody>
         <DocumentDatePicker @bind-Value="@Model.ReceivingDate"
                            Disabled="@IsReadOnly"
-                           Label="Receiving Date" />
+                           Label="Receiving Date"
+                           Class="compact-date" />
     </FieldBody>
 </Field>
 
 @* Sending Out Date - NEW FIELD *@
-<Field>
-    <FieldLabel>Sending Out Date <span class="required">*</span></FieldLabel>
+<Field Horizontal Class="field-horizontal">
+    <FieldLabel>Sending Out Date<span class="required">*</span></FieldLabel>
     <FieldBody>
         <DocumentDatePicker @bind-Value="@Model.SendingOutDate"
                            Disabled="@IsReadOnly"
-                           Label="Sending Out Date" />
+                           Label="Sending Out Date"
+                           Class="compact-date" />
     </FieldBody>
 </Field>
 
 @* Forwarded To Signatories Date - NEW FIELD *@
-<Field>
-    <FieldLabel>Forwarded To Signatories Date <span class="required">*</span></FieldLabel>
+<Field Horizontal Class="field-horizontal">
+    <FieldLabel>Fwd. to Signatories Date<span class="required">*</span></FieldLabel>
     <FieldBody>
         <DocumentDatePicker @bind-Value="@Model.ForwardedToSignatoriesDate"
                            Disabled="@IsReadOnly"
-                           Label="Forwarded To Signatories Date" />
+                           Label="Forwarded To Signatories Date"
+                           Class="compact-date" />
     </FieldBody>
 </Field>
 
 @* Dispatch Date (Conditional) *@
-<Field>
+<Field Horizontal Class="field-horizontal">
     <FieldLabel>
         Dispatch Date
         @if (Model.IsDispatchDateEnabled)
@@ -113,7 +119,8 @@
     <FieldBody>
         <DocumentDatePicker @bind-Value="@Model.DispatchDate"
                            Disabled="@(!Model.IsDispatchDateEnabled || IsReadOnly)"
-                           Label="Dispatch Date" />
+                           Label="Dispatch Date"
+                           Class="compact-date" />
         @if (!Model.IsDispatchDateEnabled)
         {
             <Small TextColor="TextColor.Muted">(Disabled in Register mode)</Small>
