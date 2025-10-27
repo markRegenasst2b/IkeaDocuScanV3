@@ -91,7 +91,7 @@
         </div>
         <div class="card-body">
             <h6>Multi-select listboxes for associating multiple counter parties to a document:</h6>
-            <ThirdPartySelector @bind-SelectedIds="selectedCounterPartyIds" />
+            <ThirdPartySelector2 @bind-SelectedIds="selectedCounterPartyIds" />
 
             @if (!string.IsNullOrWhiteSpace(selectedCounterPartyIds))
             {
