@@ -6,6 +6,7 @@
     <label class="col-sm-3 col-form-label text-end">Fax<span class="required">*</span></label>
     <div class="col-sm-9">
         <TriStateDropdown @bind-Value="@Model.Fax"
+                         @bind-Value:after="OnFieldChanged"
                          Disabled="@IsReadOnly"
                          Label="Fax" />
     </div>
@@ -16,6 +17,7 @@
     <label class="col-sm-3 col-form-label text-end">Original Received<span class="required">*</span></label>
     <div class="col-sm-9">
         <TriStateDropdown @bind-Value="@Model.OriginalReceived"
+                         @bind-Value:after="OnFieldChanged"
                          Disabled="@IsReadOnly"
                          Label="Original Received" />
     </div>
@@ -26,6 +28,7 @@
     <label class="col-sm-3 col-form-label text-end">Translation Received<span class="required">*</span></label>
     <div class="col-sm-9">
         <TriStateDropdown @bind-Value="@Model.TranslationReceived"
+                         @bind-Value:after="OnFieldChanged"
                          Disabled="@IsReadOnly"
                          Label="Translation Received" />
     </div>
@@ -36,6 +39,7 @@
     <label class="col-sm-3 col-form-label text-end">Confidential<span class="required">*</span></label>
     <div class="col-sm-9">
         <TriStateDropdown @bind-Value="@Model.Confidential"
+                         @bind-Value:after="OnFieldChanged"
                          Disabled="@IsReadOnly"
                          Label="Confidential" />
     </div>
@@ -65,4 +69,9 @@
     /// </summary>
     [Parameter]
     public bool IsReadOnly { get; set; }
+
+    private async Task OnFieldChanged()
+    {
+        await ModelChanged.InvokeAsync(Model);
+    }
 }

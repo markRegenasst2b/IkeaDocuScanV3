@@ -17,4 +17,10 @@
     <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="9.0.10" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Content Update="wwwroot\js\navigationInterceptor.js">
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
 </Project>

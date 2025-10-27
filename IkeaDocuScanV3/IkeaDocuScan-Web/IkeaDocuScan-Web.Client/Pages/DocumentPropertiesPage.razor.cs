@@ -3,6 +3,7 @@ using IkeaDocuScan_Web.Client.Models;
 using IkeaDocuScan.Shared.DTOs.Documents;
 using IkeaDocuScan.Shared.Interfaces;
 using Microsoft.JSInterop;
+using Microsoft.AspNetCore.Components.Routing;
 
 namespace IkeaDocuScan_Web.Client.Pages;
 
@@ -10,7 +11,7 @@ namespace IkeaDocuScan_Web.Client.Pages;
 /// Code-behind for DocumentPropertiesPage component.
 /// Handles three operational modes: Edit, Register, Check-in
 /// </summary>
-public partial class DocumentPropertiesPage : ComponentBase
+public partial class DocumentPropertiesPage : ComponentBase, IDisposable
 {
     // ========================================
     // PARAMETERS (from route)
@@ -42,6 +43,12 @@ public partial class DocumentPropertiesPage : ComponentBase
     private List<int> similarDocumentBarcodes = new();
     private bool duplicateConfirmed = false;
 
+    // Change tracking
+    private string? originalModelJson;
+    private bool hasUnsavedChanges = false;
+    private bool isCheckingForChanges = false; // Prevent recursive calls
+    private bool enableChangeTracking = false; // Only enable after initial load completes
+
     // ========================================
     // LIFECYCLE METHODS
     // ========================================
@@ -63,6 +70,9 @@ public partial class DocumentPropertiesPage : ComponentBase
     {
         if (firstRender)
         {
+            // Setup custom navigation interception via JavaScript
+            await SetupJavaScriptNavigationInterception();
+
             // Check if copied data exists in localStorage
             await CheckForCopiedData();
 
@@ -84,6 +94,7 @@ public partial class DocumentPropertiesPage : ComponentBase
         try
         {
             isLoading = true;
+            enableChangeTracking = false; // Disable during load
             errorMessage = null;
             successMessage = null;
             validationErrors.Clear();
@@ -111,7 +122,22 @@ public partial class DocumentPropertiesPage : ComponentBase
         finally
         {
             isLoading = false;
+
+            // Create snapshot of loaded data for change tracking
+            CreateSnapshot();
+
             StateHasChanged();
+
+            // Enable change tracking after a delay to ensure child components finish their async loading
+            _ = Task.Run(async () =>
+            {
+                await Task.Delay(500); // Wait for child components to load their data
+                await InvokeAsync(() =>
+                {
+                    enableChangeTracking = true;
+                    StateHasChanged();
+                });
+            });
         }
     }
 
@@ -198,6 +224,9 @@ public partial class DocumentPropertiesPage : ComponentBase
 
             // Post-save actions based on mode
             await HandlePostSave();
+
+            // Create new snapshot after successful save
+            CreateSnapshot();
         }
         catch (Exception ex)
         {
@@ -238,6 +267,10 @@ public partial class DocumentPropertiesPage : ComponentBase
             // Stay on page, clear form for next entry, focus barcode
             var currentMode = Model.Mode;
             var currentPropertySet = Model.PropertySetNumber;
+
+            // Disable change tracking while clearing form
+            enableChangeTracking = false;
+
             Model = new DocumentPropertiesViewModel
             {
                 Mode = currentMode,
@@ -247,6 +280,9 @@ public partial class DocumentPropertiesPage : ComponentBase
             await Task.Delay(100);
             await JSRuntime.InvokeVoidAsync("eval",
                 "document.getElementById('barcodeInput')?.focus()");
+
+            // Re-enable change tracking
+            enableChangeTracking = true;
         }
         else
         {
@@ -517,8 +553,23 @@ public partial class DocumentPropertiesPage : ComponentBase
         await Task.CompletedTask;
     }
 
-    private void Cancel()
+    private async Task Cancel()
     {
+        // Check for unsaved changes
+        if (hasUnsavedChanges && !isSaving)
+        {
+            var confirmed = await JSRuntime.InvokeAsync<bool>("confirm",
+                "You have unsaved changes. Are you sure you want to leave this page?");
+
+            if (!confirmed)
+            {
+                return; // User cancelled
+            }
+
+            // User confirmed, clear flag and navigate
+            hasUnsavedChanges = false;
+        }
+
         NavigationManager.NavigateTo("/documents");
     }
 
@@ -703,5 +754,135 @@ public partial class DocumentPropertiesPage : ComponentBase
             Authorisation = Model.Authorisation,
             BankConfirmation = Model.BankConfirmation
         };
+    }
+
+    // ========================================
+    // CHANGE TRACKING
+    // ========================================
+
+    private void CreateSnapshot()
+    {
+        originalModelJson = System.Text.Json.JsonSerializer.Serialize(Model);
+        hasUnsavedChanges = false;
+    }
+
+    private void CheckForChanges()
+    {
+        // Don't check for changes until initial load is complete
+        if (!enableChangeTracking)
+        {
+            return;
+        }
+
+        // Prevent recursive calls that cause infinite loop
+        if (isCheckingForChanges)
+        {
+            return;
+        }
+
+        try
+        {
+            isCheckingForChanges = true;
+
+            if (string.IsNullOrEmpty(originalModelJson))
+            {
+                hasUnsavedChanges = false;
+                return;
+            }
+
+            var currentJson = System.Text.Json.JsonSerializer.Serialize(Model);
+            var hadChanges = hasUnsavedChanges;
+            hasUnsavedChanges = currentJson != originalModelJson;
+
+            // Only trigger re-render if the state actually changed
+            if (hadChanges != hasUnsavedChanges)
+            {
+                StateHasChanged();
+            }
+        }
+        finally
+        {
+            isCheckingForChanges = false;
+        }
+    }
+
+    // ========================================
+    // JAVASCRIPT NAVIGATION INTERCEPTION
+    // ========================================
+
+    private DotNetObjectReference<DocumentPropertiesPage>? dotNetRef;
+
+    private async Task SetupJavaScriptNavigationInterception()
+    {
+        dotNetRef = DotNetObjectReference.Create(this);
+
+        try
+        {
+            // Wait for the JavaScript file to load (max 5 seconds)
+            var maxAttempts = 50;
+            var attempt = 0;
+            var scriptLoaded = false;
+
+            while (attempt < maxAttempts && !scriptLoaded)
+            {
+                try
+                {
+                    // Check if the documentPropertiesPage object exists
+                    scriptLoaded = await JSRuntime.InvokeAsync<bool>("eval",
+                        "typeof window.documentPropertiesPage !== 'undefined'");
+
+                    if (!scriptLoaded)
+                    {
+                        await Task.Delay(100);
+                        attempt++;
+                    }
+                }
+                catch
+                {
+                    await Task.Delay(100);
+                    attempt++;
+                }
+            }
+
+            if (scriptLoaded)
+            {
+                // Call the init function from the external JavaScript file
+                await JSRuntime.InvokeVoidAsync("documentPropertiesPage.init", dotNetRef);
+            }
+        }
+        catch
+        {
+            // Ignore errors during setup - navigation will still work without interception
+        }
+    }
+
+    [JSInvokable]
+    public Task<bool> CheckHasUnsavedChanges()
+    {
+        return Task.FromResult(hasUnsavedChanges && !isSaving);
+    }
+
+    [JSInvokable]
+    public Task ClearUnsavedChangesFlag()
+    {
+        hasUnsavedChanges = false;
+        return Task.CompletedTask;
+    }
+
+    public void Dispose()
+    {
+        // Clean up JavaScript navigation interception
+        if (dotNetRef != null)
+        {
+            try
+            {
+                JSRuntime.InvokeVoidAsync("documentPropertiesPage.dispose");
+                dotNetRef.Dispose();
+            }
+            catch
+            {
+                // Ignore errors during disposal
+            }
+        }
     }
 }

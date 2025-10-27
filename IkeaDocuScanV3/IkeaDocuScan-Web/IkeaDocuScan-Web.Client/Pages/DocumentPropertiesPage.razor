@@ -2,6 +2,7 @@
 @page "/documents/register"
 @page "/documents/checkin/{FileName}"
 @using Microsoft.AspNetCore.Components.Web
+@using Microsoft.AspNetCore.Components.Routing
 @rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
 @using IkeaDocuScan_Web.Client.Models
 @using IkeaDocuScan_Web.Client.Components.DocumentManagement
@@ -119,11 +120,12 @@
                 </div>
             }
 
+
             @* Action Buttons *@
             <div class="row mb-3">
                 <div class="col">
                     <div class="btn-group" role="group">
-                        <button class="btn btn-primary" @onclick="SaveDocument" disabled="@isSaving">
+                        <button class="btn btn-primary" @onclick="SaveDocument" disabled="@(isSaving || !hasUnsavedChanges)">
                             @if (isSaving)
                             {
                                 <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
@@ -133,6 +135,10 @@
                                 <i class="fa fa-save me-2"></i>
                             }
                             @Model.SaveButtonText
+                            @if (!hasUnsavedChanges && !isSaving)
+                            {
+                                <span class="text-muted ms-2">(No changes)</span>
+                            }
                         </button>
                         @if (Model.CanCompareWithStandard)
                         {
@@ -160,7 +166,7 @@
                             <h5 class="mb-0">Document Information</h5>
                         </div>
                         <div class="card-body">
-                            <DocumentSectionFields @bind-Model="@Model" />
+                            <DocumentSectionFields @bind-Model="@Model" @bind-Model:after="CheckForChanges" />
                         </div>
                     </div>
                 </div>
@@ -173,7 +179,7 @@
                             <h5 class="mb-0">Action Information</h5>
                         </div>
                         <div class="card-body">
-                            <ActionSectionFields @bind-Model="@Model" />
+                            <ActionSectionFields @bind-Model="@Model" @bind-Model:after="CheckForChanges" />
                         </div>
                     </div>
 
@@ -183,7 +189,7 @@
                             <h5 class="mb-0">Flags</h5>
                         </div>
                         <div class="card-body">
-                            <FlagsSectionFields @bind-Model="@Model" />
+                            <FlagsSectionFields @bind-Model="@Model" @bind-Model:after="CheckForChanges" />
                         </div>
                     </div>
 
@@ -193,7 +199,7 @@
                             <h5 class="mb-0">Additional Information</h5>
                         </div>
                         <div class="card-body">
-                            <AdditionalInfoFields @bind-Model="@Model" />
+                            <AdditionalInfoFields @bind-Model="@Model" @bind-Model:after="CheckForChanges" />
                         </div>
                     </div>
                 </div>

@@ -10,7 +10,7 @@
 <div class="row mb-3 field-horizontal">
     <label class="col-sm-3 col-form-label text-end">Document Type<span class="required">*</span></label>
     <div class="col-sm-9">
-        <select class="form-select compact-dropdown" @bind="Model.DocumentTypeId" disabled="@IsReadOnly">
+        <select class="form-select compact-dropdown" @bind="Model.DocumentTypeId" @bind:after="OnDocumentTypeChanged" disabled="@IsReadOnly">
             <option value="">-- Select Document Type --</option>
             @foreach (var dt in documentTypes)
             {
@@ -29,6 +29,7 @@
 
 @* Third Parties Selector *@
 <ThirdPartySelector @bind-SelectedThirdPartyIds="@Model.SelectedThirdPartyIds"
+                   @bind-SelectedThirdPartyIds:after="OnThirdPartiesChanged"
                    @bind-SelectedThirdPartyNames="@Model.SelectedThirdPartyNames"
                    Disabled="@IsReadOnly"
                    FilterByCounterPartyId="@Model.CounterPartyId" />
@@ -38,6 +39,7 @@
     <label class="col-sm-3 col-form-label text-end">Date of Contract<span class="required">*</span></label>
     <div class="col-sm-9">
         <DocumentDatePicker @bind-Value="@Model.DateOfContract"
+                           @bind-Value:after="OnDateChanged"
                            Disabled="@IsReadOnly"
                            Label="Date of Contract"
                            Class="compact-date" />
@@ -49,6 +51,7 @@
     <label class="col-sm-3 col-form-label text-end">Receiving Date<span class="required">*</span></label>
     <div class="col-sm-9">
         <DocumentDatePicker @bind-Value="@Model.ReceivingDate"
+                           @bind-Value:after="OnDateChanged"
                            Disabled="@IsReadOnly"
                            Label="Receiving Date"
                            Class="compact-date" />
@@ -60,6 +63,7 @@
     <label class="col-sm-3 col-form-label text-end">Sending Out Date<span class="required">*</span></label>
     <div class="col-sm-9">
         <DocumentDatePicker @bind-Value="@Model.SendingOutDate"
+                           @bind-Value:after="OnDateChanged"
                            Disabled="@IsReadOnly"
                            Label="Sending Out Date"
                            Class="compact-date" />
@@ -71,6 +75,7 @@
     <label class="col-sm-3 col-form-label text-end">Fwd. to Signatories Date<span class="required">*</span></label>
     <div class="col-sm-9">
         <DocumentDatePicker @bind-Value="@Model.ForwardedToSignatoriesDate"
+                           @bind-Value:after="OnDateChanged"
                            Disabled="@IsReadOnly"
                            Label="Forwarded To Signatories Date"
                            Class="compact-date" />
@@ -88,6 +93,7 @@
     </label>
     <div class="col-sm-9">
         <DocumentDatePicker @bind-Value="@Model.DispatchDate"
+                           @bind-Value:after="OnDateChanged"
                            Disabled="@(!Model.IsDispatchDateEnabled || IsReadOnly)"
                            Label="Dispatch Date"
                            Class="compact-date" />
@@ -103,6 +109,7 @@
     <label class="form-label">Comment <span class="required">*</span></label>
     <textarea class="form-control"
               @bind="Model.Comment"
+              @bind:after="OnCommentChanged"
               rows="3"
               maxlength="255"
               disabled="@IsReadOnly"
@@ -180,6 +187,30 @@
             Logger.LogInformation("Counter party selected: {Name}", counterParty.Name);
         }
 
+        await ModelChanged.InvokeAsync(Model);
+    }
+
+    private async Task OnThirdPartiesChanged()
+    {
+        Logger.LogInformation("Third parties changed, notifying parent");
+        await ModelChanged.InvokeAsync(Model);
+    }
+
+    private async Task OnDateChanged()
+    {
+        Logger.LogInformation("Date changed, notifying parent");
+        await ModelChanged.InvokeAsync(Model);
+    }
+
+    private async Task OnDocumentTypeChanged()
+    {
+        Logger.LogInformation("Document type changed, notifying parent");
+        await ModelChanged.InvokeAsync(Model);
+    }
+
+    private async Task OnCommentChanged()
+    {
+        Logger.LogInformation("Comment changed, notifying parent");
         await ModelChanged.InvokeAsync(Model);
     }
 }
