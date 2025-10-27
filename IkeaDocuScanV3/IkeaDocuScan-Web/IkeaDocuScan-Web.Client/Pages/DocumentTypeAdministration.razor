@@ -1,0 +1,1072 @@
+@page "/documenttype-administration"
+@rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
+@attribute [Authorize(Policy = "HasAccess")]
+@using IkeaDocuScan.Shared.DTOs.DocumentTypes
+@using IkeaDocuScan.Shared.Interfaces
+@using Microsoft.AspNetCore.Authorization
+@inject IDocumentTypeService DocumentTypeService
+@inject ILogger<DocumentTypeAdministration> Logger
+
+<PageTitle>Document Type Administration</PageTitle>
+
+<div class="container-fluid mt-4">
+    <div class="bg-light p-3">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <div>
+                <h1 class="mb-0">Document Type Administration</h1>
+                <p class="text-muted mb-0">Manage document types and settings</p>
+            </div>
+            <button class="btn btn-primary" @onclick="OpenCreateModal">
+                <i class="fa fa-plus me-2"></i>Add New Document Type
+            </button>
+        </div>
+
+        @if (!string.IsNullOrEmpty(successMessage))
+        {
+            <div class="alert alert-success alert-dismissible fade show" role="alert">
+                @successMessage
+                <button type="button" class="btn-close" @onclick="() => successMessage = null"></button>
+            </div>
+        }
+
+        @if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                @errorMessage
+                <button type="button" class="btn-close" @onclick="() => errorMessage = null"></button>
+            </div>
+        }
+
+        <div class="card mt-4">
+            <div class="card-header">
+                <div class="row align-items-center">
+                    <div class="col-md-6">
+                        <h5 class="mb-0">Document Types (@(filteredDocumentTypes?.Count ?? 0)@(filteredDocumentTypes?.Count != documentTypes?.Count ? $" of {documentTypes?.Count ?? 0}" : ""))</h5>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="input-group">
+                            <span class="input-group-text">
+                                <i class="fa fa-search"></i>
+                            </span>
+                            <input type="text"
+                                   class="form-control"
+                                   placeholder="Search by name..."
+                                   @bind="searchTerm"
+                                   @bind:event="oninput"
+                                   @bind:after="ApplyFilter" />
+                            @if (!string.IsNullOrEmpty(searchTerm))
+                            {
+                                <button class="btn btn-outline-secondary" type="button" @onclick="ClearSearch">
+                                    <i class="fa fa-times"></i>
+                                </button>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                @if (isLoading)
+                {
+                    <div class="text-center p-4">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mt-2">Loading document types...</p>
+                    </div>
+                }
+                else if (filteredDocumentTypes != null && filteredDocumentTypes.Count > 0)
+                {
+                    <div class="table-responsive">
+                        <table class="table table-hover table-striped">
+                            <thead class="table-light">
+                                <tr>
+                                    <th style="cursor: pointer;" @onclick="() => SortBy(nameof(DocumentTypeDto.DtId))">
+                                        ID
+                                        @if (sortColumn == nameof(DocumentTypeDto.DtId))
+                                        {
+                                            <i class="fa @(sortAscending ? "fa-sort-asc" : "fa-sort-desc")"></i>
+                                        }
+                                    </th>
+                                    <th style="cursor: pointer;" @onclick="() => SortBy(nameof(DocumentTypeDto.DtName))">
+                                        Name
+                                        @if (sortColumn == nameof(DocumentTypeDto.DtName))
+                                        {
+                                            <i class="fa @(sortAscending ? "fa-sort-asc" : "fa-sort-desc")"></i>
+                                        }
+                                    </th>
+                                    <th style="cursor: pointer;" @onclick="() => SortBy(nameof(DocumentTypeDto.IsEnabled))">
+                                        Status
+                                        @if (sortColumn == nameof(DocumentTypeDto.IsEnabled))
+                                        {
+                                            <i class="fa @(sortAscending ? "fa-sort-asc" : "fa-sort-desc")"></i>
+                                        }
+                                    </th>
+                                    <th style="width: 200px;">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var docType in filteredDocumentTypes)
+                                {
+                                    <tr>
+                                        <td><strong>@docType.DtId</strong></td>
+                                        <td>@docType.DtName</td>
+                                        <td>
+                                            @if (docType.IsEnabled)
+                                            {
+                                                <span class="badge bg-success">Enabled</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-secondary">Disabled</span>
+                                            }
+                                        </td>
+                                        <td>
+                                            <button class="btn btn-sm btn-outline-primary me-2" @onclick="() => OpenEditModal(docType)">
+                                                <i class="fa fa-edit"></i> Edit
+                                            </button>
+                                            <button class="btn btn-sm btn-outline-danger" @onclick="() => OpenDeleteModal(docType)">
+                                                <i class="fa fa-trash"></i> Delete
+                                            </button>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+                else if (!string.IsNullOrEmpty(searchTerm))
+                {
+                    <div class="alert alert-warning">
+                        No document types found matching "@searchTerm". <button class="btn btn-link p-0" @onclick="ClearSearch">Clear search</button>
+                    </div>
+                }
+                else
+                {
+                    <div class="alert alert-info">
+                        No document types found. Click "Add New Document Type" to create one.
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@* Create/Edit Modal *@
+<div class="modal fade @(showEditModal ? "show d-block" : "")"
+     tabindex="-1"
+     style="@(showEditModal ? "background-color: rgba(0,0,0,0.5);" : "")">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">@(isEditMode ? "Edit Document Type" : "Create New Document Type")</h5>
+                <button type="button" class="btn-close" @onclick="CloseEditModal"></button>
+            </div>
+            <div class="modal-body">
+                @if (!string.IsNullOrEmpty(modalErrorMessage))
+                {
+                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                        @modalErrorMessage
+                        <button type="button" class="btn-close" @onclick="() => modalErrorMessage = null"></button>
+                    </div>
+                }
+
+                @if (isEditMode && editDto != null)
+                {
+                    <div class="mb-3">
+                        <label class="form-label">ID</label>
+                        <input type="text" class="form-control" value="@selectedDocumentType?.DtId" disabled />
+                        <small class="text-muted">Document type ID cannot be changed</small>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Name <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" @bind="editDto.DtName" maxlength="255" />
+                    </div>
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" @bind="editDto.IsEnabled" id="editIsEnabled" />
+                            <label class="form-check-label" for="editIsEnabled">
+                                Enabled
+                            </label>
+                        </div>
+                        <small class="text-muted">Disabled document types are hidden from document creation</small>
+                    </div>
+
+                    @* Field Configuration Section *@
+                    <div class="mb-3">
+                        <button class="btn btn-outline-secondary btn-sm w-100" type="button" @onclick="() => showFieldConfig = !showFieldConfig">
+                            <i class="fa @(showFieldConfig ? "fa-chevron-up" : "fa-chevron-down") me-2"></i>
+                            Field Configuration (M=Mandatory, O=Optional, N=Not Applicable)
+                        </button>
+                    </div>
+
+                    @if (showFieldConfig)
+                    {
+                        <div class="card mb-3">
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Bar Code</label>
+                                        <select class="form-select form-select-sm" @bind="editDto.BarCode">
+                                            <option value="M">Mandatory</option>
+                                            <option value="O">Optional</option>
+                                            <option value="N">Not Applicable</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Counter Party</label>
+                                        <select class="form-select form-select-sm" @bind="editDto.CounterParty">
+                                            <option value="M">Mandatory</option>
+                                            <option value="O">Optional</option>
+                                            <option value="N">Not Applicable</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Date of Contract</label>
+                                        <select class="form-select form-select-sm" @bind="editDto.DateOfContract">
+                                            <option value="M">Mandatory</option>
+                                            <option value="O">Optional</option>
+                                            <option value="N">Not Applicable</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Comment</label>
+                                        <select class="form-select form-select-sm" @bind="editDto.Comment">
+                                            <option value="M">Mandatory</option>
+                                            <option value="O">Optional</option>
+                                            <option value="N">Not Applicable</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Receiving Date</label>
+                                        <select class="form-select form-select-sm" @bind="editDto.ReceivingDate">
+                                            <option value="M">Mandatory</option>
+                                            <option value="O">Optional</option>
+                                            <option value="N">Not Applicable</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Dispatch Date</label>
+                                        <select class="form-select form-select-sm" @bind="editDto.DispatchDate">
+                                            <option value="M">Mandatory</option>
+                                            <option value="O">Optional</option>
+                                            <option value="N">Not Applicable</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Fax</label>
+                                        <select class="form-select form-select-sm" @bind="editDto.Fax">
+                                            <option value="M">Mandatory</option>
+                                            <option value="O">Optional</option>
+                                            <option value="N">Not Applicable</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Original Received</label>
+                                        <select class="form-select form-select-sm" @bind="editDto.OriginalReceived">
+                                            <option value="M">Mandatory</option>
+                                            <option value="O">Optional</option>
+                                            <option value="N">Not Applicable</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Document No</label>
+                                        <select class="form-select form-select-sm" @bind="editDto.DocumentNo">
+                                            <option value="M">Mandatory</option>
+                                            <option value="O">Optional</option>
+                                            <option value="N">Not Applicable</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Associated To PUA</label>
+                                        <select class="form-select form-select-sm" @bind="editDto.AssociatedToPua">
+                                            <option value="M">Mandatory</option>
+                                            <option value="O">Optional</option>
+                                            <option value="N">Not Applicable</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Version No</label>
+                                        <select class="form-select form-select-sm" @bind="editDto.VersionNo">
+                                            <option value="M">Mandatory</option>
+                                            <option value="O">Optional</option>
+                                            <option value="N">Not Applicable</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Associated To Appendix</label>
+                                        <select class="form-select form-select-sm" @bind="editDto.AssociatedToAppendix">
+                                            <option value="M">Mandatory</option>
+                                            <option value="O">Optional</option>
+                                            <option value="N">Not Applicable</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Valid Until</label>
+                                        <select class="form-select form-select-sm" @bind="editDto.ValidUntil">
+                                            <option value="M">Mandatory</option>
+                                            <option value="O">Optional</option>
+                                            <option value="N">Not Applicable</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Currency</label>
+                                        <select class="form-select form-select-sm" @bind="editDto.Currency">
+                                            <option value="M">Mandatory</option>
+                                            <option value="O">Optional</option>
+                                            <option value="N">Not Applicable</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Amount</label>
+                                        <select class="form-select form-select-sm" @bind="editDto.Amount">
+                                            <option value="M">Mandatory</option>
+                                            <option value="O">Optional</option>
+                                            <option value="N">Not Applicable</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Authorisation</label>
+                                        <select class="form-select form-select-sm" @bind="editDto.Authorisation">
+                                            <option value="M">Mandatory</option>
+                                            <option value="O">Optional</option>
+                                            <option value="N">Not Applicable</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Bank Confirmation</label>
+                                        <select class="form-select form-select-sm" @bind="editDto.BankConfirmation">
+                                            <option value="M">Mandatory</option>
+                                            <option value="O">Optional</option>
+                                            <option value="N">Not Applicable</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Translated Version Received</label>
+                                        <select class="form-select form-select-sm" @bind="editDto.TranslatedVersionReceived">
+                                            <option value="M">Mandatory</option>
+                                            <option value="O">Optional</option>
+                                            <option value="N">Not Applicable</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Action Date</label>
+                                        <select class="form-select form-select-sm" @bind="editDto.ActionDate">
+                                            <option value="M">Mandatory</option>
+                                            <option value="O">Optional</option>
+                                            <option value="N">Not Applicable</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Action Description</label>
+                                        <select class="form-select form-select-sm" @bind="editDto.ActionDescription">
+                                            <option value="M">Mandatory</option>
+                                            <option value="O">Optional</option>
+                                            <option value="N">Not Applicable</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Reminder Group</label>
+                                        <select class="form-select form-select-sm" @bind="editDto.ReminderGroup">
+                                            <option value="M">Mandatory</option>
+                                            <option value="O">Optional</option>
+                                            <option value="N">Not Applicable</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Confidential</label>
+                                        <select class="form-select form-select-sm" @bind="editDto.Confidential">
+                                            <option value="M">Mandatory</option>
+                                            <option value="O">Optional</option>
+                                            <option value="N">Not Applicable</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Counter Party Alpha</label>
+                                        <select class="form-select form-select-sm" @bind="editDto.CounterPartyAlpha">
+                                            <option value="M">Mandatory</option>
+                                            <option value="O">Optional</option>
+                                            <option value="N">Not Applicable</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Sending Out Date</label>
+                                        <select class="form-select form-select-sm" @bind="editDto.SendingOutDate">
+                                            <option value="M">Mandatory</option>
+                                            <option value="O">Optional</option>
+                                            <option value="N">Not Applicable</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Forwarded To Signatories Date</label>
+                                        <select class="form-select form-select-sm" @bind="editDto.ForwardedToSignatoriesDate">
+                                            <option value="M">Mandatory</option>
+                                            <option value="O">Optional</option>
+                                            <option value="N">Not Applicable</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="mb-3">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" @bind="editDto.IsAppendix" id="editIsAppendix" />
+                                        <label class="form-check-label" for="editIsAppendix">
+                                            Is Appendix
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Template Path</label>
+                                    <input type="text" class="form-control form-control-sm" @bind="editDto.TemplatePath" maxlength="500" placeholder="Optional template file path" />
+                                </div>
+                            </div>
+                        </div>
+                    }
+                }
+                else if (!isEditMode && createDto != null)
+                {
+                    <div class="mb-3">
+                        <label class="form-label">Name <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" @bind="createDto.DtName" maxlength="255" placeholder="e.g., Contract, Invoice, Agreement" />
+                    </div>
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" @bind="createDto.IsEnabled" id="createIsEnabled" />
+                            <label class="form-check-label" for="createIsEnabled">
+                                Enabled
+                            </label>
+                        </div>
+                        <small class="text-muted">Disabled document types are hidden from document creation</small>
+                    </div>
+
+                    @* Field Configuration Section *@
+                    <div class="mb-3">
+                        <button class="btn btn-outline-secondary btn-sm w-100" type="button" @onclick="() => showFieldConfig = !showFieldConfig">
+                            <i class="fa @(showFieldConfig ? "fa-chevron-up" : "fa-chevron-down") me-2"></i>
+                            Field Configuration (M=Mandatory, O=Optional, N=Not Applicable)
+                        </button>
+                    </div>
+
+                    @if (showFieldConfig)
+                    {
+                        <div class="card mb-3">
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Bar Code</label>
+                                        <select class="form-select form-select-sm" @bind="createDto.BarCode">
+                                            <option value="M">Mandatory</option>
+                                            <option value="O">Optional</option>
+                                            <option value="N">Not Applicable</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Counter Party</label>
+                                        <select class="form-select form-select-sm" @bind="createDto.CounterParty">
+                                            <option value="M">Mandatory</option>
+                                            <option value="O">Optional</option>
+                                            <option value="N">Not Applicable</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Date of Contract</label>
+                                        <select class="form-select form-select-sm" @bind="createDto.DateOfContract">
+                                            <option value="M">Mandatory</option>
+                                            <option value="O">Optional</option>
+                                            <option value="N">Not Applicable</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Comment</label>
+                                        <select class="form-select form-select-sm" @bind="createDto.Comment">
+                                            <option value="M">Mandatory</option>
+                                            <option value="O">Optional</option>
+                                            <option value="N">Not Applicable</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Receiving Date</label>
+                                        <select class="form-select form-select-sm" @bind="createDto.ReceivingDate">
+                                            <option value="M">Mandatory</option>
+                                            <option value="O">Optional</option>
+                                            <option value="N">Not Applicable</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Dispatch Date</label>
+                                        <select class="form-select form-select-sm" @bind="createDto.DispatchDate">
+                                            <option value="M">Mandatory</option>
+                                            <option value="O">Optional</option>
+                                            <option value="N">Not Applicable</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Fax</label>
+                                        <select class="form-select form-select-sm" @bind="createDto.Fax">
+                                            <option value="M">Mandatory</option>
+                                            <option value="O">Optional</option>
+                                            <option value="N">Not Applicable</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Original Received</label>
+                                        <select class="form-select form-select-sm" @bind="createDto.OriginalReceived">
+                                            <option value="M">Mandatory</option>
+                                            <option value="O">Optional</option>
+                                            <option value="N">Not Applicable</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Document No</label>
+                                        <select class="form-select form-select-sm" @bind="createDto.DocumentNo">
+                                            <option value="M">Mandatory</option>
+                                            <option value="O">Optional</option>
+                                            <option value="N">Not Applicable</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Associated To PUA</label>
+                                        <select class="form-select form-select-sm" @bind="createDto.AssociatedToPua">
+                                            <option value="M">Mandatory</option>
+                                            <option value="O">Optional</option>
+                                            <option value="N">Not Applicable</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Version No</label>
+                                        <select class="form-select form-select-sm" @bind="createDto.VersionNo">
+                                            <option value="M">Mandatory</option>
+                                            <option value="O">Optional</option>
+                                            <option value="N">Not Applicable</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Associated To Appendix</label>
+                                        <select class="form-select form-select-sm" @bind="createDto.AssociatedToAppendix">
+                                            <option value="M">Mandatory</option>
+                                            <option value="O">Optional</option>
+                                            <option value="N">Not Applicable</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Valid Until</label>
+                                        <select class="form-select form-select-sm" @bind="createDto.ValidUntil">
+                                            <option value="M">Mandatory</option>
+                                            <option value="O">Optional</option>
+                                            <option value="N">Not Applicable</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Currency</label>
+                                        <select class="form-select form-select-sm" @bind="createDto.Currency">
+                                            <option value="M">Mandatory</option>
+                                            <option value="O">Optional</option>
+                                            <option value="N">Not Applicable</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Amount</label>
+                                        <select class="form-select form-select-sm" @bind="createDto.Amount">
+                                            <option value="M">Mandatory</option>
+                                            <option value="O">Optional</option>
+                                            <option value="N">Not Applicable</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Authorisation</label>
+                                        <select class="form-select form-select-sm" @bind="createDto.Authorisation">
+                                            <option value="M">Mandatory</option>
+                                            <option value="O">Optional</option>
+                                            <option value="N">Not Applicable</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Bank Confirmation</label>
+                                        <select class="form-select form-select-sm" @bind="createDto.BankConfirmation">
+                                            <option value="M">Mandatory</option>
+                                            <option value="O">Optional</option>
+                                            <option value="N">Not Applicable</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Translated Version Received</label>
+                                        <select class="form-select form-select-sm" @bind="createDto.TranslatedVersionReceived">
+                                            <option value="M">Mandatory</option>
+                                            <option value="O">Optional</option>
+                                            <option value="N">Not Applicable</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Action Date</label>
+                                        <select class="form-select form-select-sm" @bind="createDto.ActionDate">
+                                            <option value="M">Mandatory</option>
+                                            <option value="O">Optional</option>
+                                            <option value="N">Not Applicable</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Action Description</label>
+                                        <select class="form-select form-select-sm" @bind="createDto.ActionDescription">
+                                            <option value="M">Mandatory</option>
+                                            <option value="O">Optional</option>
+                                            <option value="N">Not Applicable</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Reminder Group</label>
+                                        <select class="form-select form-select-sm" @bind="createDto.ReminderGroup">
+                                            <option value="M">Mandatory</option>
+                                            <option value="O">Optional</option>
+                                            <option value="N">Not Applicable</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Confidential</label>
+                                        <select class="form-select form-select-sm" @bind="createDto.Confidential">
+                                            <option value="M">Mandatory</option>
+                                            <option value="O">Optional</option>
+                                            <option value="N">Not Applicable</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Counter Party Alpha</label>
+                                        <select class="form-select form-select-sm" @bind="createDto.CounterPartyAlpha">
+                                            <option value="M">Mandatory</option>
+                                            <option value="O">Optional</option>
+                                            <option value="N">Not Applicable</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Sending Out Date</label>
+                                        <select class="form-select form-select-sm" @bind="createDto.SendingOutDate">
+                                            <option value="M">Mandatory</option>
+                                            <option value="O">Optional</option>
+                                            <option value="N">Not Applicable</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Forwarded To Signatories Date</label>
+                                        <select class="form-select form-select-sm" @bind="createDto.ForwardedToSignatoriesDate">
+                                            <option value="M">Mandatory</option>
+                                            <option value="O">Optional</option>
+                                            <option value="N">Not Applicable</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="mb-3">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" @bind="createDto.IsAppendix" id="createIsAppendix" />
+                                        <label class="form-check-label" for="createIsAppendix">
+                                            Is Appendix
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Template Path</label>
+                                    <input type="text" class="form-control form-control-sm" @bind="createDto.TemplatePath" maxlength="500" placeholder="Optional template file path" />
+                                </div>
+                            </div>
+                        </div>
+                    }
+                }
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" @onclick="CloseEditModal">Cancel</button>
+                <button type="button" class="btn btn-primary" @onclick="SaveDocumentType" disabled="@isSaving">
+                    @if (isSaving)
+                    {
+                        <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                    }
+                    else
+                    {
+                        <i class="fa fa-save me-2"></i>
+                    }
+                    @(isEditMode ? "Update" : "Create")
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@* Delete Confirmation Modal *@
+<div class="modal fade @(showDeleteModal ? "show d-block" : "")"
+     tabindex="-1"
+     style="@(showDeleteModal ? "background-color: rgba(0,0,0,0.5);" : "")">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirm Delete</h5>
+                <button type="button" class="btn-close" @onclick="CloseDeleteModal"></button>
+            </div>
+            <div class="modal-body">
+                @if (!string.IsNullOrEmpty(modalErrorMessage))
+                {
+                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                        @modalErrorMessage
+                        <button type="button" class="btn-close" @onclick="() => modalErrorMessage = null"></button>
+                    </div>
+                }
+
+                @if (isCheckingUsage)
+                {
+                    <div class="text-center p-4">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Checking...</span>
+                        </div>
+                        <p class="mt-2">Checking document type usage...</p>
+                    </div>
+                }
+                else if (deleteDocumentCount > 0 || deleteDocumentNameCount > 0 || deleteUserPermissionCount > 0)
+                {
+                    <div class="alert alert-warning">
+                        <i class="fa fa-exclamation-triangle me-2"></i>
+                        <strong>Warning: Document type is in use!</strong>
+                        <p class="mb-0 mt-2">
+                            Document type <strong>@selectedDocumentType?.DtName</strong> is currently used by:
+                        </p>
+                        <ul class="mt-2 mb-0">
+                            @if (deleteDocumentCount > 0)
+                            {
+                                <li><strong>@deleteDocumentCount</strong> document@(deleteDocumentCount != 1 ? "s" : "")</li>
+                            }
+                            @if (deleteDocumentNameCount > 0)
+                            {
+                                <li><strong>@deleteDocumentNameCount</strong> document name@(deleteDocumentNameCount != 1 ? "s" : "")</li>
+                            }
+                            @if (deleteUserPermissionCount > 0)
+                            {
+                                <li><strong>@deleteUserPermissionCount</strong> user permission@(deleteUserPermissionCount != 1 ? "s" : "")</li>
+                            }
+                        </ul>
+                        <p class="mb-0 mt-2">
+                            You must remove or update all references before this document type can be deleted.
+                        </p>
+                    </div>
+                }
+                else
+                {
+                    <p>Are you sure you want to delete the document type <strong>@selectedDocumentType?.DtName</strong>?</p>
+                    <p class="text-muted mb-0">This action cannot be undone.</p>
+                }
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" @onclick="CloseDeleteModal">Cancel</button>
+                @if (deleteDocumentCount == 0 && deleteDocumentNameCount == 0 && deleteUserPermissionCount == 0 && !isCheckingUsage)
+                {
+                    <button type="button" class="btn btn-danger" @onclick="ConfirmDelete" disabled="@isSaving">
+                        @if (isSaving)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                        }
+                        else
+                        {
+                            <i class="fa fa-trash me-2"></i>
+                        }
+                        Delete
+                    </button>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private List<DocumentTypeDto>? documentTypes;
+    private List<DocumentTypeDto>? filteredDocumentTypes;
+    private string searchTerm = string.Empty;
+    private string sortColumn = nameof(DocumentTypeDto.DtName);
+    private bool sortAscending = true;
+    private bool isLoading = false;
+    private bool isSaving = false;
+    private bool isCheckingUsage = false;
+    private string? errorMessage;
+    private string? successMessage;
+    private string? modalErrorMessage;
+
+    // Edit/Create modal
+    private bool showEditModal = false;
+    private bool isEditMode = false;
+    private bool showFieldConfig = false;
+    private DocumentTypeDto? selectedDocumentType;
+    private CreateDocumentTypeDto? createDto;
+    private UpdateDocumentTypeDto? editDto;
+
+    // Delete modal
+    private bool showDeleteModal = false;
+    private int deleteDocumentCount = 0;
+    private int deleteDocumentNameCount = 0;
+    private int deleteUserPermissionCount = 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDocumentTypes();
+    }
+
+    private async Task LoadDocumentTypes()
+    {
+        try
+        {
+            isLoading = true;
+            errorMessage = null;
+            StateHasChanged();
+
+            documentTypes = await DocumentTypeService.GetAllIncludingDisabledAsync();
+            ApplyFilter();
+            Logger.LogInformation("Loaded {Count} document types", documentTypes.Count);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading document types");
+            errorMessage = $"Error loading document types: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private void ApplyFilter()
+    {
+        if (documentTypes == null)
+        {
+            filteredDocumentTypes = null;
+            return;
+        }
+
+        // Apply search filter
+        IEnumerable<DocumentTypeDto> filtered;
+        if (string.IsNullOrWhiteSpace(searchTerm))
+        {
+            filtered = documentTypes;
+        }
+        else
+        {
+            var search = searchTerm.Trim().ToLowerInvariant();
+            filtered = documentTypes
+                .Where(dt => dt.DtName.ToLowerInvariant().Contains(search));
+        }
+
+        // Apply sorting
+        filtered = sortColumn switch
+        {
+            nameof(DocumentTypeDto.DtId) => sortAscending
+                ? filtered.OrderBy(dt => dt.DtId)
+                : filtered.OrderByDescending(dt => dt.DtId),
+            nameof(DocumentTypeDto.DtName) => sortAscending
+                ? filtered.OrderBy(dt => dt.DtName)
+                : filtered.OrderByDescending(dt => dt.DtName),
+            nameof(DocumentTypeDto.IsEnabled) => sortAscending
+                ? filtered.OrderBy(dt => dt.IsEnabled)
+                : filtered.OrderByDescending(dt => dt.IsEnabled),
+            _ => filtered.OrderBy(dt => dt.DtName)
+        };
+
+        filteredDocumentTypes = filtered.ToList();
+    }
+
+    private void ClearSearch()
+    {
+        searchTerm = string.Empty;
+        ApplyFilter();
+    }
+
+    private void SortBy(string columnName)
+    {
+        if (sortColumn == columnName)
+        {
+            // Toggle sort direction if clicking same column
+            sortAscending = !sortAscending;
+        }
+        else
+        {
+            // New column, default to ascending
+            sortColumn = columnName;
+            sortAscending = true;
+        }
+
+        ApplyFilter();
+    }
+
+    private void OpenCreateModal()
+    {
+        isEditMode = false;
+        selectedDocumentType = null;
+        createDto = new CreateDocumentTypeDto { IsEnabled = true };
+        editDto = null;
+        showEditModal = true;
+        showFieldConfig = false;
+        errorMessage = null;
+        successMessage = null;
+        modalErrorMessage = null;
+    }
+
+    private void OpenEditModal(DocumentTypeDto documentType)
+    {
+        isEditMode = true;
+        selectedDocumentType = documentType;
+        createDto = null;
+        editDto = new UpdateDocumentTypeDto
+        {
+            DtName = documentType.DtName,
+            IsEnabled = documentType.IsEnabled,
+            BarCode = documentType.BarCode,
+            CounterParty = documentType.CounterParty,
+            DateOfContract = documentType.DateOfContract,
+            Comment = documentType.Comment,
+            ReceivingDate = documentType.ReceivingDate,
+            DispatchDate = documentType.DispatchDate,
+            Fax = documentType.Fax,
+            OriginalReceived = documentType.OriginalReceived,
+            DocumentNo = documentType.DocumentNo,
+            AssociatedToPua = documentType.AssociatedToPua,
+            VersionNo = documentType.VersionNo,
+            AssociatedToAppendix = documentType.AssociatedToAppendix,
+            ValidUntil = documentType.ValidUntil,
+            Currency = documentType.Currency,
+            Amount = documentType.Amount,
+            Authorisation = documentType.Authorisation,
+            BankConfirmation = documentType.BankConfirmation,
+            TranslatedVersionReceived = documentType.TranslatedVersionReceived,
+            ActionDate = documentType.ActionDate,
+            ActionDescription = documentType.ActionDescription,
+            ReminderGroup = documentType.ReminderGroup,
+            Confidential = documentType.Confidential,
+            CounterPartyAlpha = documentType.CounterPartyAlpha,
+            SendingOutDate = documentType.SendingOutDate,
+            ForwardedToSignatoriesDate = documentType.ForwardedToSignatoriesDate,
+            IsAppendix = documentType.IsAppendix,
+            TemplatePath = documentType.TemplatePath
+        };
+        showEditModal = true;
+        showFieldConfig = false;
+        errorMessage = null;
+        successMessage = null;
+        modalErrorMessage = null;
+    }
+
+    private void CloseEditModal()
+    {
+        showEditModal = false;
+        selectedDocumentType = null;
+        createDto = null;
+        editDto = null;
+        modalErrorMessage = null;
+    }
+
+    private async Task OpenDeleteModal(DocumentTypeDto documentType)
+    {
+        selectedDocumentType = documentType;
+        showDeleteModal = true;
+        isCheckingUsage = true;
+        deleteDocumentCount = 0;
+        deleteDocumentNameCount = 0;
+        deleteUserPermissionCount = 0;
+        errorMessage = null;
+        successMessage = null;
+        modalErrorMessage = null;
+        StateHasChanged();
+
+        try
+        {
+            (deleteDocumentCount, deleteDocumentNameCount, deleteUserPermissionCount) =
+                await DocumentTypeService.GetUsageCountAsync(documentType.DtId);
+            Logger.LogInformation("Document type {Id} is used by {DocumentCount} documents, {DocumentNameCount} document names, and {UserPermissionCount} user permissions",
+                documentType.DtId, deleteDocumentCount, deleteDocumentNameCount, deleteUserPermissionCount);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error checking document type usage");
+            modalErrorMessage = $"Error checking document type usage: {ex.Message}";
+        }
+        finally
+        {
+            isCheckingUsage = false;
+            StateHasChanged();
+        }
+    }
+
+    private void CloseDeleteModal()
+    {
+        showDeleteModal = false;
+        selectedDocumentType = null;
+        deleteDocumentCount = 0;
+        deleteDocumentNameCount = 0;
+        deleteUserPermissionCount = 0;
+        modalErrorMessage = null;
+    }
+
+    private async Task SaveDocumentType()
+    {
+        try
+        {
+            isSaving = true;
+            modalErrorMessage = null;
+            StateHasChanged();
+
+            if (isEditMode && editDto != null && selectedDocumentType != null)
+            {
+                await DocumentTypeService.UpdateAsync(selectedDocumentType.DtId, editDto);
+                successMessage = $"Document type '{selectedDocumentType.DtName}' updated successfully";
+                Logger.LogInformation("Updated document type ID {Id}", selectedDocumentType.DtId);
+                CloseEditModal();
+                await LoadDocumentTypes();
+            }
+            else if (!isEditMode && createDto != null)
+            {
+                await DocumentTypeService.CreateAsync(createDto);
+                successMessage = $"Document type '{createDto.DtName}' created successfully";
+                Logger.LogInformation("Created document type '{Name}'", createDto.DtName);
+                CloseEditModal();
+                await LoadDocumentTypes();
+            }
+        }
+        catch (HttpRequestException ex)
+        {
+            Logger.LogError(ex, "HTTP error saving document type");
+            modalErrorMessage = ex.Message;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error saving document type");
+            modalErrorMessage = $"Error saving document type: {ex.Message}";
+        }
+        finally
+        {
+            isSaving = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task ConfirmDelete()
+    {
+        if (selectedDocumentType == null) return;
+
+        try
+        {
+            isSaving = true;
+            modalErrorMessage = null;
+            StateHasChanged();
+
+            await DocumentTypeService.DeleteAsync(selectedDocumentType.DtId);
+            successMessage = $"Document type '{selectedDocumentType.DtName}' deleted successfully";
+            Logger.LogInformation("Deleted document type ID {Id}", selectedDocumentType.DtId);
+
+            CloseDeleteModal();
+            await LoadDocumentTypes();
+        }
+        catch (HttpRequestException ex)
+        {
+            Logger.LogError(ex, "HTTP error deleting document type");
+            modalErrorMessage = ex.Message;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error deleting document type");
+            modalErrorMessage = $"Error deleting document type: {ex.Message}";
+        }
+        finally
+        {
+            isSaving = false;
+            StateHasChanged();
+        }
+    }
+}
