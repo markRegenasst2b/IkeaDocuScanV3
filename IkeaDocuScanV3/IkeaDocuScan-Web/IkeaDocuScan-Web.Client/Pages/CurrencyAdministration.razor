@@ -80,9 +80,27 @@
                         <table class="table table-hover table-striped">
                             <thead class="table-light">
                                 <tr>
-                                    <th>Currency Code</th>
-                                    <th>Name</th>
-                                    <th>Decimal Places</th>
+                                    <th style="cursor: pointer;" @onclick="() => SortBy(nameof(CurrencyDto.CurrencyCode))">
+                                        Currency Code
+                                        @if (sortColumn == nameof(CurrencyDto.CurrencyCode))
+                                        {
+                                            <i class="fa @(sortAscending ? "fa-sort-asc" : "fa-sort-desc")"></i>
+                                        }
+                                    </th>
+                                    <th style="cursor: pointer;" @onclick="() => SortBy(nameof(CurrencyDto.Name))">
+                                        Name
+                                        @if (sortColumn == nameof(CurrencyDto.Name))
+                                        {
+                                            <i class="fa @(sortAscending ? "fa-sort-asc" : "fa-sort-desc")"></i>
+                                        }
+                                    </th>
+                                    <th style="cursor: pointer;" @onclick="() => SortBy(nameof(CurrencyDto.DecimalPlaces))">
+                                        Decimal Places
+                                        @if (sortColumn == nameof(CurrencyDto.DecimalPlaces))
+                                        {
+                                            <i class="fa @(sortAscending ? "fa-sort-asc" : "fa-sort-desc")"></i>
+                                        }
+                                    </th>
                                     <th style="width: 200px;">Actions</th>
                                 </tr>
                             </thead>
@@ -268,6 +286,8 @@
     private List<CurrencyDto>? currencies;
     private List<CurrencyDto>? filteredCurrencies;
     private string searchTerm = string.Empty;
+    private string sortColumn = nameof(CurrencyDto.CurrencyCode);
+    private bool sortAscending = true;
     private bool isLoading = false;
     private bool isSaving = false;
     private bool isCheckingUsage = false;
@@ -323,19 +343,37 @@
             return;
         }
 
+        // Apply search filter
+        IEnumerable<CurrencyDto> filtered;
         if (string.IsNullOrWhiteSpace(searchTerm))
         {
-            filteredCurrencies = currencies;
+            filtered = currencies;
         }
         else
         {
             var search = searchTerm.Trim().ToLowerInvariant();
-            filteredCurrencies = currencies
+            filtered = currencies
                 .Where(c =>
                     c.CurrencyCode.ToLowerInvariant().Contains(search) ||
-                    c.Name.ToLowerInvariant().Contains(search))
-                .ToList();
+                    c.Name.ToLowerInvariant().Contains(search));
         }
+
+        // Apply sorting
+        filtered = sortColumn switch
+        {
+            nameof(CurrencyDto.CurrencyCode) => sortAscending
+                ? filtered.OrderBy(c => c.CurrencyCode)
+                : filtered.OrderByDescending(c => c.CurrencyCode),
+            nameof(CurrencyDto.Name) => sortAscending
+                ? filtered.OrderBy(c => c.Name)
+                : filtered.OrderByDescending(c => c.Name),
+            nameof(CurrencyDto.DecimalPlaces) => sortAscending
+                ? filtered.OrderBy(c => c.DecimalPlaces)
+                : filtered.OrderByDescending(c => c.DecimalPlaces),
+            _ => filtered.OrderBy(c => c.CurrencyCode)
+        };
+
+        filteredCurrencies = filtered.ToList();
     }
 
     private void ClearSearch()
@@ -491,5 +529,22 @@
             isSaving = false;
             StateHasChanged();
         }
+    }
+
+    private void SortBy(string columnName)
+    {
+        if (sortColumn == columnName)
+        {
+            // Toggle sort direction if clicking same column
+            sortAscending = !sortAscending;
+        }
+        else
+        {
+            // New column, default to ascending
+            sortColumn = columnName;
+            sortAscending = true;
+        }
+
+        ApplyFilter();
     }
 }

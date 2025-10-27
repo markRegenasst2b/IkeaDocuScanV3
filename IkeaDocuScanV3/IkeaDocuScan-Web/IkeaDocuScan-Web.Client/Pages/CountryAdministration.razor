@@ -80,8 +80,20 @@
                         <table class="table table-hover table-striped">
                             <thead class="table-light">
                                 <tr>
-                                    <th>Country Code</th>
-                                    <th>Name</th>
+                                    <th style="cursor: pointer;" @onclick="() => SortBy(nameof(CountryDto.CountryCode))">
+                                        Country Code
+                                        @if (sortColumn == nameof(CountryDto.CountryCode))
+                                        {
+                                            <i class="fa @(sortAscending ? "fa-sort-asc" : "fa-sort-desc")"></i>
+                                        }
+                                    </th>
+                                    <th style="cursor: pointer;" @onclick="() => SortBy(nameof(CountryDto.Name))">
+                                        Name
+                                        @if (sortColumn == nameof(CountryDto.Name))
+                                        {
+                                            <i class="fa @(sortAscending ? "fa-sort-asc" : "fa-sort-desc")"></i>
+                                        }
+                                    </th>
                                     <th style="width: 200px;">Actions</th>
                                 </tr>
                             </thead>
@@ -266,6 +278,8 @@
     private List<CountryDto>? countries;
     private List<CountryDto>? filteredCountries;
     private string searchTerm = string.Empty;
+    private string sortColumn = nameof(CountryDto.CountryCode);
+    private bool sortAscending = true;
     private bool isLoading = false;
     private bool isSaving = false;
     private bool isCheckingUsage = false;
@@ -322,19 +336,34 @@
             return;
         }
 
+        // Apply search filter
+        IEnumerable<CountryDto> filtered;
         if (string.IsNullOrWhiteSpace(searchTerm))
         {
-            filteredCountries = countries;
+            filtered = countries;
         }
         else
         {
             var search = searchTerm.Trim().ToLowerInvariant();
-            filteredCountries = countries
+            filtered = countries
                 .Where(c =>
                     c.CountryCode.ToLowerInvariant().Contains(search) ||
-                    (c.Name?.ToLowerInvariant().Contains(search) ?? false))
-                .ToList();
+                    (c.Name?.ToLowerInvariant().Contains(search) ?? false));
         }
+
+        // Apply sorting
+        filtered = sortColumn switch
+        {
+            nameof(CountryDto.CountryCode) => sortAscending
+                ? filtered.OrderBy(c => c.CountryCode)
+                : filtered.OrderByDescending(c => c.CountryCode),
+            nameof(CountryDto.Name) => sortAscending
+                ? filtered.OrderBy(c => c.Name)
+                : filtered.OrderByDescending(c => c.Name),
+            _ => filtered.OrderBy(c => c.CountryCode)
+        };
+
+        filteredCountries = filtered.ToList();
     }
 
     private void ClearSearch()
@@ -492,5 +521,22 @@
             isSaving = false;
             StateHasChanged();
         }
+    }
+
+    private void SortBy(string columnName)
+    {
+        if (sortColumn == columnName)
+        {
+            // Toggle sort direction if clicking same column
+            sortAscending = !sortAscending;
+        }
+        else
+        {
+            // New column, default to ascending
+            sortColumn = columnName;
+            sortAscending = true;
+        }
+
+        ApplyFilter();
     }
 }
