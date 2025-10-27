@@ -89,6 +89,12 @@
     display: block;
 }
 
+.nav-section-header {
+    color: aqua;
+    margin-left: 2em;
+    margin-top: 1em;
+}
+
 @media (min-width: 641px) {
     .navbar-toggler {
         display: none;

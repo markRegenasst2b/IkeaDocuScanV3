@@ -2,13 +2,15 @@
 
 <div class="top-row ps-3 navbar navbar-dark">
     <div class="container-fluid">
-        <a class="navbar-brand" href="">IkeaDocuScan-Web</a>
+        <a class="navbar-brand" href="">Ikea Documentscannning</a>
     </div>
 </div>
 
 <input type="checkbox" title="Navigation menu" class="navbar-toggler" />
 
 <div class="nav-scrollable" onclick="document.querySelector('.navbar-toggler').click()">
+    
+
     <nav class="nav flex-column">
         <div class="nav-item px-3">
             <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
@@ -18,6 +20,8 @@
 
         <AuthorizeView Policy="HasAccess">
             <Authorized>
+                <div class="nav-section-header">DOCUMENT MANAGEMENT</div>
+
                 <div class="nav-item px-3">
                     <NavLink class="nav-link" href="documents">
                         <span class="bi bi-plus-square-fill-nav-menu" aria-hidden="true"></span> Documents
@@ -30,6 +34,8 @@
                     </NavLink>
                 </div>
 
+                <div class="nav-section-header">ADMINISTRATION</div>
+
                 <div class="nav-item px-3">
                     <NavLink class="nav-link" href="edit-userpermissions">
                         <span class="bi bi-people-nav-menu" aria-hidden="true"></span> User Permissions
@@ -38,27 +44,29 @@
 
                 <div class="nav-item px-3">
                     <NavLink class="nav-link" href="currency-administration">
-                        <span class="bi bi-currency-dollar" aria-hidden="true"></span> Currency Administration
+                        <span class="bi bi-currency-dollar" aria-hidden="true"></span> Currency
                     </NavLink>
                 </div>
 
                 <div class="nav-item px-3">
                     <NavLink class="nav-link" href="country-administration">
-                        <span class="bi bi-globe" aria-hidden="true"></span> Country Administration
+                        <span class="bi bi-globe" aria-hidden="true"></span> Country
                     </NavLink>
                 </div>
 
                 <div class="nav-item px-3">
                     <NavLink class="nav-link" href="documenttype-administration">
-                        <span class="bi bi-file-earmark-text" aria-hidden="true"></span> Document Type Administration
+                        <span class="bi bi-file-earmark-text" aria-hidden="true"></span> Document Type
                     </NavLink>
                 </div>
 
                 <div class="nav-item px-3">
                     <NavLink class="nav-link" href="counterparty-administration">
-                        <span class="bi bi-building" aria-hidden="true"></span> Counter Party Administration
+                        <span class="bi bi-building" aria-hidden="true"></span> Counter Party
                     </NavLink>
                 </div>
+
+                <div class="nav-section-header">DEMO</div>
 
                 <div class="nav-item px-3">
                     <NavLink class="nav-link" href="counterparty-demo">
