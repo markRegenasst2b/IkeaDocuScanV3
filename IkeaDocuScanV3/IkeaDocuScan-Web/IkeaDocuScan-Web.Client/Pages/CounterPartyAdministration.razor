@@ -16,7 +16,7 @@
 
     @* Search and Create section *@
     <div class="row mb-3">
-        <div class="col-md-6">
+        <div class="col-md-5">
             <div class="input-group">
                 <span class="input-group-text"><i class="fa fa-search"></i></span>
                 <input type="text"
@@ -27,7 +27,20 @@
                        @bind:after="ApplyFilter" />
             </div>
         </div>
-        <div class="col-md-6 text-end">
+        <div class="col-md-3">
+            <div class="input-group">
+                <span class="input-group-text">Show</span>
+                <select class="form-select" @bind="recordLimit" @bind:after="ApplyFilter">
+                    <option value="100">100</option>
+                    <option value="300">300</option>
+                    <option value="500">500</option>
+                    <option value="1000">1000</option>
+                    <option value="0">All</option>
+                </select>
+                <span class="input-group-text">records</span>
+            </div>
+        </div>
+        <div class="col-md-4 text-end">
             <button class="btn btn-primary" @onclick="OpenCreateModal">
                 <i class="fa fa-plus me-2"></i>Create New Counter Party
             </button>
@@ -449,6 +462,7 @@
     private string searchTerm = string.Empty;
     private string sortColumn = nameof(CounterPartyDto.Name);
     private bool sortAscending = true;
+    private int recordLimit = 300;
 
     private bool isLoading = true;
     private bool showModal = false;
@@ -530,6 +544,12 @@
                 : filtered.OrderByDescending(cp => cp.Since),
             _ => filtered.OrderBy(cp => cp.Name)
         };
+
+        // Apply record limit (0 means show all)
+        if (recordLimit > 0)
+        {
+            filtered = filtered.Take(recordLimit);
+        }
 
         filteredCounterParties = filtered.ToList();
     }
