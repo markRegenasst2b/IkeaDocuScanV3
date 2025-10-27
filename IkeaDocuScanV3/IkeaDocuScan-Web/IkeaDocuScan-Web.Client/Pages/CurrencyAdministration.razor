@@ -1,0 +1,416 @@
+@page "/currency-administration"
+@rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
+@attribute [Authorize(Policy = "HasAccess")]
+@using IkeaDocuScan.Shared.DTOs.Currencies
+@using IkeaDocuScan.Shared.Interfaces
+@using IkeaDocuScan_Web.Client.Extensions
+@using Microsoft.AspNetCore.Authorization
+@inject ICurrencyService CurrencyService
+@inject ILogger<CurrencyAdministration> Logger
+
+<PageTitle>Currency Administration</PageTitle>
+
+<div class="container-fluid mt-4">
+    <div class="bg-light p-3">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <div>
+                <h1 class="mb-0">Currency Administration</h1>
+                <p class="text-muted mb-0">Manage currency codes and settings</p>
+            </div>
+            <button class="btn btn-primary" @onclick="OpenCreateModal">
+                <i class="fa fa-plus me-2"></i>Add New Currency
+            </button>
+        </div>
+
+        @if (!string.IsNullOrEmpty(successMessage))
+        {
+            <div class="alert alert-success alert-dismissible fade show" role="alert">
+                @successMessage
+                <button type="button" class="btn-close" @onclick="() => successMessage = null"></button>
+            </div>
+        }
+
+        @if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                @errorMessage
+                <button type="button" class="btn-close" @onclick="() => errorMessage = null"></button>
+            </div>
+        }
+
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5 class="mb-0">Currencies (@(currencies?.Count ?? 0))</h5>
+            </div>
+            <div class="card-body">
+                @if (isLoading)
+                {
+                    <div class="text-center p-4">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mt-2">Loading currencies...</p>
+                    </div>
+                }
+                else if (currencies != null && currencies.Count > 0)
+                {
+                    <div class="table-responsive">
+                        <table class="table table-hover table-striped">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Currency Code</th>
+                                    <th>Name</th>
+                                    <th>Decimal Places</th>
+                                    <th style="width: 200px;">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var currency in currencies)
+                                {
+                                    <tr>
+                                        <td><strong>@currency.CurrencyCode</strong></td>
+                                        <td>@currency.Name</td>
+                                        <td>@currency.DecimalPlaces</td>
+                                        <td>
+                                            <button class="btn btn-sm btn-outline-primary me-2" @onclick="() => OpenEditModal(currency)">
+                                                <i class="fa fa-edit"></i> Edit
+                                            </button>
+                                            <button class="btn btn-sm btn-outline-danger" @onclick="() => OpenDeleteModal(currency)">
+                                                <i class="fa fa-trash"></i> Delete
+                                            </button>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+                else
+                {
+                    <div class="alert alert-info">
+                        No currencies found. Click "Add New Currency" to create one.
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@* Create/Edit Modal *@
+<div class="modal fade @(showEditModal ? "show d-block" : "")"
+     tabindex="-1"
+     style="@(showEditModal ? "background-color: rgba(0,0,0,0.5);" : "")">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">@(isEditMode ? "Edit Currency" : "Create New Currency")</h5>
+                <button type="button" class="btn-close" @onclick="CloseEditModal"></button>
+            </div>
+            <div class="modal-body">
+                @if (isEditMode && editDto != null)
+                {
+                    <div class="mb-3">
+                        <label class="form-label">Currency Code</label>
+                        <input type="text" class="form-control" value="@selectedCurrency?.CurrencyCode" disabled />
+                        <small class="text-muted">Currency code cannot be changed</small>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Name <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" @bind="editDto.Name" maxlength="128" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Decimal Places <span class="text-danger">*</span></label>
+                        <input type="number" class="form-control" @bind="editDto.DecimalPlaces" min="0" max="4" />
+                        <small class="text-muted">Typically 0-4 (most currencies use 2)</small>
+                    </div>
+                }
+                else if (!isEditMode && createDto != null)
+                {
+                    <div class="mb-3">
+                        <label class="form-label">Currency Code <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control text-uppercase" @bind="createDto.CurrencyCode" maxlength="3" placeholder="USD" />
+                        <small class="text-muted">3-letter ISO 4217 code (e.g., USD, EUR, GBP)</small>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Name <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" @bind="createDto.Name" maxlength="128" placeholder="US Dollar" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Decimal Places <span class="text-danger">*</span></label>
+                        <input type="number" class="form-control" @bind="createDto.DecimalPlaces" min="0" max="4" />
+                        <small class="text-muted">Typically 0-4 (most currencies use 2)</small>
+                    </div>
+                }
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" @onclick="CloseEditModal">Cancel</button>
+                <button type="button" class="btn btn-primary" @onclick="SaveCurrency" disabled="@isSaving">
+                    @if (isSaving)
+                    {
+                        <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                    }
+                    else
+                    {
+                        <i class="fa fa-save me-2"></i>
+                    }
+                    @(isEditMode ? "Update" : "Create")
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@* Delete Confirmation Modal *@
+<div class="modal fade @(showDeleteModal ? "show d-block" : "")"
+     tabindex="-1"
+     style="@(showDeleteModal ? "background-color: rgba(0,0,0,0.5);" : "")">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirm Delete</h5>
+                <button type="button" class="btn-close" @onclick="CloseDeleteModal"></button>
+            </div>
+            <div class="modal-body">
+                @if (isCheckingUsage)
+                {
+                    <div class="text-center p-4">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Checking...</span>
+                        </div>
+                        <p class="mt-2">Checking currency usage...</p>
+                    </div>
+                }
+                else if (deleteUsageCount > 0)
+                {
+                    <div class="alert alert-warning">
+                        <i class="fa fa-exclamation-triangle me-2"></i>
+                        <strong>Warning: Currency is in use!</strong>
+                        <p class="mb-0 mt-2">
+                            Currency <strong>@selectedCurrency?.CurrencyCode</strong> is currently used by <strong>@deleteUsageCount</strong> document(s).
+                        </p>
+                        <p class="mb-0 mt-2">
+                            You must remove or update all documents using this currency before it can be deleted.
+                        </p>
+                    </div>
+                }
+                else
+                {
+                    <p>Are you sure you want to delete the currency <strong>@selectedCurrency?.CurrencyCode - @selectedCurrency?.Name</strong>?</p>
+                    <p class="text-muted mb-0">This action cannot be undone.</p>
+                }
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" @onclick="CloseDeleteModal">Cancel</button>
+                @if (deleteUsageCount == 0 && !isCheckingUsage)
+                {
+                    <button type="button" class="btn btn-danger" @onclick="ConfirmDelete" disabled="@isSaving">
+                        @if (isSaving)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                        }
+                        else
+                        {
+                            <i class="fa fa-trash me-2"></i>
+                        }
+                        Delete
+                    </button>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private List<CurrencyDto>? currencies;
+    private bool isLoading = false;
+    private bool isSaving = false;
+    private bool isCheckingUsage = false;
+    private string? errorMessage;
+    private string? successMessage;
+
+    // Edit/Create modal
+    private bool showEditModal = false;
+    private bool isEditMode = false;
+    private CurrencyDto? selectedCurrency;
+    private CreateCurrencyDto? createDto;
+    private UpdateCurrencyDto? editDto;
+
+    // Delete modal
+    private bool showDeleteModal = false;
+    private int deleteUsageCount = 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadCurrencies();
+    }
+
+    private async Task LoadCurrencies()
+    {
+        try
+        {
+            isLoading = true;
+            errorMessage = null;
+            StateHasChanged();
+
+            currencies = await CurrencyService.GetAllAsync();
+            Logger.LogInformation("Loaded {Count} currencies", currencies.Count);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading currencies");
+            errorMessage = $"Error loading currencies: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private void OpenCreateModal()
+    {
+        isEditMode = false;
+        selectedCurrency = null;
+        createDto = new CreateCurrencyDto { DecimalPlaces = 2 };
+        editDto = null;
+        showEditModal = true;
+        errorMessage = null;
+        successMessage = null;
+    }
+
+    private void OpenEditModal(CurrencyDto currency)
+    {
+        isEditMode = true;
+        selectedCurrency = currency;
+        createDto = null;
+        editDto = new UpdateCurrencyDto
+        {
+            Name = currency.Name,
+            DecimalPlaces = currency.DecimalPlaces
+        };
+        showEditModal = true;
+        errorMessage = null;
+        successMessage = null;
+    }
+
+    private void CloseEditModal()
+    {
+        showEditModal = false;
+        selectedCurrency = null;
+        createDto = null;
+        editDto = null;
+    }
+
+    private async Task OpenDeleteModal(CurrencyDto currency)
+    {
+        selectedCurrency = currency;
+        showDeleteModal = true;
+        isCheckingUsage = true;
+        deleteUsageCount = 0;
+        errorMessage = null;
+        successMessage = null;
+        StateHasChanged();
+
+        try
+        {
+            deleteUsageCount = await CurrencyService.GetUsageCountAsync(currency.CurrencyCode);
+            Logger.LogInformation("Currency {Code} is used by {Count} documents", currency.CurrencyCode, deleteUsageCount);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error checking currency usage");
+            errorMessage = $"Error checking currency usage: {ex.Message}";
+        }
+        finally
+        {
+            isCheckingUsage = false;
+            StateHasChanged();
+        }
+    }
+
+    private void CloseDeleteModal()
+    {
+        showDeleteModal = false;
+        selectedCurrency = null;
+        deleteUsageCount = 0;
+    }
+
+    private async Task SaveCurrency()
+    {
+        try
+        {
+            isSaving = true;
+            errorMessage = null;
+            successMessage = null;
+            StateHasChanged();
+
+            if (isEditMode && editDto != null && selectedCurrency != null)
+            {
+                await CurrencyService.UpdateAsync(selectedCurrency.CurrencyCode, editDto);
+                successMessage = $"Currency {selectedCurrency.CurrencyCode} updated successfully";
+                Logger.LogInformation("Updated currency {Code}", selectedCurrency.CurrencyCode);
+            }
+            else if (!isEditMode && createDto != null)
+            {
+                await CurrencyService.CreateAsync(createDto);
+                successMessage = $"Currency {createDto.CurrencyCode} created successfully";
+                Logger.LogInformation("Created currency {Code}", createDto.CurrencyCode);
+            }
+
+            CloseEditModal();
+            await LoadCurrencies();
+        }
+        catch (HttpRequestException ex)
+        {
+            Logger.LogError(ex, "HTTP error saving currency");
+            var errorContent = await ex.GetErrorMessageAsync();
+            errorMessage = $"Error saving currency: {errorContent}";
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error saving currency");
+            errorMessage = $"Error saving currency: {ex.Message}";
+        }
+        finally
+        {
+            isSaving = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task ConfirmDelete()
+    {
+        if (selectedCurrency == null) return;
+
+        try
+        {
+            isSaving = true;
+            errorMessage = null;
+            successMessage = null;
+            StateHasChanged();
+
+            await CurrencyService.DeleteAsync(selectedCurrency.CurrencyCode);
+            successMessage = $"Currency {selectedCurrency.CurrencyCode} deleted successfully";
+            Logger.LogInformation("Deleted currency {Code}", selectedCurrency.CurrencyCode);
+
+            CloseDeleteModal();
+            await LoadCurrencies();
+        }
+        catch (HttpRequestException ex)
+        {
+            Logger.LogError(ex, "HTTP error deleting currency");
+            var errorContent = await ex.GetErrorMessageAsync();
+            errorMessage = $"Error deleting currency: {errorContent}";
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error deleting currency");
+            errorMessage = $"Error deleting currency: {ex.Message}";
+        }
+        finally
+        {
+            isSaving = false;
+            StateHasChanged();
+        }
+    }
+}
