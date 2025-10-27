@@ -39,7 +39,30 @@
 
         <div class="card mt-4">
             <div class="card-header">
-                <h5 class="mb-0">Countries (@(countries?.Count ?? 0))</h5>
+                <div class="row align-items-center">
+                    <div class="col-md-6">
+                        <h5 class="mb-0">Countries (@(filteredCountries?.Count ?? 0)@(filteredCountries?.Count != countries?.Count ? $" of {countries?.Count ?? 0}" : ""))</h5>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="input-group">
+                            <span class="input-group-text">
+                                <i class="fa fa-search"></i>
+                            </span>
+                            <input type="text"
+                                   class="form-control"
+                                   placeholder="Search by code or name..."
+                                   @bind="searchTerm"
+                                   @bind:event="oninput"
+                                   @bind:after="ApplyFilter" />
+                            @if (!string.IsNullOrEmpty(searchTerm))
+                            {
+                                <button class="btn btn-outline-secondary" type="button" @onclick="ClearSearch">
+                                    <i class="fa fa-times"></i>
+                                </button>
+                            }
+                        </div>
+                    </div>
+                </div>
             </div>
             <div class="card-body">
                 @if (isLoading)
@@ -51,7 +74,7 @@
                         <p class="mt-2">Loading countries...</p>
                     </div>
                 }
-                else if (countries != null && countries.Count > 0)
+                else if (filteredCountries != null && filteredCountries.Count > 0)
                 {
                     <div class="table-responsive">
                         <table class="table table-hover table-striped">
@@ -63,7 +86,7 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                @foreach (var country in countries)
+                                @foreach (var country in filteredCountries)
                                 {
                                     <tr>
                                         <td><strong>@country.CountryCode</strong></td>
@@ -80,6 +103,12 @@
                                 }
                             </tbody>
                         </table>
+                    </div>
+                }
+                else if (!string.IsNullOrEmpty(searchTerm))
+                {
+                    <div class="alert alert-warning">
+                        No countries found matching "@searchTerm". <button class="btn btn-link p-0" @onclick="ClearSearch">Clear search</button>
                     </div>
                 }
                 else
@@ -235,6 +264,8 @@
 
 @code {
     private List<CountryDto>? countries;
+    private List<CountryDto>? filteredCountries;
+    private string searchTerm = string.Empty;
     private bool isLoading = false;
     private bool isSaving = false;
     private bool isCheckingUsage = false;
@@ -268,6 +299,7 @@
             StateHasChanged();
 
             countries = await CountryService.GetAllAsync();
+            ApplyFilter();
             Logger.LogInformation("Loaded {Count} countries", countries.Count);
         }
         catch (Exception ex)
@@ -280,6 +312,35 @@
             isLoading = false;
             StateHasChanged();
         }
+    }
+
+    private void ApplyFilter()
+    {
+        if (countries == null)
+        {
+            filteredCountries = null;
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(searchTerm))
+        {
+            filteredCountries = countries;
+        }
+        else
+        {
+            var search = searchTerm.Trim().ToLowerInvariant();
+            filteredCountries = countries
+                .Where(c =>
+                    c.CountryCode.ToLowerInvariant().Contains(search) ||
+                    (c.Name?.ToLowerInvariant().Contains(search) ?? false))
+                .ToList();
+        }
+    }
+
+    private void ClearSearch()
+    {
+        searchTerm = string.Empty;
+        ApplyFilter();
     }
 
     private void OpenCreateModal()

@@ -39,7 +39,30 @@
 
         <div class="card mt-4">
             <div class="card-header">
-                <h5 class="mb-0">Currencies (@(currencies?.Count ?? 0))</h5>
+                <div class="row align-items-center">
+                    <div class="col-md-6">
+                        <h5 class="mb-0">Currencies (@(filteredCurrencies?.Count ?? 0)@(filteredCurrencies?.Count != currencies?.Count ? $" of {currencies?.Count ?? 0}" : ""))</h5>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="input-group">
+                            <span class="input-group-text">
+                                <i class="fa fa-search"></i>
+                            </span>
+                            <input type="text"
+                                   class="form-control"
+                                   placeholder="Search by code or name..."
+                                   @bind="searchTerm"
+                                   @bind:event="oninput"
+                                   @bind:after="ApplyFilter" />
+                            @if (!string.IsNullOrEmpty(searchTerm))
+                            {
+                                <button class="btn btn-outline-secondary" type="button" @onclick="ClearSearch">
+                                    <i class="fa fa-times"></i>
+                                </button>
+                            }
+                        </div>
+                    </div>
+                </div>
             </div>
             <div class="card-body">
                 @if (isLoading)
@@ -51,7 +74,7 @@
                         <p class="mt-2">Loading currencies...</p>
                     </div>
                 }
-                else if (currencies != null && currencies.Count > 0)
+                else if (filteredCurrencies != null && filteredCurrencies.Count > 0)
                 {
                     <div class="table-responsive">
                         <table class="table table-hover table-striped">
@@ -64,7 +87,7 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                @foreach (var currency in currencies)
+                                @foreach (var currency in filteredCurrencies)
                                 {
                                     <tr>
                                         <td><strong>@currency.CurrencyCode</strong></td>
@@ -82,6 +105,12 @@
                                 }
                             </tbody>
                         </table>
+                    </div>
+                }
+                else if (!string.IsNullOrEmpty(searchTerm))
+                {
+                    <div class="alert alert-warning">
+                        No currencies found matching "@searchTerm". <button class="btn btn-link p-0" @onclick="ClearSearch">Clear search</button>
                     </div>
                 }
                 else
@@ -237,6 +266,8 @@
 
 @code {
     private List<CurrencyDto>? currencies;
+    private List<CurrencyDto>? filteredCurrencies;
+    private string searchTerm = string.Empty;
     private bool isLoading = false;
     private bool isSaving = false;
     private bool isCheckingUsage = false;
@@ -269,6 +300,7 @@
             StateHasChanged();
 
             currencies = await CurrencyService.GetAllAsync();
+            ApplyFilter();
             Logger.LogInformation("Loaded {Count} currencies", currencies.Count);
         }
         catch (Exception ex)
@@ -281,6 +313,35 @@
             isLoading = false;
             StateHasChanged();
         }
+    }
+
+    private void ApplyFilter()
+    {
+        if (currencies == null)
+        {
+            filteredCurrencies = null;
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(searchTerm))
+        {
+            filteredCurrencies = currencies;
+        }
+        else
+        {
+            var search = searchTerm.Trim().ToLowerInvariant();
+            filteredCurrencies = currencies
+                .Where(c =>
+                    c.CurrencyCode.ToLowerInvariant().Contains(search) ||
+                    c.Name.ToLowerInvariant().Contains(search))
+                .ToList();
+        }
+    }
+
+    private void ClearSearch()
+    {
+        searchTerm = string.Empty;
+        ApplyFilter();
     }
 
     private void OpenCreateModal()
