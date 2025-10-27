@@ -125,7 +125,8 @@ public partial class DocumentPropertiesPage : ComponentBase
             return;
         }
 
-        Model = MapFromDto(document);
+        // Update existing Model instead of replacing it to avoid triggering child component re-initialization
+        UpdateModelFromDto(Model, document);
         Model.Mode = DocumentPropertyMode.Edit;
         Model.PropertySetNumber = 2; // DispatchDate enabled
     }
@@ -589,6 +590,46 @@ public partial class DocumentPropertiesPage : ComponentBase
         model.SetThirdPartyNamesFromString(dto.ThirdParty);
 
         return model;
+    }
+
+    private void UpdateModelFromDto(DocumentPropertiesViewModel model, DocumentDto dto)
+    {
+        model.Id = dto.Id;
+        model.BarCode = dto.BarCode.ToString();
+        model.Name = dto.Name;
+        model.FileName = dto.BarCode + ".pdf"; // TODO: Get actual filename from DocumentFile
+        model.DocumentTypeId = dto.DocumentTypeId;
+        model.CounterPartyId = dto.CounterPartyId?.ToString();
+        model.DateOfContract = dto.DateOfContract;
+        model.ReceivingDate = dto.ReceivingDate;
+        model.SendingOutDate = dto.SendingOutDate;
+        model.ForwardedToSignatoriesDate = dto.ForwardedToSignatoriesDate;
+        model.DispatchDate = dto.DispatchDate;
+        model.Comment = dto.Comment;
+        model.ActionDate = dto.ActionDate;
+        model.ActionDescription = dto.ActionDescription;
+        model.EmailReminderGroup = dto.ReminderGroup;
+        model.Fax = dto.Fax;
+        model.OriginalReceived = dto.OriginalReceived;
+        model.TranslationReceived = dto.TranslatedVersionReceived;
+        model.Confidential = dto.Confidential;
+        model.DocumentNameId = dto.DocumentNameId;
+        model.DocumentNo = dto.DocumentNo;
+        model.VersionNo = dto.VersionNo;
+        model.AssociatedToPUA = dto.AssociatedToPua;
+        model.AssociatedToAppendix = dto.AssociatedToAppendix;
+        model.ValidUntil = dto.ValidUntil;
+        model.Amount = dto.Amount;
+        model.CurrencyCode = dto.CurrencyCode;
+        model.Authorisation = dto.Authorisation;
+        model.BankConfirmation = dto.BankConfirmation;
+        model.CreatedOn = dto.CreatedOn;
+        model.CreatedBy = dto.CreatedBy;
+        model.ModifiedOn = dto.ModifiedOn;
+        model.ModifiedBy = dto.ModifiedBy;
+
+        model.SetThirdPartyIdsFromString(dto.ThirdPartyId);
+        model.SetThirdPartyNamesFromString(dto.ThirdParty);
     }
 
     private UpdateDocumentDto MapToUpdateDto()

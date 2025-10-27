@@ -2,37 +2,53 @@ using IkeaDocuScan.Infrastructure.Data;
 using IkeaDocuScan.Shared.DTOs.DocumentTypes;
 using IkeaDocuScan.Shared.Interfaces;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace IkeaDocuScan_Web.Services;
 
 /// <summary>
-/// Service for DocumentType operations
+/// Service for DocumentType operations with caching
 /// </summary>
 public class DocumentTypeService : IDocumentTypeService
 {
     private readonly IDbContextFactory<AppDbContext> _contextFactory;
     private readonly ILogger<DocumentTypeService> _logger;
+    private readonly IMemoryCache _cache;
+
+    private const string CacheKey = "DocumentTypes_All";
+    private static readonly TimeSpan CacheDuration = TimeSpan.FromHours(1);
 
     public DocumentTypeService(
         IDbContextFactory<AppDbContext> contextFactory,
-        ILogger<DocumentTypeService> logger)
+        ILogger<DocumentTypeService> logger,
+        IMemoryCache cache)
     {
         _contextFactory = contextFactory;
         _logger = logger;
+        _cache = cache;
     }
 
     public async Task<List<DocumentTypeDto>> GetAllAsync()
     {
-        _logger.LogInformation("Fetching all enabled document types");
+        return await _cache.GetOrCreateAsync(CacheKey, async entry =>
+        {
+            _logger.LogInformation("Fetching all enabled document types from database (cache miss)");
 
-        await using var context = await _contextFactory.CreateDbContextAsync();
-        var documentTypes = await context.DocumentTypes
-            .AsNoTracking()
-            .Where(dt => dt.IsEnabled)
-            .OrderBy(dt => dt.DtName)
-            .ToListAsync();
+            entry.AbsoluteExpirationRelativeToNow = CacheDuration;
+            entry.SetPriority(CacheItemPriority.High);
 
-        return documentTypes.Select(MapToDto).ToList();
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            var documentTypes = await context.DocumentTypes
+                .AsNoTracking()
+                .Where(dt => dt.IsEnabled)
+                .OrderBy(dt => dt.DtName)
+                .ToListAsync();
+
+            var result = documentTypes.Select(MapToDto).ToList();
+            _logger.LogInformation("Cached {Count} document types for {Duration}", result.Count, CacheDuration);
+
+            return result;
+        }) ?? new List<DocumentTypeDto>();
     }
 
     public async Task<DocumentTypeDto?> GetByIdAsync(int id)
@@ -51,6 +67,15 @@ public class DocumentTypeService : IDocumentTypeService
         }
 
         return MapToDto(documentType);
+    }
+
+    /// <summary>
+    /// Clear the document types cache. Call this when document types are added, updated, or deleted.
+    /// </summary>
+    public void ClearCache()
+    {
+        _cache.Remove(CacheKey);
+        _logger.LogInformation("Document types cache cleared");
     }
 
     private static DocumentTypeDto MapToDto(IkeaDocuScan.Infrastructure.Entities.DocumentType entity)

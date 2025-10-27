@@ -2,23 +2,30 @@ using IkeaDocuScan.Infrastructure.Data;
 using IkeaDocuScan.Shared.DTOs.CounterParties;
 using IkeaDocuScan.Shared.Interfaces;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace IkeaDocuScan_Web.Services;
 
 /// <summary>
-/// Service for CounterParty operations
+/// Service for CounterParty operations with caching
 /// </summary>
 public class CounterPartyService : ICounterPartyService
 {
     private readonly IDbContextFactory<AppDbContext> _contextFactory;
     private readonly ILogger<CounterPartyService> _logger;
+    private readonly IMemoryCache _cache;
+
+    private const string CacheKey = "CounterParties_All";
+    private static readonly TimeSpan CacheDuration = TimeSpan.FromHours(1);
 
     public CounterPartyService(
         IDbContextFactory<AppDbContext> contextFactory,
-        ILogger<CounterPartyService> logger)
+        ILogger<CounterPartyService> logger,
+        IMemoryCache cache)
     {
         _contextFactory = contextFactory;
         _logger = logger;
+        _cache = cache;
     }
 
     public async Task<List<CounterPartyDto>> SearchAsync(string searchTerm)
@@ -51,15 +58,24 @@ public class CounterPartyService : ICounterPartyService
 
     public async Task<List<CounterPartyDto>> GetAllAsync()
     {
-        _logger.LogInformation("Fetching all counter parties");
+        return await _cache.GetOrCreateAsync(CacheKey, async entry =>
+        {
+            _logger.LogInformation("Fetching all counter parties from database (cache miss)");
 
-        await using var context = await _contextFactory.CreateDbContextAsync();
-        var counterParties = await context.CounterParties
-            .AsNoTracking()
-            .OrderBy(cp => cp.Name)
-            .ToListAsync();
+            entry.AbsoluteExpirationRelativeToNow = CacheDuration;
+            entry.SetPriority(CacheItemPriority.High);
 
-        return counterParties.Select(MapToDto).ToList();
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            var counterParties = await context.CounterParties
+                .AsNoTracking()
+                .OrderBy(cp => cp.Name)
+                .ToListAsync();
+
+            var result = counterParties.Select(MapToDto).ToList();
+            _logger.LogInformation("Cached {Count} counter parties for {Duration}", result.Count, CacheDuration);
+
+            return result;
+        }) ?? new List<CounterPartyDto>();
     }
 
     public async Task<CounterPartyDto?> GetByIdAsync(int id)
@@ -78,6 +94,15 @@ public class CounterPartyService : ICounterPartyService
         }
 
         return MapToDto(counterParty);
+    }
+
+    /// <summary>
+    /// Clear the counter parties cache. Call this when counter parties are added, updated, or deleted.
+    /// </summary>
+    public void ClearCache()
+    {
+        _cache.Remove(CacheKey);
+        _logger.LogInformation("Counter parties cache cleared");
     }
 
     private static CounterPartyDto MapToDto(IkeaDocuScan.Infrastructure.Entities.CounterParty entity)

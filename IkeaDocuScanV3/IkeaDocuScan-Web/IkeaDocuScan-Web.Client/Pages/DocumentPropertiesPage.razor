@@ -2,7 +2,7 @@
 @page "/documents/register"
 @page "/documents/checkin/{FileName}"
 @using Microsoft.AspNetCore.Components.Web
-@rendermode InteractiveWebAssembly
+@rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
 @using IkeaDocuScan_Web.Client.Models
 @using IkeaDocuScan_Web.Client.Components.DocumentManagement
 @using IkeaDocuScan.Shared.Interfaces
@@ -18,16 +18,20 @@
 <div class="container-fluid">
     <div class="bg-light p-3 document-properties-page">
 
+        @* Loading overlay - allows child components to render and load data underneath *@
         @if (isLoading)
         {
-            <div class="text-center p-5">
-                <div class="spinner-border text-primary" role="status">
-                    <span class="visually-hidden">Loading...</span>
+            <div class="loading-overlay">
+                <div class="text-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-3">Loading document...</p>
                 </div>
-                <p class="mt-3">Loading...</p>
             </div>
         }
-        else if (!string.IsNullOrEmpty(errorMessage))
+
+        @if (!string.IsNullOrEmpty(errorMessage))
         {
             <div class="alert alert-danger" role="alert">
                 <h5 class="alert-heading">Error</h5>
@@ -289,6 +293,20 @@
 </div>
 
 <style>
+    /* Loading overlay */
+    .loading-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: rgba(255, 255, 255, 0.95);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 9999;
+    }
+
     /* Compact form styling - configurable widths for dropdowns and inputs */
     :root {
         --dropdown-max-width: 20em;
