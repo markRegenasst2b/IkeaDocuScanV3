@@ -67,9 +67,20 @@ public class CurrencyHttpService : ICurrencyService
         {
             _logger.LogInformation("Creating currency with code {CurrencyCode}", dto.CurrencyCode);
             var response = await _http.PostAsJsonAsync("/api/currencies", dto);
-            response.EnsureSuccessStatusCode();
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var errorContent = await response.Content.ReadAsStringAsync();
+                var errorMessage = TryExtractErrorMessage(errorContent);
+                throw new HttpRequestException(errorMessage);
+            }
+
             var currency = await response.Content.ReadFromJsonAsync<CurrencyDto>();
             return currency ?? throw new InvalidOperationException("Failed to deserialize created currency");
+        }
+        catch (HttpRequestException)
+        {
+            throw; // Re-throw HttpRequestException with our custom message
         }
         catch (Exception ex)
         {
@@ -87,9 +98,20 @@ public class CurrencyHttpService : ICurrencyService
         {
             _logger.LogInformation("Updating currency with code {CurrencyCode}", currencyCode);
             var response = await _http.PutAsJsonAsync($"/api/currencies/{currencyCode}", dto);
-            response.EnsureSuccessStatusCode();
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var errorContent = await response.Content.ReadAsStringAsync();
+                var errorMessage = TryExtractErrorMessage(errorContent);
+                throw new HttpRequestException(errorMessage);
+            }
+
             var currency = await response.Content.ReadFromJsonAsync<CurrencyDto>();
             return currency ?? throw new InvalidOperationException("Failed to deserialize updated currency");
+        }
+        catch (HttpRequestException)
+        {
+            throw; // Re-throw HttpRequestException with our custom message
         }
         catch (Exception ex)
         {
@@ -107,7 +129,17 @@ public class CurrencyHttpService : ICurrencyService
         {
             _logger.LogInformation("Deleting currency with code {CurrencyCode}", currencyCode);
             var response = await _http.DeleteAsync($"/api/currencies/{currencyCode}");
-            response.EnsureSuccessStatusCode();
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var errorContent = await response.Content.ReadAsStringAsync();
+                var errorMessage = TryExtractErrorMessage(errorContent);
+                throw new HttpRequestException(errorMessage);
+            }
+        }
+        catch (HttpRequestException)
+        {
+            throw; // Re-throw HttpRequestException with our custom message
         }
         catch (Exception ex)
         {
@@ -152,10 +184,38 @@ public class CurrencyHttpService : ICurrencyService
         }
     }
 
+    private string TryExtractErrorMessage(string errorContent)
+    {
+        try
+        {
+            var options = new System.Text.Json.JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            };
+            var errorResponse = System.Text.Json.JsonSerializer.Deserialize<ErrorResponse>(errorContent, options);
+            if (errorResponse?.Error != null)
+            {
+                return errorResponse.Error;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to deserialize error response: {Content}", errorContent);
+            // If deserialization fails, return raw content or a default message
+        }
+
+        return !string.IsNullOrEmpty(errorContent) ? errorContent : "An error occurred";
+    }
+
     private class UsageResponse
     {
         public string CurrencyCode { get; set; } = string.Empty;
         public bool IsInUse { get; set; }
         public int UsageCount { get; set; }
+    }
+
+    private class ErrorResponse
+    {
+        public string? Error { get; set; }
     }
 }
