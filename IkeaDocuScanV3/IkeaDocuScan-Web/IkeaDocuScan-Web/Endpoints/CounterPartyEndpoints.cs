@@ -1,3 +1,4 @@
+using IkeaDocuScan.Shared.Exceptions;
 using IkeaDocuScan.Shared.Interfaces;
 using IkeaDocuScan.Shared.DTOs.CounterParties;
 
@@ -8,7 +9,7 @@ public static class CounterPartyEndpoints
     public static void MapCounterPartyEndpoints(this IEndpointRouteBuilder routes)
     {
         var group = routes.MapGroup("/api/counterparties")
-            .RequireAuthorization()
+            .RequireAuthorization("HasAccess")
             .WithTags("CounterParties");
 
         group.MapGet("/", async (ICounterPartyService service) =>
@@ -38,5 +39,70 @@ public static class CounterPartyEndpoints
         .WithName("GetCounterPartyById")
         .Produces<CounterPartyDto>(200)
         .Produces(404);
+
+        group.MapPost("/", async (CreateCounterPartyDto dto, ICounterPartyService service) =>
+        {
+            try
+            {
+                var counterParty = await service.CreateAsync(dto);
+                return Results.Created($"/api/counterparties/{counterParty.CounterPartyId}", counterParty);
+            }
+            catch (ValidationException ex)
+            {
+                return Results.BadRequest(new { error = ex.Message });
+            }
+        })
+        .WithName("CreateCounterParty")
+        .Produces<CounterPartyDto>(201)
+        .Produces(400);
+
+        group.MapPut("/{id}", async (int id, UpdateCounterPartyDto dto, ICounterPartyService service) =>
+        {
+            try
+            {
+                var counterParty = await service.UpdateAsync(id, dto);
+                return Results.Ok(counterParty);
+            }
+            catch (ValidationException ex)
+            {
+                return Results.BadRequest(new { error = ex.Message });
+            }
+        })
+        .WithName("UpdateCounterParty")
+        .Produces<CounterPartyDto>(200)
+        .Produces(400);
+
+        group.MapDelete("/{id}", async (int id, ICounterPartyService service) =>
+        {
+            try
+            {
+                await service.DeleteAsync(id);
+                return Results.NoContent();
+            }
+            catch (ValidationException ex)
+            {
+                return Results.BadRequest(new { error = ex.Message });
+            }
+        })
+        .WithName("DeleteCounterParty")
+        .Produces(204)
+        .Produces(400);
+
+        group.MapGet("/{id}/usage", async (int id, ICounterPartyService service) =>
+        {
+            var (documentCount, userPermissionCount) = await service.GetUsageCountAsync(id);
+            var isInUse = documentCount > 0 || userPermissionCount > 0;
+
+            return Results.Ok(new
+            {
+                counterPartyId = id,
+                isInUse,
+                documentCount,
+                userPermissionCount,
+                totalUsage = documentCount + userPermissionCount
+            });
+        })
+        .WithName("GetCounterPartyUsage")
+        .Produces(200);
     }
 }

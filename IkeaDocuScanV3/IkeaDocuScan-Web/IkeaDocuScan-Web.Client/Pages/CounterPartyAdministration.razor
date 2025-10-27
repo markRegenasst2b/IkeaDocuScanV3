@@ -1,0 +1,682 @@
+@page "/counterparty-administration"
+@rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
+@using IkeaDocuScan.Shared.DTOs.CounterParties
+@using IkeaDocuScan.Shared.Interfaces
+@inject ICounterPartyService CounterPartyService
+@inject ILogger<CounterPartyAdministration> Logger
+
+<PageTitle>Counter Party Administration</PageTitle>
+
+<div class="container-fluid">
+    <div class="row mb-3">
+        <div class="col">
+            <h3>Counter Party Administration</h3>
+        </div>
+    </div>
+
+    @* Search and Create section *@
+    <div class="row mb-3">
+        <div class="col-md-6">
+            <div class="input-group">
+                <span class="input-group-text"><i class="fa fa-search"></i></span>
+                <input type="text"
+                       class="form-control"
+                       placeholder="Search by name, number, city, or country..."
+                       @bind="searchTerm"
+                       @bind:event="oninput"
+                       @bind:after="ApplyFilter" />
+            </div>
+        </div>
+        <div class="col-md-6 text-end">
+            <button class="btn btn-primary" @onclick="OpenCreateModal">
+                <i class="fa fa-plus me-2"></i>Create New Counter Party
+            </button>
+        </div>
+    </div>
+
+    @* Loading state *@
+    @if (isLoading)
+    {
+        <div class="text-center my-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-2">Loading counter parties...</p>
+        </div>
+    }
+    else
+    {
+        @* Counter parties table *@
+        <div class="row">
+            <div class="col">
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover">
+                        <thead>
+                            <tr>
+                                <th style="cursor: pointer;" @onclick="() => SortBy(nameof(CounterPartyDto.CounterPartyId))">
+                                    ID
+                                    @if (sortColumn == nameof(CounterPartyDto.CounterPartyId))
+                                    {
+                                        <i class="fa @(sortAscending ? "fa-sort-asc" : "fa-sort-desc")"></i>
+                                    }
+                                </th>
+                                <th style="cursor: pointer;" @onclick="() => SortBy(nameof(CounterPartyDto.Name))">
+                                    Name
+                                    @if (sortColumn == nameof(CounterPartyDto.Name))
+                                    {
+                                        <i class="fa @(sortAscending ? "fa-sort-asc" : "fa-sort-desc")"></i>
+                                    }
+                                </th>
+                                <th style="cursor: pointer;" @onclick="() => SortBy(nameof(CounterPartyDto.CounterPartyNoAlpha))">
+                                    Counter Party No
+                                    @if (sortColumn == nameof(CounterPartyDto.CounterPartyNoAlpha))
+                                    {
+                                        <i class="fa @(sortAscending ? "fa-sort-asc" : "fa-sort-desc")"></i>
+                                    }
+                                </th>
+                                <th style="cursor: pointer;" @onclick="() => SortBy(nameof(CounterPartyDto.City))">
+                                    City
+                                    @if (sortColumn == nameof(CounterPartyDto.City))
+                                    {
+                                        <i class="fa @(sortAscending ? "fa-sort-asc" : "fa-sort-desc")"></i>
+                                    }
+                                </th>
+                                <th style="cursor: pointer;" @onclick="() => SortBy(nameof(CounterPartyDto.Country))">
+                                    Country
+                                    @if (sortColumn == nameof(CounterPartyDto.Country))
+                                    {
+                                        <i class="fa @(sortAscending ? "fa-sort-asc" : "fa-sort-desc")"></i>
+                                    }
+                                </th>
+                                <th style="cursor: pointer;" @onclick="() => SortBy(nameof(CounterPartyDto.DisplayAtCheckIn))">
+                                    Display at Check-In
+                                    @if (sortColumn == nameof(CounterPartyDto.DisplayAtCheckIn))
+                                    {
+                                        <i class="fa @(sortAscending ? "fa-sort-asc" : "fa-sort-desc")"></i>
+                                    }
+                                </th>
+                                <th style="cursor: pointer;" @onclick="() => SortBy(nameof(CounterPartyDto.Since))">
+                                    Since
+                                    @if (sortColumn == nameof(CounterPartyDto.Since))
+                                    {
+                                        <i class="fa @(sortAscending ? "fa-sort-asc" : "fa-sort-desc")"></i>
+                                    }
+                                </th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (filteredCounterParties.Count == 0)
+                            {
+                                <tr>
+                                    <td colspan="8" class="text-center text-muted">
+                                        @if (string.IsNullOrWhiteSpace(searchTerm))
+                                        {
+                                            <span>No counter parties found.</span>
+                                        }
+                                        else
+                                        {
+                                            <span>No counter parties match your search.</span>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                            else
+                            {
+                                @foreach (var counterParty in filteredCounterParties)
+                                {
+                                    <tr>
+                                        <td>@counterParty.CounterPartyId</td>
+                                        <td>@counterParty.Name</td>
+                                        <td>@counterParty.CounterPartyNoAlpha</td>
+                                        <td>@counterParty.City</td>
+                                        <td>@counterParty.Country</td>
+                                        <td>
+                                            @if (counterParty.DisplayAtCheckIn)
+                                            {
+                                                <span class="badge bg-success">Yes</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-secondary">No</span>
+                                            }
+                                        </td>
+                                        <td>@counterParty.Since.ToString("yyyy-MM-dd")</td>
+                                        <td>
+                                            <button class="btn btn-sm btn-outline-primary me-2"
+                                                    @onclick="() => OpenEditModal(counterParty)">
+                                                <i class="fa fa-edit"></i>
+                                            </button>
+                                            <button class="btn btn-sm btn-outline-danger"
+                                                    @onclick="() => OpenDeleteModal(counterParty)">
+                                                <i class="fa fa-trash"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                }
+                            }
+                        </tbody>
+                    </table>
+                </div>
+                <div class="text-muted">
+                    Showing @filteredCounterParties.Count of @counterParties.Count counter parties
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@* Create/Edit Modal *@
+@if (showModal)
+{
+    <div class="modal show d-block" tabindex="-1" role="dialog" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">@(isEditMode ? "Edit Counter Party" : "Create New Counter Party")</h5>
+                    <button type="button" class="btn-close" @onclick="CloseModal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    @if (!string.IsNullOrEmpty(modalError))
+                    {
+                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                            @modalError
+                            <button type="button" class="btn-close" @onclick="() => modalError = string.Empty"></button>
+                        </div>
+                    }
+
+                    @if (isEditMode)
+                    {
+                        <form>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Name <span class="text-danger">*</span></label>
+                                    <input type="text"
+                                           class="form-control"
+                                           @bind="editDto.Name"
+                                           maxlength="128" />
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Counter Party No</label>
+                                    <input type="text"
+                                           class="form-control"
+                                           @bind="editDto.CounterPartyNoAlpha"
+                                           maxlength="32" />
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Address</label>
+                                <input type="text"
+                                       class="form-control"
+                                       @bind="editDto.Address"
+                                       maxlength="255" />
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">City <span class="text-danger">*</span></label>
+                                    <input type="text"
+                                           class="form-control"
+                                           @bind="editDto.City"
+                                           maxlength="128" />
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Country Code (2 chars) <span class="text-danger">*</span></label>
+                                    <input type="text"
+                                           class="form-control"
+                                           @bind="editDto.Country"
+                                           maxlength="2"
+                                           placeholder="e.g., US, GB, SE" />
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Affiliated To</label>
+                                    <input type="text"
+                                           class="form-control"
+                                           @bind="editDto.AffiliatedTo"
+                                           maxlength="128" />
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Since <span class="text-danger">*</span></label>
+                                    <input type="date"
+                                           class="form-control"
+                                           @bind="editDto.Since" />
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <div class="form-check">
+                                    <input type="checkbox"
+                                           class="form-check-input"
+                                           id="displayAtCheckInEdit"
+                                           @bind="editDto.DisplayAtCheckIn" />
+                                    <label class="form-check-label" for="displayAtCheckInEdit">
+                                        Display at Check-In
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Comments</label>
+                                <textarea class="form-control"
+                                          rows="3"
+                                          @bind="editDto.Comments"
+                                          maxlength="255"></textarea>
+                            </div>
+                        </form>
+                    }
+                    else
+                    {
+                        <form>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Name <span class="text-danger">*</span></label>
+                                    <input type="text"
+                                           class="form-control"
+                                           @bind="createDto.Name"
+                                           maxlength="128" />
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Counter Party No</label>
+                                    <input type="text"
+                                           class="form-control"
+                                           @bind="createDto.CounterPartyNoAlpha"
+                                           maxlength="32" />
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Address</label>
+                                <input type="text"
+                                       class="form-control"
+                                       @bind="createDto.Address"
+                                       maxlength="255" />
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">City <span class="text-danger">*</span></label>
+                                    <input type="text"
+                                           class="form-control"
+                                           @bind="createDto.City"
+                                           maxlength="128" />
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Country Code (2 chars) <span class="text-danger">*</span></label>
+                                    <input type="text"
+                                           class="form-control"
+                                           @bind="createDto.Country"
+                                           maxlength="2"
+                                           placeholder="e.g., US, GB, SE" />
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Affiliated To</label>
+                                    <input type="text"
+                                           class="form-control"
+                                           @bind="createDto.AffiliatedTo"
+                                           maxlength="128" />
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Since <span class="text-danger">*</span></label>
+                                    <input type="date"
+                                           class="form-control"
+                                           @bind="createDto.Since" />
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <div class="form-check">
+                                    <input type="checkbox"
+                                           class="form-check-input"
+                                           id="displayAtCheckInCreate"
+                                           @bind="createDto.DisplayAtCheckIn" />
+                                    <label class="form-check-label" for="displayAtCheckInCreate">
+                                        Display at Check-In
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Comments</label>
+                                <textarea class="form-control"
+                                          rows="3"
+                                          @bind="createDto.Comments"
+                                          maxlength="255"></textarea>
+                            </div>
+                        </form>
+                    }
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseModal">Cancel</button>
+                    <button type="button"
+                            class="btn btn-primary"
+                            @onclick="SaveCounterParty"
+                            disabled="@isSaving">
+                        @if (isSaving)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                        }
+                        @(isEditMode ? "Update" : "Create")
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@* Delete Confirmation Modal *@
+@if (showDeleteModal)
+{
+    <div class="modal show d-block" tabindex="-1" role="dialog" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-dialog-centered" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Confirm Delete</h5>
+                    <button type="button" class="btn-close" @onclick="CloseDeleteModal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    @if (!string.IsNullOrEmpty(deleteModalError))
+                    {
+                        <div class="alert alert-danger" role="alert">
+                            @deleteModalError
+                        </div>
+                    }
+                    else if (isCheckingUsage)
+                    {
+                        <div class="text-center">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Checking usage...</span>
+                            </div>
+                            <p class="mt-2">Checking if counter party is in use...</p>
+                        </div>
+                    }
+                    else if (usageCount.documentCount > 0 || usageCount.userPermissionCount > 0)
+                    {
+                        <div class="alert alert-warning" role="alert">
+                            <i class="fa fa-exclamation-triangle me-2"></i>
+                            <strong>Cannot delete this counter party!</strong>
+                            <p class="mb-0 mt-2">This counter party is currently in use:</p>
+                            <ul class="mb-0 mt-2">
+                                @if (usageCount.documentCount > 0)
+                                {
+                                    <li>@usageCount.documentCount document@(usageCount.documentCount != 1 ? "s" : "")</li>
+                                }
+                                @if (usageCount.userPermissionCount > 0)
+                                {
+                                    <li>@usageCount.userPermissionCount user permission@(usageCount.userPermissionCount != 1 ? "s" : "")</li>
+                                }
+                            </ul>
+                        </div>
+                    }
+                    else
+                    {
+                        <p>Are you sure you want to delete the counter party <strong>@counterPartyToDelete?.Name</strong>?</p>
+                        <p class="text-muted">This action cannot be undone.</p>
+                    }
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseDeleteModal">
+                        @(usageCount.documentCount > 0 || usageCount.userPermissionCount > 0 ? "Close" : "Cancel")
+                    </button>
+                    @if (usageCount.documentCount == 0 && usageCount.userPermissionCount == 0 && !isCheckingUsage)
+                    {
+                        <button type="button"
+                                class="btn btn-danger"
+                                @onclick="ConfirmDelete"
+                                disabled="@isDeleting">
+                            @if (isDeleting)
+                            {
+                                <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                            }
+                            Delete
+                        </button>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<CounterPartyDto> counterParties = new();
+    private List<CounterPartyDto> filteredCounterParties = new();
+    private string searchTerm = string.Empty;
+    private string sortColumn = nameof(CounterPartyDto.Name);
+    private bool sortAscending = true;
+
+    private bool isLoading = true;
+    private bool showModal = false;
+    private bool isEditMode = false;
+    private bool isSaving = false;
+    private string modalError = string.Empty;
+
+    private bool showDeleteModal = false;
+    private bool isDeleting = false;
+    private bool isCheckingUsage = false;
+    private string deleteModalError = string.Empty;
+    private CounterPartyDto? counterPartyToDelete = null;
+    private (int documentCount, int userPermissionCount) usageCount = (0, 0);
+
+    private CreateCounterPartyDto createDto = new();
+    private UpdateCounterPartyDto editDto = new();
+    private int editingCounterPartyId = 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadCounterParties();
+    }
+
+    private async Task LoadCounterParties()
+    {
+        try
+        {
+            isLoading = true;
+            counterParties = await CounterPartyService.GetAllAsync();
+            ApplyFilter();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading counter parties");
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void ApplyFilter()
+    {
+        var filtered = counterParties.AsEnumerable();
+
+        if (!string.IsNullOrWhiteSpace(searchTerm))
+        {
+            var term = searchTerm.ToLower();
+            filtered = filtered.Where(cp =>
+                (cp.Name?.Contains(term, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                (cp.CounterPartyNoAlpha?.Contains(term, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                (cp.City?.Contains(term, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                (cp.Country?.Contains(term, StringComparison.OrdinalIgnoreCase) ?? false));
+        }
+
+        // Apply sorting
+        filtered = sortColumn switch
+        {
+            nameof(CounterPartyDto.CounterPartyId) => sortAscending
+                ? filtered.OrderBy(cp => cp.CounterPartyId)
+                : filtered.OrderByDescending(cp => cp.CounterPartyId),
+            nameof(CounterPartyDto.Name) => sortAscending
+                ? filtered.OrderBy(cp => cp.Name)
+                : filtered.OrderByDescending(cp => cp.Name),
+            nameof(CounterPartyDto.CounterPartyNoAlpha) => sortAscending
+                ? filtered.OrderBy(cp => cp.CounterPartyNoAlpha)
+                : filtered.OrderByDescending(cp => cp.CounterPartyNoAlpha),
+            nameof(CounterPartyDto.City) => sortAscending
+                ? filtered.OrderBy(cp => cp.City)
+                : filtered.OrderByDescending(cp => cp.City),
+            nameof(CounterPartyDto.Country) => sortAscending
+                ? filtered.OrderBy(cp => cp.Country)
+                : filtered.OrderByDescending(cp => cp.Country),
+            nameof(CounterPartyDto.DisplayAtCheckIn) => sortAscending
+                ? filtered.OrderBy(cp => cp.DisplayAtCheckIn)
+                : filtered.OrderByDescending(cp => cp.DisplayAtCheckIn),
+            nameof(CounterPartyDto.Since) => sortAscending
+                ? filtered.OrderBy(cp => cp.Since)
+                : filtered.OrderByDescending(cp => cp.Since),
+            _ => filtered.OrderBy(cp => cp.Name)
+        };
+
+        filteredCounterParties = filtered.ToList();
+    }
+
+    private void SortBy(string columnName)
+    {
+        if (sortColumn == columnName)
+        {
+            sortAscending = !sortAscending;
+        }
+        else
+        {
+            sortColumn = columnName;
+            sortAscending = true;
+        }
+        ApplyFilter();
+    }
+
+    private void OpenCreateModal()
+    {
+        isEditMode = false;
+        createDto = new CreateCounterPartyDto
+        {
+            DisplayAtCheckIn = true,
+            Since = DateTime.Now
+        };
+        modalError = string.Empty;
+        showModal = true;
+    }
+
+    private void OpenEditModal(CounterPartyDto counterParty)
+    {
+        isEditMode = true;
+        editingCounterPartyId = counterParty.CounterPartyId;
+        editDto = new UpdateCounterPartyDto
+        {
+            Name = counterParty.Name,
+            CounterPartyNoAlpha = counterParty.CounterPartyNoAlpha,
+            Address = counterParty.Address,
+            City = counterParty.City,
+            Country = counterParty.Country,
+            AffiliatedTo = counterParty.AffiliatedTo,
+            DisplayAtCheckIn = counterParty.DisplayAtCheckIn,
+            Since = counterParty.Since,
+            Comments = counterParty.Comments
+        };
+        modalError = string.Empty;
+        showModal = true;
+    }
+
+    private void CloseModal()
+    {
+        showModal = false;
+        modalError = string.Empty;
+    }
+
+    private async Task SaveCounterParty()
+    {
+        try
+        {
+            isSaving = true;
+            modalError = string.Empty;
+
+            if (isEditMode)
+            {
+                await CounterPartyService.UpdateAsync(editingCounterPartyId, editDto);
+            }
+            else
+            {
+                await CounterPartyService.CreateAsync(createDto);
+            }
+
+            await LoadCounterParties();
+            CloseModal();
+        }
+        catch (HttpRequestException ex)
+        {
+            modalError = ex.Message;
+            Logger.LogError(ex, "Error saving counter party");
+        }
+        catch (Exception ex)
+        {
+            modalError = "An unexpected error occurred while saving the counter party.";
+            Logger.LogError(ex, "Error saving counter party");
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+    private async Task OpenDeleteModal(CounterPartyDto counterParty)
+    {
+        counterPartyToDelete = counterParty;
+        usageCount = (0, 0);
+        deleteModalError = string.Empty;
+        isCheckingUsage = true;
+        showDeleteModal = true;
+
+        try
+        {
+            usageCount = await CounterPartyService.GetUsageCountAsync(counterParty.CounterPartyId);
+        }
+        catch (Exception ex)
+        {
+            deleteModalError = "Error checking if counter party is in use. Please try again.";
+            Logger.LogError(ex, "Error checking counter party usage");
+        }
+        finally
+        {
+            isCheckingUsage = false;
+        }
+    }
+
+    private void CloseDeleteModal()
+    {
+        showDeleteModal = false;
+        counterPartyToDelete = null;
+        deleteModalError = string.Empty;
+    }
+
+    private async Task ConfirmDelete()
+    {
+        if (counterPartyToDelete == null) return;
+
+        try
+        {
+            isDeleting = true;
+            deleteModalError = string.Empty;
+
+            await CounterPartyService.DeleteAsync(counterPartyToDelete.CounterPartyId);
+            await LoadCounterParties();
+            CloseDeleteModal();
+        }
+        catch (HttpRequestException ex)
+        {
+            deleteModalError = ex.Message;
+            Logger.LogError(ex, "Error deleting counter party");
+        }
+        catch (Exception ex)
+        {
+            deleteModalError = "An unexpected error occurred while deleting the counter party.";
+            Logger.LogError(ex, "Error deleting counter party");
+        }
+        finally
+        {
+            isDeleting = false;
+        }
+    }
+}
