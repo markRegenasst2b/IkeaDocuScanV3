@@ -99,6 +99,7 @@
                             {
                                 <tr class="@(selectedFile?.FileName == file.FileName ? "table-primary" : "")"
                                     @onclick="() => SelectFile(file)"
+                                    @ondblclick="() => CheckInFile(file)"
                                     style="cursor: pointer;">
                                     <td class="text-center">
                                         <i class="@file.GetIconClass() fa-2x"></i>
@@ -287,5 +288,11 @@
     {
         Logger.LogInformation("Navigating to file details: {FileName}", file.FileName);
         Navigation.NavigateTo($"/checkin-scanned/detail/{Uri.EscapeDataString(file.FileName)}");
+    }
+
+    private void CheckInFile(ScannedFileDto file)
+    {
+        Logger.LogInformation("Double-click detected. Navigating to check-in page for file: {FileName}", file.FileName);
+        Navigation.NavigateTo($"/documents/checkin/{Uri.EscapeDataString(file.FileName)}");
     }
 }

@@ -847,9 +847,12 @@ public partial class DocumentPropertiesPage : ComponentBase, IDisposable
 
     private void CreateSnapshot()
     {
-        originalModelJson = System.Text.Json.JsonSerializer.Serialize(Model);
+        // Create snapshot excluding FileBytes for performance
+        // FileBytes can be very large (MB) and doesn't change after load
+        var snapshotData = CreateSnapshotObject();
+        originalModelJson = System.Text.Json.JsonSerializer.Serialize(snapshotData);
         hasUnsavedChanges = false;
-        Logger.LogInformation("Created Snapshot");
+        Logger.LogInformation("Created Snapshot (FileBytes excluded from comparison)");
     }
 
     private void CheckForChanges()
@@ -876,7 +879,9 @@ public partial class DocumentPropertiesPage : ComponentBase, IDisposable
                 return;
             }
 
-            var currentJson = System.Text.Json.JsonSerializer.Serialize(Model);
+            // Create current snapshot excluding FileBytes
+            var currentSnapshotData = CreateSnapshotObject();
+            var currentJson = System.Text.Json.JsonSerializer.Serialize(currentSnapshotData);
             var hadChanges = hasUnsavedChanges;
             hasUnsavedChanges = currentJson != originalModelJson;
 
@@ -890,6 +895,50 @@ public partial class DocumentPropertiesPage : ComponentBase, IDisposable
         {
             isCheckingForChanges = false;
         }
+    }
+
+    /// <summary>
+    /// Creates a lightweight snapshot object for change tracking, excluding FileBytes
+    /// </summary>
+    private object CreateSnapshotObject()
+    {
+        return new
+        {
+            Model.Id,
+            Model.BarCode,
+            Model.Name,
+            Model.FileName,
+            Model.DocumentTypeId,
+            Model.CounterPartyNoAlpha,
+            Model.CounterPartyId,
+            Model.SelectedThirdPartyIds,
+            Model.SelectedThirdPartyNames,
+            Model.DateOfContract,
+            Model.ReceivingDate,
+            Model.SendingOutDate,
+            Model.ForwardedToSignatoriesDate,
+            Model.DispatchDate,
+            Model.Comment,
+            Model.ActionDate,
+            Model.ActionDescription,
+            Model.EmailReminderGroup,
+            Model.Fax,
+            Model.OriginalReceived,
+            Model.TranslationReceived,
+            Model.Confidential,
+            Model.DocumentNameId,
+            Model.DocumentNo,
+            Model.VersionNo,
+            Model.AssociatedToPUA,
+            Model.AssociatedToAppendix,
+            Model.ValidUntil,
+            Model.Amount,
+            Model.CurrencyCode,
+            Model.Authorisation,
+            Model.BankConfirmation
+            // FileBytes intentionally excluded - can be very large and doesn't change
+            // SourceFilePath intentionally excluded - doesn't affect user data
+        };
     }
 
     // ========================================
