@@ -291,6 +291,64 @@ public class ScannedFileService : IScannedFileService
         }
     }
 
+    /// <inheritdoc />
+    public async Task<bool> DeleteFileAsync(string fileName)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(fileName))
+            {
+                throw new ArgumentNullException(nameof(fileName));
+            }
+
+            // Security check
+            if (!IsPathSafe(fileName))
+            {
+                _logger.LogWarning("Unsafe file path detected: {FileName}", fileName);
+                throw new UnauthorizedAccessException($"Access denied to file: {fileName}");
+            }
+
+            var filePath = Path.Combine(_options.ScannedFilesPath, fileName);
+
+            if (!File.Exists(filePath))
+            {
+                _logger.LogWarning("File not found for deletion: {FileName}", fileName);
+                return false;
+            }
+
+            _logger.LogInformation("Deleting file: {FileName}", fileName);
+
+            // Delete the file
+            File.Delete(filePath);
+
+            // Invalidate cache after deletion
+            if (_options.EnableFileListCaching)
+            {
+                _cache.Remove(CacheKey);
+                _logger.LogDebug("Cache invalidated after file deletion");
+            }
+
+            _logger.LogInformation("Successfully deleted file: {FileName}", fileName);
+
+            return await Task.FromResult(true);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            _logger.LogError(ex, "Access denied when deleting file: {FileName}", fileName);
+            throw;
+        }
+        catch (IOException ex)
+        {
+            _logger.LogError(ex, "IO error when deleting file: {FileName}", fileName);
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error deleting file: {FileName}", fileName);
+            throw;
+        }
+    }
+
     /// <summary>
     /// Check if file extension is allowed
     /// </summary>

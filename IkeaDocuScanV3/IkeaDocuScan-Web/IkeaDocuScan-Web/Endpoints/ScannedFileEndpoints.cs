@@ -93,5 +93,38 @@ public static class ScannedFileEndpoints
         .WithName("GetScannedFileStream")
         .Produces(200)
         .Produces(404);
+
+        group.MapDelete("/{fileName}", async (string fileName, IScannedFileService service) =>
+        {
+            try
+            {
+                var deleted = await service.DeleteFileAsync(fileName);
+                if (deleted)
+                {
+                    return Results.Ok(new { message = $"File '{fileName}' deleted successfully" });
+                }
+
+                return Results.NotFound(new { error = $"File '{fileName}' not found" });
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Results.Problem(
+                    statusCode: StatusCodes.Status403Forbidden,
+                    title: "Access Denied",
+                    detail: ex.Message);
+            }
+            catch (IOException ex)
+            {
+                return Results.Problem(
+                    statusCode: StatusCodes.Status500InternalServerError,
+                    title: "File Deletion Error",
+                    detail: ex.Message);
+            }
+        })
+        .WithName("DeleteScannedFile")
+        .Produces(200)
+        .Produces(404)
+        .Produces(403)
+        .Produces(500);
     }
 }

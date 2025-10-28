@@ -153,6 +153,19 @@ public partial class DocumentPropertiesPage : ComponentBase, IDisposable
 
     private async Task LoadCheckInModeAsync(string fileName)
     {
+        // Extract barcode from filename first
+        var barcode = ExtractBarcodeFromFileName(fileName);
+
+        // Check if document with this barcode already exists
+        var existingDocument = await DocumentService.GetByBarCodeAsync(barcode);
+        if (existingDocument != null)
+        {
+            errorMessage = $"A document with barcode '{barcode}' already exists in the system. This file cannot be checked in. Please return to the scanned documents list.";
+            Logger.LogWarning("Attempted to check in file {FileName} with barcode {BarCode} that already exists (Document ID: {DocumentId})",
+                fileName, barcode, existingDocument.Id);
+            return;
+        }
+
         // Load scanned file from CheckinDirectory via ScannedFileService
         var scannedFile = await ScannedFileService.GetFileByNameAsync(fileName);
 
@@ -163,6 +176,7 @@ public partial class DocumentPropertiesPage : ComponentBase, IDisposable
             return;
         }
         Logger.LogInformation($"Loaded scanned file {fileName}. ({scannedFile.SizeFormatted})");
+
         // Load file bytes
         var fileBytes = await ScannedFileService.GetFileContentAsync(fileName);
 
@@ -179,7 +193,7 @@ public partial class DocumentPropertiesPage : ComponentBase, IDisposable
             Mode = DocumentPropertyMode.CheckIn,
             PropertySetNumber = 2, // DispatchDate enabled
             FileName = fileName,
-            BarCode = ExtractBarcodeFromFileName(fileName),
+            BarCode = barcode,
             FileBytes = fileBytes,
             SourceFilePath = scannedFile.FullPath
         };
@@ -285,8 +299,37 @@ public partial class DocumentPropertiesPage : ComponentBase, IDisposable
             await AuditTrailService.LogAsync(
                 AuditAction.CheckIn,
                 Model.BarCode,
-                $"File checked in: {Model.FileName} ({Model.FileBytes} bytes)"
+                $"File checked in: {Model.FileName} ({Model.FileBytes?.Length ?? 0} bytes)"
             );
+            
+            // Delete the file from check-in directory after successful check-in
+            if (!string.IsNullOrEmpty(Model.FileName))
+            {
+                try
+                {
+                    Logger.LogInformation("Attempting to delete checked-in file from directory: {FileName}", Model.FileName);
+                    var deleted = await ScannedFileService.DeleteFileAsync(Model.FileName);
+
+                    if (deleted)
+                    {
+                        Logger.LogInformation("Successfully deleted file from check-in directory: {FileName}", Model.FileName);
+                    }
+                    else
+                    {
+                        var errorMsg = $"Warning: File '{Model.FileName}' could not be deleted from check-in directory. The file may have already been removed.";
+                        Logger.LogWarning(errorMsg);
+                        errorMessage = errorMsg;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    var errorMsg = $"Error: Failed to delete file '{Model.FileName}' from check-in directory: {ex.Message}";
+                    Logger.LogError(ex, "Failed to delete file from check-in directory: {FileName}", Model.FileName);
+                    errorMessage = errorMsg;
+                    throw new InvalidOperationException(errorMsg, ex);
+                }
+            }
+            
         } else {
             await AuditTrailService.LogAsync(
                 AuditAction.Register,
@@ -790,7 +833,11 @@ public partial class DocumentPropertiesPage : ComponentBase, IDisposable
             Amount = Model.Amount,
             CurrencyCode = Model.CurrencyCode,
             Authorisation = Model.Authorisation,
-            BankConfirmation = Model.BankConfirmation
+            BankConfirmation = Model.BankConfirmation,
+            // File upload (Check-in mode)
+            FileBytes = Model.FileBytes,
+            FileName = Model.FileName,
+            FileType = Model.FileName != null ? Path.GetExtension(Model.FileName).TrimStart('.') : null
         };
     }
 

@@ -108,14 +108,56 @@ public class DocumentService : IDocumentService
             }
         }
 
+        // Determine BarCode: use provided BarCode if available, otherwise generate next available
+        int barCode;
+        if (!string.IsNullOrWhiteSpace(dto.BarCode) && int.TryParse(dto.BarCode, out int providedBarCode))
+        {
+            // Use provided BarCode (from Check-in mode where it comes from filename)
+            barCode = providedBarCode;
+            _logger.LogInformation("Using provided BarCode: {BarCode}", barCode);
+
+            // Validate that this BarCode doesn't already exist
+            var existingDocument = await _context.Documents.AnyAsync(d => d.BarCode == barCode);
+            if (existingDocument)
+            {
+                throw new ValidationException($"Document with BarCode {barCode} already exists");
+            }
+        }
+        else
+        {
+            // Generate next BarCode (for Register mode)
+            barCode = await GenerateNextBarCode();
+            _logger.LogInformation("Generated new BarCode: {BarCode}", barCode);
+        }
+
+        // Create DocumentFile if file bytes are provided (Check-in mode)
+        int? fileId = dto.FileId;
+        if (dto.FileBytes != null && dto.FileBytes.Length > 0 && !string.IsNullOrEmpty(dto.FileName))
+        {
+            _logger.LogInformation("Creating DocumentFile for {FileName} with {FileSize} bytes", dto.FileName, dto.FileBytes.Length);
+
+            var documentFile = new DocumentFile
+            {
+                FileName = dto.FileName,
+                FileType = dto.FileType ?? Path.GetExtension(dto.FileName).TrimStart('.'),
+                Bytes = dto.FileBytes
+            };
+
+            _context.DocumentFiles.Add(documentFile);
+            await _context.SaveChangesAsync(); // Save to get the FileId
+
+            fileId = documentFile.Id;
+            _logger.LogInformation("DocumentFile created with ID {FileId}", fileId);
+        }
+
         var entity = new Document
         {
             Name = dto.Name,
-            BarCode = await GenerateNextBarCode(),
+            BarCode = barCode,
             DtId = dto.DocumentTypeId,
             CounterPartyId = dto.CounterPartyId,
             DocumentNameId = dto.DocumentNameId,
-            FileId = dto.FileId,
+            FileId = fileId,
             DateOfContract = dto.DateOfContract,
             Comment = dto.Comment,
             ReceivingDate = dto.ReceivingDate,

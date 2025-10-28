@@ -40,4 +40,13 @@ public interface IScannedFileService
     /// <param name="fileName">Name of the file</param>
     /// <returns>File stream or null if not found</returns>
     Task<Stream?> GetFileStreamAsync(string fileName);
+
+    /// <summary>
+    /// Delete a file from the scanned files folder
+    /// </summary>
+    /// <param name="fileName">Name of the file to delete</param>
+    /// <returns>True if deletion was successful, false otherwise</returns>
+    /// <exception cref="UnauthorizedAccessException">Thrown when access is denied</exception>
+    /// <exception cref="IOException">Thrown when file cannot be deleted</exception>
+    Task<bool> DeleteFileAsync(string fileName);
 }

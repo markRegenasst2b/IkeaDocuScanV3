@@ -42,4 +42,20 @@ public class CreateDocumentDto
     public bool? BankConfirmation { get; set; }
     public bool? TranslatedVersionReceived { get; set; }
     public bool? Confidential { get; set; }
+
+    // File upload (for Check-in mode)
+    /// <summary>
+    /// File bytes for upload (populated in Check-in mode)
+    /// </summary>
+    public byte[]? FileBytes { get; set; }
+
+    /// <summary>
+    /// Original file name (e.g., "12345.pdf")
+    /// </summary>
+    public string? FileName { get; set; }
+
+    /// <summary>
+    /// File type/extension (e.g., "pdf", "jpg")
+    /// </summary>
+    public string? FileType { get; set; }
 }

@@ -112,4 +112,31 @@ public class ScannedFileHttpService : IScannedFileService
             throw;
         }
     }
+
+    public async Task<bool> DeleteFileAsync(string fileName)
+    {
+        try
+        {
+            _logger.LogInformation("Deleting scanned file {FileName}", fileName);
+            var response = await _http.DeleteAsync($"/api/scannedfiles/{Uri.EscapeDataString(fileName)}");
+
+            if (response.IsSuccessStatusCode)
+            {
+                return true;
+            }
+
+            var errorContent = await response.Content.ReadAsStringAsync();
+            _logger.LogError("Failed to delete scanned file {FileName}: {Error}", fileName, errorContent);
+            throw new HttpRequestException($"Failed to delete file: {errorContent}");
+        }
+        catch (HttpRequestException)
+        {
+            throw; // Re-throw HTTP exceptions
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error deleting scanned file {FileName}", fileName);
+            throw;
+        }
+    }
 }
