@@ -11,8 +11,11 @@
 @inject IDocumentService DocumentService
 @inject ICounterPartyService CounterPartyService
 @inject IDocumentTypeService DocumentTypeService
+@inject IScannedFileService ScannedFileService
 @inject NavigationManager NavigationManager
 @inject IJSRuntime JSRuntime
+@inject IAuditTrailService AuditTrailService
+@inject ILogger<DocumentPropertiesPage> Logger
 
 <PageTitle>@GetPageTitle()</PageTitle>
 

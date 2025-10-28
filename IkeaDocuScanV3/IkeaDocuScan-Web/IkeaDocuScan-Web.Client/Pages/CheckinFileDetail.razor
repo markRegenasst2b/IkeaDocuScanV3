@@ -339,28 +339,8 @@
 
             Logger.LogInformation("Checking in file: {FileName}", file.FileName);
 
-            // TODO: Implement actual document check-in logic
-            // This should:
-            // 1. Create a new Document record
-            // 2. Copy or move the file to the document storage
-            // 3. Generate a barcode
-            // 4. Log the check-in action
-
-            // For now, just log the check-in action
-            await AuditTrailService.LogAsync(
-                AuditAction.CheckIn,
-                "TEMP-" + DateTime.Now.Ticks.ToString(), // Temporary barcode
-                $"File checked in: {file.FileName} ({file.SizeFormatted})"
-            );
-
-            successMessage = $"File '{file.FileName}' has been checked in successfully!";
-            Logger.LogInformation("File checked in successfully: {FileName}", file.FileName);
-
-            // Wait a moment to show the success message
-            await Task.Delay(2000);
-
-            // Navigate back to the list or to the documents page
-            Navigation.NavigateTo("/documents");
+            // Navigate to the document property page
+            Navigation.NavigateTo($"/documents/checkin/{FileName}");
         }
         catch (Exception ex)
         {

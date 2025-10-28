@@ -1,9 +1,10 @@
-using Microsoft.AspNetCore.Components;
-using IkeaDocuScan_Web.Client.Models;
 using IkeaDocuScan.Shared.DTOs.Documents;
+using IkeaDocuScan.Shared.Enums;
 using IkeaDocuScan.Shared.Interfaces;
-using Microsoft.JSInterop;
+using IkeaDocuScan_Web.Client.Models;
+using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Routing;
+using Microsoft.JSInterop;
 
 namespace IkeaDocuScan_Web.Client.Pages;
 
@@ -91,36 +92,30 @@ public partial class DocumentPropertiesPage : ComponentBase, IDisposable
 
     private async Task LoadPageAsync()
     {
-        try
-        {
+        try {
             isLoading = true;
             enableChangeTracking = false; // Disable during load
             errorMessage = null;
             successMessage = null;
             validationErrors.Clear();
 
-            if (BarCode.HasValue)
-            {
+            if (BarCode.HasValue) {
                 // EDIT MODE
+                Logger.LogInformation("Load document in Edit Mode");
                 await LoadEditModeAsync(BarCode.Value);
-            }
-            else if (!string.IsNullOrEmpty(FileName))
-            {
+            } else if (!string.IsNullOrEmpty(FileName)) {
                 // CHECK-IN MODE
+                Logger.LogInformation("Load document in Check-In Mode");
                 await LoadCheckInModeAsync(FileName);
-            }
-            else
-            {
+            } else  {
                 // REGISTER MODE
+                Logger.LogInformation("Open document in register mode");
                 LoadRegisterMode();
             }
-        }
-        catch (Exception ex)
-        {
+        } catch (Exception ex) {
+            Logger.LogInformation($"Failed to load page: {ex.Message}");
             errorMessage = $"Failed to load page: {ex.Message}";
-        }
-        finally
-        {
+        } finally {
             isLoading = false;
 
             // Create snapshot of loaded data for change tracking
@@ -129,11 +124,9 @@ public partial class DocumentPropertiesPage : ComponentBase, IDisposable
             StateHasChanged();
 
             // Enable change tracking after a delay to ensure child components finish their async loading
-            _ = Task.Run(async () =>
-            {
+            _ = Task.Run(async () => {
                 await Task.Delay(500); // Wait for child components to load their data
-                await InvokeAsync(() =>
-                {
+                await InvokeAsync(() => {
                     enableChangeTracking = true;
                     StateHasChanged();
                 });
@@ -148,6 +141,7 @@ public partial class DocumentPropertiesPage : ComponentBase, IDisposable
         if (document == null)
         {
             errorMessage = $"Document with barcode {barcode} not found.";
+            Logger.LogWarning(errorMessage);
             return;
         }
 
@@ -159,18 +153,37 @@ public partial class DocumentPropertiesPage : ComponentBase, IDisposable
 
     private async Task LoadCheckInModeAsync(string fileName)
     {
-        // TODO: Load scanned file from CheckinDirectory via ScannedFileService
-        // For now, create new model
+        // Load scanned file from CheckinDirectory via ScannedFileService
+        var scannedFile = await ScannedFileService.GetFileByNameAsync(fileName);
+
+        if (scannedFile == null)
+        {
+            errorMessage = $"Scanned file '{fileName}' not found in check-in directory.";
+            Logger.LogWarning(errorMessage);
+            return;
+        }
+        Logger.LogInformation($"Loaded scanned file {fileName}. ({scannedFile.SizeFormatted})");
+        // Load file bytes
+        var fileBytes = await ScannedFileService.GetFileContentAsync(fileName);
+
+        if (fileBytes == null || fileBytes.Length == 0)
+        {
+            errorMessage = $"Failed to load content for file '{fileName}'.";
+            Logger.LogWarning(errorMessage);
+            return;
+        }
+
+        // Create model with loaded file data
         Model = new DocumentPropertiesViewModel
         {
             Mode = DocumentPropertyMode.CheckIn,
             PropertySetNumber = 2, // DispatchDate enabled
             FileName = fileName,
-            BarCode = ExtractBarcodeFromFileName(fileName)
+            BarCode = ExtractBarcodeFromFileName(fileName),
+            FileBytes = fileBytes,
+            SourceFilePath = scannedFile.FullPath
         };
-
-        // TODO: Load file bytes
-        // Model.FileBytes = await LoadFileFromDirectory(fileName);
+        Logger.LogDebug($"Model FileBytes = {Model?.FileBytes?.Length.ToString() ?? "-unk-"}");
     }
 
     private void LoadRegisterMode()
@@ -199,6 +212,7 @@ public partial class DocumentPropertiesPage : ComponentBase, IDisposable
             // Validate
             if (!ValidateModel())
             {
+                Logger.LogWarning("Validation failed");
                 return;
             }
 
@@ -221,6 +235,7 @@ public partial class DocumentPropertiesPage : ComponentBase, IDisposable
             {
                 await SaveRegisterOrCheckInModeAsync();
             }
+            Logger.LogInformation($"Saved document. barcode={Model.BarCode}, filename={Model.FileName}, bytes ={Model.FileBytes?.Length.ToString() ?? "-null-"} ");
 
             // Post-save actions based on mode
             await HandlePostSave();
@@ -231,6 +246,7 @@ public partial class DocumentPropertiesPage : ComponentBase, IDisposable
         catch (Exception ex)
         {
             errorMessage = $"Failed to save document: {ex.Message}";
+            Logger.LogError(ex, "Failed to save document");
         }
         finally
         {
@@ -244,6 +260,12 @@ public partial class DocumentPropertiesPage : ComponentBase, IDisposable
         var updateDto = MapToUpdateDto();
         await DocumentService.UpdateAsync(updateDto);
         successMessage = "Successfully changed the document properties!";
+        Logger.LogInformation("Document properties updated successfully");
+        await AuditTrailService.LogAsync(
+            AuditAction.Edit,
+            Model.BarCode,
+            "Modified document."
+        );
     }
 
     private async Task SaveRegisterOrCheckInModeAsync()
@@ -256,6 +278,22 @@ public partial class DocumentPropertiesPage : ComponentBase, IDisposable
         successMessage = Model.Mode == DocumentPropertyMode.Register
             ? "Successfully registered document!"
             : "Successfully checked in document!";
+
+        Logger.LogInformation("Document created successfully with ID {DocumentId}", result.Id);
+
+        if (Model.Mode == DocumentPropertyMode.CheckIn) {
+            await AuditTrailService.LogAsync(
+                AuditAction.CheckIn,
+                Model.BarCode,
+                $"File checked in: {Model.FileName} ({Model.FileBytes} bytes)"
+            );
+        } else {
+            await AuditTrailService.LogAsync(
+                AuditAction.Register,
+                Model.BarCode,
+                "Registered document."
+            );
+        }
     }
 
     private async Task HandlePostSave()
@@ -288,7 +326,7 @@ public partial class DocumentPropertiesPage : ComponentBase, IDisposable
         {
             // Edit and Check-in modes: close/navigate back
             await Task.Delay(2000); // Show success message briefly
-            NavigationManager.NavigateTo("/documents");
+            NavigationManager.NavigateTo("/checkin-scanned");
         }
     }
 
@@ -764,6 +802,7 @@ public partial class DocumentPropertiesPage : ComponentBase, IDisposable
     {
         originalModelJson = System.Text.Json.JsonSerializer.Serialize(Model);
         hasUnsavedChanges = false;
+        Logger.LogInformation("Created Snapshot");
     }
 
     private void CheckForChanges()
