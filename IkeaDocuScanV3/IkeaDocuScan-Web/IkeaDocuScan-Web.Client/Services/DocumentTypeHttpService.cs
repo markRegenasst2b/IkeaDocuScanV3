@@ -7,11 +7,18 @@ namespace IkeaDocuScan_Web.Client.Services;
 /// <summary>
 /// HTTP client service for DocumentType operations
 /// Implements IDocumentTypeService interface to call server APIs
+/// Includes client-side in-memory caching for performance
 /// </summary>
 public class DocumentTypeHttpService : IDocumentTypeService
 {
     private readonly HttpClient _http;
     private readonly ILogger<DocumentTypeHttpService> _logger;
+
+    // Client-side cache
+    private static List<DocumentTypeDto>? _cachedDocumentTypes;
+    private static DateTime? _cacheExpiration;
+    private static readonly TimeSpan CacheDuration = TimeSpan.FromMinutes(5);
+    private static readonly SemaphoreSlim _cacheLock = new(1, 1);
 
     public DocumentTypeHttpService(HttpClient http, ILogger<DocumentTypeHttpService> logger)
     {
@@ -21,16 +28,44 @@ public class DocumentTypeHttpService : IDocumentTypeService
 
     public async Task<List<DocumentTypeDto>> GetAllAsync()
     {
+        // Check cache first
+        if (_cachedDocumentTypes != null && _cacheExpiration.HasValue && DateTime.Now < _cacheExpiration.Value)
+        {
+            _logger.LogInformation("⚡ Returning {Count} document types from client-side cache", _cachedDocumentTypes.Count);
+            return _cachedDocumentTypes;
+        }
+
+        // Cache miss or expired - fetch from server
+        await _cacheLock.WaitAsync();
         try
         {
-            _logger.LogInformation("Fetching all document types from API");
+            // Double-check after acquiring lock (another thread might have updated cache)
+            if (_cachedDocumentTypes != null && _cacheExpiration.HasValue && DateTime.Now < _cacheExpiration.Value)
+            {
+                _logger.LogInformation("⚡ Returning {Count} document types from client-side cache (after lock)", _cachedDocumentTypes.Count);
+                return _cachedDocumentTypes;
+            }
+
+            _logger.LogInformation("🌐 Fetching all document types from API (client cache miss)");
             var result = await _http.GetFromJsonAsync<List<DocumentTypeDto>>("/api/documenttypes");
+
+            if (result != null)
+            {
+                _cachedDocumentTypes = result;
+                _cacheExpiration = DateTime.Now.Add(CacheDuration);
+                _logger.LogInformation("💾 Cached {Count} document types on client for {Duration}", result.Count, CacheDuration);
+            }
+
             return result ?? new List<DocumentTypeDto>();
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error fetching document types");
             throw;
+        }
+        finally
+        {
+            _cacheLock.Release();
         }
     }
 
@@ -83,6 +118,10 @@ public class DocumentTypeHttpService : IDocumentTypeService
             }
 
             var documentType = await response.Content.ReadFromJsonAsync<DocumentTypeDto>();
+
+            // Invalidate client cache after create
+            ClearCache();
+
             return documentType ?? throw new InvalidOperationException("Failed to deserialize created document type");
         }
         catch (HttpRequestException)
@@ -111,6 +150,10 @@ public class DocumentTypeHttpService : IDocumentTypeService
             }
 
             var documentType = await response.Content.ReadFromJsonAsync<DocumentTypeDto>();
+
+            // Invalidate client cache after update
+            ClearCache();
+
             return documentType ?? throw new InvalidOperationException("Failed to deserialize updated document type");
         }
         catch (HttpRequestException)
@@ -130,6 +173,9 @@ public class DocumentTypeHttpService : IDocumentTypeService
         {
             _logger.LogInformation("Deleting document type ID: {Id}", id);
             var response = await _http.DeleteAsync($"/api/documenttypes/{id}");
+
+            // Invalidate client cache after delete
+            ClearCache();
 
             if (!response.IsSuccessStatusCode)
             {
@@ -199,6 +245,16 @@ public class DocumentTypeHttpService : IDocumentTypeService
         }
 
         return !string.IsNullOrEmpty(errorContent) ? errorContent : "An error occurred";
+    }
+
+    /// <summary>
+    /// Clears the client-side cache. Call this when document types are modified.
+    /// </summary>
+    public void ClearCache()
+    {
+        _cachedDocumentTypes = null;
+        _cacheExpiration = null;
+        _logger.LogInformation("Client-side document types cache cleared");
     }
 
     private class UsageResponse

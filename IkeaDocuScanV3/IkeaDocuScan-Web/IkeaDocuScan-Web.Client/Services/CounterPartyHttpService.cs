@@ -47,7 +47,7 @@ public class CounterPartyHttpService : ICounterPartyService
         // Check cache first
         if (_cachedCounterParties != null && _cacheExpiration.HasValue && DateTime.Now < _cacheExpiration.Value)
         {
-            _logger.LogInformation("Returning {Count} counter parties from client-side cache", _cachedCounterParties.Count);
+            _logger.LogInformation("⚡ Returning {Count} counter parties from client-side cache", _cachedCounterParties.Count);
             return _cachedCounterParties;
         }
 
@@ -58,18 +58,18 @@ public class CounterPartyHttpService : ICounterPartyService
             // Double-check after acquiring lock (another thread might have updated cache)
             if (_cachedCounterParties != null && _cacheExpiration.HasValue && DateTime.Now < _cacheExpiration.Value)
             {
-                _logger.LogInformation("Returning {Count} counter parties from client-side cache (after lock)", _cachedCounterParties.Count);
+                _logger.LogInformation("⚡ Returning {Count} counter parties from client-side cache (after lock)", _cachedCounterParties.Count);
                 return _cachedCounterParties;
             }
 
-            _logger.LogInformation("Fetching all counter parties from API (client cache miss)");
+            _logger.LogInformation("🌐 Fetching all counter parties from API (client cache miss)");
             var result = await _http.GetFromJsonAsync<List<CounterPartyDto>>("/api/counterparties");
 
             if (result != null)
             {
                 _cachedCounterParties = result;
                 _cacheExpiration = DateTime.Now.Add(CacheDuration);
-                _logger.LogInformation("Cached {Count} counter parties on client for {Duration}", result.Count, CacheDuration);
+                _logger.LogInformation("💾 Cached {Count} counter parties on client for {Duration}", result.Count, CacheDuration);
             }
 
             return result ?? new List<CounterPartyDto>();

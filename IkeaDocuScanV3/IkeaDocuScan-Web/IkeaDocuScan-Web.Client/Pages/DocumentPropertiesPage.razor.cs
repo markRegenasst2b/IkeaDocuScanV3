@@ -105,6 +105,9 @@ public partial class DocumentPropertiesPage : ComponentBase, IDisposable
 
     private async Task LoadPageAsync()
     {
+        var totalStopwatch = System.Diagnostics.Stopwatch.StartNew();
+        var referenceDataStopwatch = System.Diagnostics.Stopwatch.StartNew();
+
         try {
             isLoading = true;
             enableChangeTracking = false; // Disable during load
@@ -121,7 +124,7 @@ public partial class DocumentPropertiesPage : ComponentBase, IDisposable
 
             // PERFORMANCE OPTIMIZATION: Load all reference data in parallel FIRST
             // This data will be passed to child components, eliminating duplicate loads
-            Logger.LogInformation("Loading reference data in parallel...");
+            Logger.LogInformation("⏱️ PERF: Loading reference data in parallel...");
             var loadReferenceDataTask = Task.WhenAll(
                 LoadDocumentTypesAsync(),
                 LoadCounterPartiesAsync(),
@@ -130,25 +133,32 @@ public partial class DocumentPropertiesPage : ComponentBase, IDisposable
             );
 
             // Load page-specific data in parallel with reference data
+            var pageDataStopwatch = System.Diagnostics.Stopwatch.StartNew();
             Task pageDataTask;
             if (BarCode.HasValue) {
                 // EDIT MODE
-                Logger.LogInformation("Load document in Edit Mode");
+                Logger.LogInformation("⏱️ PERF: Load document in Edit Mode");
                 pageDataTask = LoadEditModeAsync(BarCode.Value);
             } else if (!string.IsNullOrEmpty(FileName)) {
                 // CHECK-IN MODE
-                Logger.LogInformation("Load document in Check-In Mode");
+                Logger.LogInformation("⏱️ PERF: Load document in Check-In Mode");
                 pageDataTask = LoadCheckInModeAsync(FileName);
             } else  {
                 // REGISTER MODE
-                Logger.LogInformation("Open document in register mode");
+                Logger.LogInformation("⏱️ PERF: Open document in register mode");
                 LoadRegisterMode();
                 pageDataTask = Task.CompletedTask;
             }
 
             // Wait for both reference data and page data to complete
             await Task.WhenAll(loadReferenceDataTask, pageDataTask);
-            Logger.LogInformation("Reference data and page data loaded");
+
+            referenceDataStopwatch.Stop();
+            pageDataStopwatch.Stop();
+
+            Logger.LogInformation("⏱️ PERF: Reference data loaded in {ReferenceMs}ms", referenceDataStopwatch.ElapsedMilliseconds);
+            Logger.LogInformation("⏱️ PERF: Page data loaded in {PageMs}ms", pageDataStopwatch.ElapsedMilliseconds);
+            Logger.LogInformation("⏱️ PERF: Parent data loading complete in {TotalMs}ms (parallel execution)", Math.Max(referenceDataStopwatch.ElapsedMilliseconds, pageDataStopwatch.ElapsedMilliseconds));
         } catch (Exception ex) {
             Logger.LogInformation($"Failed to load page: {ex.Message}");
             errorMessage = $"Failed to load page: {ex.Message}";
@@ -157,12 +167,15 @@ public partial class DocumentPropertiesPage : ComponentBase, IDisposable
             isLoading = false;
             isLoadingChildren = false;
         } finally {
+            totalStopwatch.Stop();
+            Logger.LogInformation("⏱️ PERF: Parent LoadPageAsync complete in {TotalMs}ms", totalStopwatch.ElapsedMilliseconds);
+
             // Reset child component load counter and START accepting callbacks
             lock (childLoadLock)
             {
                 loadedChildComponentCount = 0;
                 acceptChildCallbacks = true;
-                Logger.LogInformation("LoadPageAsync complete. Now accepting child callbacks. Waiting for {Total} child components.", TotalChildComponents);
+                Logger.LogInformation("⏱️ PERF: Now accepting child callbacks. Waiting for {Total} child components.", TotalChildComponents);
             }
 
             // Parent data loaded - now allow children to mount and start loading their data

@@ -6,11 +6,18 @@ namespace IkeaDocuScan_Web.Client.Services;
 
 /// <summary>
 /// Client-side HTTP service for currencies
+/// Includes client-side in-memory caching for performance
 /// </summary>
 public class CurrencyHttpService : ICurrencyService
 {
     private readonly HttpClient _http;
     private readonly ILogger<CurrencyHttpService> _logger;
+
+    // Client-side cache
+    private static List<CurrencyDto>? _cachedCurrencies;
+    private static DateTime? _cacheExpiration;
+    private static readonly TimeSpan CacheDuration = TimeSpan.FromMinutes(5);
+    private static readonly SemaphoreSlim _cacheLock = new(1, 1);
 
     public CurrencyHttpService(HttpClient http, ILogger<CurrencyHttpService> logger)
     {
@@ -23,16 +30,44 @@ public class CurrencyHttpService : ICurrencyService
     /// </summary>
     public async Task<List<CurrencyDto>> GetAllAsync()
     {
+        // Check cache first
+        if (_cachedCurrencies != null && _cacheExpiration.HasValue && DateTime.Now < _cacheExpiration.Value)
+        {
+            _logger.LogInformation("⚡ Returning {Count} currencies from client-side cache", _cachedCurrencies.Count);
+            return _cachedCurrencies;
+        }
+
+        // Cache miss or expired - fetch from server
+        await _cacheLock.WaitAsync();
         try
         {
-            _logger.LogInformation("Fetching all currencies from API");
+            // Double-check after acquiring lock (another thread might have updated cache)
+            if (_cachedCurrencies != null && _cacheExpiration.HasValue && DateTime.Now < _cacheExpiration.Value)
+            {
+                _logger.LogInformation("⚡ Returning {Count} currencies from client-side cache (after lock)", _cachedCurrencies.Count);
+                return _cachedCurrencies;
+            }
+
+            _logger.LogInformation("🌐 Fetching all currencies from API (client cache miss)");
             var currencies = await _http.GetFromJsonAsync<List<CurrencyDto>>("/api/currencies");
+
+            if (currencies != null)
+            {
+                _cachedCurrencies = currencies;
+                _cacheExpiration = DateTime.Now.Add(CacheDuration);
+                _logger.LogInformation("💾 Cached {Count} currencies on client for {Duration}", currencies.Count, CacheDuration);
+            }
+
             return currencies ?? new List<CurrencyDto>();
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error fetching currencies");
             throw;
+        }
+        finally
+        {
+            _cacheLock.Release();
         }
     }
 
@@ -76,6 +111,10 @@ public class CurrencyHttpService : ICurrencyService
             }
 
             var currency = await response.Content.ReadFromJsonAsync<CurrencyDto>();
+
+            // Invalidate client cache after create
+            ClearCache();
+
             return currency ?? throw new InvalidOperationException("Failed to deserialize created currency");
         }
         catch (HttpRequestException)
@@ -107,6 +146,10 @@ public class CurrencyHttpService : ICurrencyService
             }
 
             var currency = await response.Content.ReadFromJsonAsync<CurrencyDto>();
+
+            // Invalidate client cache after update
+            ClearCache();
+
             return currency ?? throw new InvalidOperationException("Failed to deserialize updated currency");
         }
         catch (HttpRequestException)
@@ -129,6 +172,9 @@ public class CurrencyHttpService : ICurrencyService
         {
             _logger.LogInformation("Deleting currency with code {CurrencyCode}", currencyCode);
             var response = await _http.DeleteAsync($"/api/currencies/{currencyCode}");
+
+            // Invalidate client cache after delete
+            ClearCache();
 
             if (!response.IsSuccessStatusCode)
             {
@@ -205,6 +251,16 @@ public class CurrencyHttpService : ICurrencyService
         }
 
         return !string.IsNullOrEmpty(errorContent) ? errorContent : "An error occurred";
+    }
+
+    /// <summary>
+    /// Clears the client-side cache. Call this when currencies are modified.
+    /// </summary>
+    public void ClearCache()
+    {
+        _cachedCurrencies = null;
+        _cacheExpiration = null;
+        _logger.LogInformation("Client-side currencies cache cleared");
     }
 
     private class UsageResponse
