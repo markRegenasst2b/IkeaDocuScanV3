@@ -170,12 +170,24 @@
 
     protected override async Task OnInitializedAsync()
     {
-        // Use pre-loaded data from parent (no async loading needed)
-        documentTypes = DocumentTypes;
-        Logger.LogInformation("Using {Count} pre-loaded document types", documentTypes.Count);
+        try
+        {
+            Logger.LogInformation("🔧 DocumentSectionFields.OnInitializedAsync START");
 
-        // Signal parent that this component has completed initialization (immediate)
-        await OnLoadComplete.InvokeAsync();
+            // Use pre-loaded data from parent (no async loading needed)
+            documentTypes = DocumentTypes;
+            Logger.LogInformation("Using {Count} pre-loaded document types", documentTypes.Count);
+
+            // Signal parent that this component has completed initialization (immediate)
+            Logger.LogInformation("🔧 DocumentSectionFields invoking OnLoadComplete callback");
+            await OnLoadComplete.InvokeAsync();
+            Logger.LogInformation("🔧 DocumentSectionFields.OnInitializedAsync COMPLETE");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "🔧 DocumentSectionFields.OnInitializedAsync FAILED");
+            throw;
+        }
     }
 
     private async Task OnCounterPartySelectedFromSelector(CounterPartyDto? counterParty)

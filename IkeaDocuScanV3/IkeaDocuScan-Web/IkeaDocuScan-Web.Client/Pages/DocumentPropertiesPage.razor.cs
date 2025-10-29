@@ -62,6 +62,7 @@ public partial class DocumentPropertiesPage : ComponentBase, IDisposable
     private int loadedChildComponentCount = 0;
     private bool acceptChildCallbacks = false; // Only accept callbacks after parent finishes loading
     private readonly object childLoadLock = new();
+    private bool isFirstLoad = true; // Track if this is the first load or a re-navigation
 
     // ========================================
     // LIFECYCLE METHODS
@@ -76,6 +77,14 @@ public partial class DocumentPropertiesPage : ComponentBase, IDisposable
     {
         if (isLoading)
             return; // First load handled by OnInitializedAsync
+
+        // When navigating back to the same route, components are reused
+        // Reset child component counter to allow re-initialization
+        lock (childLoadLock)
+        {
+            loadedChildComponentCount = 0;
+            acceptChildCallbacks = false;
+        }
 
         await LoadPageAsync();
     }
@@ -112,10 +121,11 @@ public partial class DocumentPropertiesPage : ComponentBase, IDisposable
             isLoading = true;
             enableChangeTracking = false; // Disable during load
 
-            // Stop accepting child callbacks during page load
+            // Stop accepting child callbacks during page load and reset counter
             lock (childLoadLock)
             {
                 acceptChildCallbacks = false;
+                loadedChildComponentCount = 0;
             }
 
             errorMessage = null;
@@ -170,18 +180,65 @@ public partial class DocumentPropertiesPage : ComponentBase, IDisposable
             totalStopwatch.Stop();
             Logger.LogInformation("⏱️ PERF: Parent LoadPageAsync complete in {TotalMs}ms", totalStopwatch.ElapsedMilliseconds);
 
-            // Reset child component load counter and START accepting callbacks
+            // Start accepting child callbacks now that parent data is loaded
             lock (childLoadLock)
             {
-                loadedChildComponentCount = 0;
                 acceptChildCallbacks = true;
-                Logger.LogInformation("⏱️ PERF: Now accepting child callbacks. Waiting for {Total} child components.", TotalChildComponents);
+                Logger.LogInformation("⏱️ PERF: Now accepting child callbacks. Waiting for {Total} child components to complete.", TotalChildComponents);
             }
 
-            // Parent data loaded - now allow children to mount and start loading their data
+            // Parent data loaded - children will now mount and call their callbacks
             isLoading = false;
-            isLoadingChildren = true; // Keep overlay visible while children load
-            StateHasChanged();
+
+            // On re-navigation, components are already mounted and won't call OnInitializedAsync again
+            // So we skip waiting for callbacks and immediately enable the form
+            if (!isFirstLoad)
+            {
+                Logger.LogInformation("⏱️ PERF: Re-navigation detected. Skipping child callback wait. Components already initialized.");
+                isLoadingChildren = false;
+                CreateSnapshot();
+                enableChangeTracking = true;
+                StateHasChanged();
+            }
+            else
+            {
+                // First load - wait for child components to initialize
+                isLoadingChildren = true; // Keep overlay visible while children load (first load only)
+                isFirstLoad = false; // Mark that we've completed first load
+
+                Logger.LogInformation("⏱️ PERF: About to render children. Mode={Mode}, isLoading={IsLoading}, DocumentTypes={DtCount}, CounterParties={CpCount}, Currencies={CurCount}",
+                    Model.Mode, isLoading, documentTypes.Count, counterParties.Count, currencies.Count);
+
+                StateHasChanged();
+
+                Logger.LogInformation("⏱️ PERF: StateHasChanged called. isLoading={IsLoading}, isLoadingChildren={IsLoadingChildren}",
+                    isLoading, isLoadingChildren);
+
+                // Safety timeout: Wait a bit for components to mount, then check if all called back
+                _ = Task.Run(async () =>
+                {
+                    // Give components 500ms to mount and call their OnInitializedAsync
+                    await Task.Delay(500);
+
+                    // Then wait up to 5 more seconds for them to complete their initialization
+                    await Task.Delay(5000);
+                    lock (childLoadLock)
+                    {
+                        if (isLoadingChildren)
+                        {
+                            Logger.LogWarning("⚠️ Child component loading timeout! Only {Count}/{Total} components called back. Forcing completion.",
+                                loadedChildComponentCount, TotalChildComponents);
+                            _ = InvokeAsync(() =>
+                            {
+                                CreateSnapshot();
+                                enableChangeTracking = true;
+                                isLoadingChildren = false;
+                                StateHasChanged();
+                            });
+                        }
+                    }
+                });
+            }
         }
     }
 
