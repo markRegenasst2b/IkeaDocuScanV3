@@ -12,6 +12,8 @@
 @inject ICounterPartyService CounterPartyService
 @inject IDocumentTypeService DocumentTypeService
 @inject IScannedFileService ScannedFileService
+@inject ICurrencyService CurrencyService
+@inject IDocumentNameService DocumentNameService
 @inject NavigationManager NavigationManager
 @inject IJSRuntime JSRuntime
 @inject IAuditTrailService AuditTrailService
@@ -181,6 +183,8 @@
                             <div class="card-body">
                                 <DocumentSectionFields @bind-Model="@Model"
                                                        @bind-Model:after="CheckForChanges"
+                                                       DocumentTypes="@documentTypes"
+                                                       CounterParties="@counterParties"
                                                        OnLoadComplete="@OnChildComponentLoadComplete" />
                             </div>
                         </div>
@@ -220,6 +224,7 @@
                             <div class="card-body">
                                 <AdditionalInfoFields @bind-Model="@Model"
                                                      @bind-Model:after="CheckForChanges"
+                                                     Currencies="@currencies"
                                                      OnLoadComplete="@OnChildComponentLoadComplete" />
                             </div>
                         </div>

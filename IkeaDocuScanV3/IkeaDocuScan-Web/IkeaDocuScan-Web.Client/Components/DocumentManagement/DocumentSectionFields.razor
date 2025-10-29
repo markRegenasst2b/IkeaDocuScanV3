@@ -3,7 +3,6 @@
 @using IkeaDocuScan.Shared.DTOs.DocumentTypes
 @using IkeaDocuScan.Shared.DTOs.CounterParties
 @using IkeaDocuScan.Shared.Interfaces
-@inject IDocumentTypeService DocumentTypeService
 @inject ILogger<DocumentSectionFields> Logger
 
 @* Document Type *@
@@ -25,6 +24,7 @@
     <CounterPartySelector @bind-SelectedCounterPartyId="@Model.CounterPartyId"
                          OnCounterPartySelected="@OnCounterPartySelectedFromSelector"
                          Disabled="@IsReadOnly"
+                         CounterParties="@CounterParties"
                          OnLoadComplete="@OnLoadComplete" />
 </div>
 
@@ -34,6 +34,7 @@
                    @bind-SelectedThirdPartyNames="@Model.SelectedThirdPartyNames"
                    Disabled="@IsReadOnly"
                    FilterByCounterPartyId="@Model.CounterPartyId"
+                   CounterParties="@CounterParties"
                    OnLoadComplete="@OnLoadComplete" />
 
 @* Date of Contract *@
@@ -148,6 +149,18 @@
     public bool IsReadOnly { get; set; }
 
     /// <summary>
+    /// Pre-loaded document types (passed from parent for performance)
+    /// </summary>
+    [Parameter]
+    public List<DocumentTypeDto> DocumentTypes { get; set; } = new();
+
+    /// <summary>
+    /// Pre-loaded counter parties (passed from parent for performance)
+    /// </summary>
+    [Parameter]
+    public List<CounterPartyDto> CounterParties { get; set; } = new();
+
+    /// <summary>
     /// Event callback when component finishes loading
     /// </summary>
     [Parameter]
@@ -157,24 +170,12 @@
 
     protected override async Task OnInitializedAsync()
     {
-        await LoadDocumentTypes();
+        // Use pre-loaded data from parent (no async loading needed)
+        documentTypes = DocumentTypes;
+        Logger.LogInformation("Using {Count} pre-loaded document types", documentTypes.Count);
 
-        // Signal parent that this component has completed initialization
+        // Signal parent that this component has completed initialization (immediate)
         await OnLoadComplete.InvokeAsync();
-    }
-
-    private async Task LoadDocumentTypes()
-    {
-        try
-        {
-            // Load document types
-            documentTypes = await DocumentTypeService.GetAllAsync();
-            Logger.LogInformation("Loaded {Count} document types", documentTypes.Count);
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Error loading document types");
-        }
     }
 
     private async Task OnCounterPartySelectedFromSelector(CounterPartyDto? counterParty)

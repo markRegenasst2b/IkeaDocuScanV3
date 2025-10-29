@@ -128,6 +128,12 @@
     public string? FilterByCounterPartyId { get; set; }
 
     /// <summary>
+    /// Pre-loaded counter parties (optional, passed from parent for performance)
+    /// </summary>
+    [Parameter]
+    public List<CounterPartyDto>? CounterParties { get; set; }
+
+    /// <summary>
     /// Event callback when component finishes loading
     /// </summary>
     [Parameter]
@@ -159,7 +165,19 @@
     {
         try
         {
-            var counterParties = await CounterPartyService.GetAllAsync();
+            List<CounterPartyDto> counterParties;
+
+            // Use pre-loaded data if available, otherwise load
+            if (CounterParties != null && CounterParties.Any())
+            {
+                counterParties = CounterParties;
+                Logger.LogInformation("Using {Count} pre-loaded counterparties for third party selector", counterParties.Count);
+            }
+            else
+            {
+                counterParties = await CounterPartyService.GetAllAsync();
+                Logger.LogInformation("Loaded {Count} counterparties for third party selector", counterParties.Count);
+            }
 
             allThirdParties = counterParties
                 .Where(cp => cp.DisplayAtCheckIn == true) // Only show third parties marked for display
@@ -174,7 +192,7 @@
                 .OrderBy(tp => tp.Name)
                 .ToList();
 
-            Logger.LogInformation("Loaded {Count} third parties for selector", allThirdParties.Count);
+            Logger.LogInformation("Prepared {Count} third parties for selector", allThirdParties.Count);
         }
         catch (Exception ex)
         {

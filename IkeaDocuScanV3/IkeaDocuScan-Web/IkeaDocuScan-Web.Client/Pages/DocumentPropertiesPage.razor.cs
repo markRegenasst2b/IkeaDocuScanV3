@@ -51,6 +51,12 @@ public partial class DocumentPropertiesPage : ComponentBase, IDisposable
     private bool isCheckingForChanges = false; // Prevent recursive calls
     private bool enableChangeTracking = false; // Only enable after initial load completes
 
+    // Reference data loaded once and shared with all child components
+    private List<IkeaDocuScan.Shared.DTOs.DocumentTypes.DocumentTypeDto> documentTypes = new();
+    private List<IkeaDocuScan.Shared.DTOs.CounterParties.CounterPartyDto> counterParties = new();
+    private List<IkeaDocuScan.Shared.DTOs.Currencies.CurrencyDto> currencies = new();
+    private List<IkeaDocuScan.Shared.DTOs.DocumentNames.DocumentNameDto> documentNames = new();
+
     // Child component load tracking
     private const int TotalChildComponents = 6; // DocumentSection, CounterParty, ThirdParty, Action, Flags, AdditionalInfo
     private int loadedChildComponentCount = 0;
@@ -113,19 +119,36 @@ public partial class DocumentPropertiesPage : ComponentBase, IDisposable
             successMessage = null;
             validationErrors.Clear();
 
+            // PERFORMANCE OPTIMIZATION: Load all reference data in parallel FIRST
+            // This data will be passed to child components, eliminating duplicate loads
+            Logger.LogInformation("Loading reference data in parallel...");
+            var loadReferenceDataTask = Task.WhenAll(
+                LoadDocumentTypesAsync(),
+                LoadCounterPartiesAsync(),
+                LoadCurrenciesAsync()
+                // Note: DocumentNames depends on DocumentTypeId, so loaded per-document in child component
+            );
+
+            // Load page-specific data in parallel with reference data
+            Task pageDataTask;
             if (BarCode.HasValue) {
                 // EDIT MODE
                 Logger.LogInformation("Load document in Edit Mode");
-                await LoadEditModeAsync(BarCode.Value);
+                pageDataTask = LoadEditModeAsync(BarCode.Value);
             } else if (!string.IsNullOrEmpty(FileName)) {
                 // CHECK-IN MODE
                 Logger.LogInformation("Load document in Check-In Mode");
-                await LoadCheckInModeAsync(FileName);
+                pageDataTask = LoadCheckInModeAsync(FileName);
             } else  {
                 // REGISTER MODE
                 Logger.LogInformation("Open document in register mode");
                 LoadRegisterMode();
+                pageDataTask = Task.CompletedTask;
             }
+
+            // Wait for both reference data and page data to complete
+            await Task.WhenAll(loadReferenceDataTask, pageDataTask);
+            Logger.LogInformation("Reference data and page data loaded");
         } catch (Exception ex) {
             Logger.LogInformation($"Failed to load page: {ex.Message}");
             errorMessage = $"Failed to load page: {ex.Message}";
@@ -195,6 +218,56 @@ public partial class DocumentPropertiesPage : ComponentBase, IDisposable
             });
         }
     }
+
+    // ========================================
+    // LOAD REFERENCE DATA (Shared across all child components)
+    // ========================================
+
+    private async Task LoadDocumentTypesAsync()
+    {
+        try
+        {
+            documentTypes = await DocumentTypeService.GetAllAsync();
+            Logger.LogInformation("Loaded {Count} document types", documentTypes.Count);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading document types");
+            documentTypes = new();
+        }
+    }
+
+    private async Task LoadCounterPartiesAsync()
+    {
+        try
+        {
+            counterParties = await CounterPartyService.GetAllAsync();
+            Logger.LogInformation("Loaded {Count} counter parties", counterParties.Count);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading counter parties");
+            counterParties = new();
+        }
+    }
+
+    private async Task LoadCurrenciesAsync()
+    {
+        try
+        {
+            currencies = await CurrencyService.GetAllAsync();
+            Logger.LogInformation("Loaded {Count} currencies", currencies.Count);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading currencies");
+            currencies = new();
+        }
+    }
+
+    // ========================================
+    // LOAD PAGE-SPECIFIC DATA
+    // ========================================
 
     private async Task LoadEditModeAsync(int barcode)
     {

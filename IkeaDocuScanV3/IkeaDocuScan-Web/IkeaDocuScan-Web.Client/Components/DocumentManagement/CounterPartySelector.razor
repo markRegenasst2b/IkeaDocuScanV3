@@ -166,6 +166,12 @@
     public bool Disabled { get; set; }
 
     /// <summary>
+    /// Pre-loaded counter parties (optional, passed from parent for performance)
+    /// </summary>
+    [Parameter]
+    public List<CounterPartyDto>? CounterParties { get; set; }
+
+    /// <summary>
     /// Event callback when component finishes loading
     /// </summary>
     [Parameter]
@@ -179,7 +185,17 @@
 
     protected override async Task OnInitializedAsync()
     {
-        await LoadCounterParties();
+        // Use pre-loaded data if available, otherwise load
+        if (CounterParties != null && CounterParties.Any())
+        {
+            allCounterParties = CounterParties;
+            Logger.LogInformation("Using {Count} pre-loaded counterparties for selector", allCounterParties.Count);
+        }
+        else
+        {
+            await LoadCounterParties();
+        }
+
         ApplyFilter();
 
         // Signal parent that this component has completed initialization
