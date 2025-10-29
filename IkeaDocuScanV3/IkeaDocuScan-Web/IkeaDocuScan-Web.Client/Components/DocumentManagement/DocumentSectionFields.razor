@@ -24,7 +24,8 @@
 <div class="mb-3">
     <CounterPartySelector @bind-SelectedCounterPartyId="@Model.CounterPartyId"
                          OnCounterPartySelected="@OnCounterPartySelectedFromSelector"
-                         Disabled="@IsReadOnly" />
+                         Disabled="@IsReadOnly"
+                         OnLoadComplete="@OnLoadComplete" />
 </div>
 
 @* Third Parties Selector *@
@@ -32,7 +33,8 @@
                    @bind-SelectedThirdPartyIds:after="OnThirdPartiesChanged"
                    @bind-SelectedThirdPartyNames="@Model.SelectedThirdPartyNames"
                    Disabled="@IsReadOnly"
-                   FilterByCounterPartyId="@Model.CounterPartyId" />
+                   FilterByCounterPartyId="@Model.CounterPartyId"
+                   OnLoadComplete="@OnLoadComplete" />
 
 @* Date of Contract *@
 <div class="row mb-3 field-horizontal">
@@ -145,11 +147,20 @@
     [Parameter]
     public bool IsReadOnly { get; set; }
 
+    /// <summary>
+    /// Event callback when component finishes loading
+    /// </summary>
+    [Parameter]
+    public EventCallback OnLoadComplete { get; set; }
+
     private List<DocumentTypeDto> documentTypes = new();
 
     protected override async Task OnInitializedAsync()
     {
         await LoadDocumentTypes();
+
+        // Signal parent that this component has completed initialization
+        await OnLoadComplete.InvokeAsync();
     }
 
     private async Task LoadDocumentTypes()

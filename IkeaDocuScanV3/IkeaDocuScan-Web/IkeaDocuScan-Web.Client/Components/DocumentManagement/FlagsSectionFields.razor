@@ -70,6 +70,18 @@
     [Parameter]
     public bool IsReadOnly { get; set; }
 
+    /// <summary>
+    /// Event callback when component finishes loading
+    /// </summary>
+    [Parameter]
+    public EventCallback OnLoadComplete { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        // This component has no async initialization, signal completion immediately
+        await OnLoadComplete.InvokeAsync();
+    }
+
     private async Task OnFieldChanged()
     {
         await ModelChanged.InvokeAsync(Model);

@@ -192,6 +192,12 @@
     [Parameter]
     public bool IsReadOnly { get; set; }
 
+    /// <summary>
+    /// Event callback when component finishes loading
+    /// </summary>
+    [Parameter]
+    public EventCallback OnLoadComplete { get; set; }
+
     // Internal state for document names
     private List<DocumentNameDto> documentNames = new();
     private bool isLoadingDocumentNames = false;
@@ -206,6 +212,9 @@
         // Load dropdowns sequentially to avoid DbContext concurrency issues
         await LoadCurrencies();
         await LoadDocumentNames();
+
+        // Signal parent that this component has completed initialization
+        await OnLoadComplete.InvokeAsync();
     }
 
     protected override async Task OnParametersSetAsync()

@@ -165,6 +165,12 @@
     [Parameter]
     public bool Disabled { get; set; }
 
+    /// <summary>
+    /// Event callback when component finishes loading
+    /// </summary>
+    [Parameter]
+    public EventCallback OnLoadComplete { get; set; }
+
     // Internal state
     private List<CounterPartyDto> allCounterParties = new();
     private List<CounterPartyDto> filteredCounterParties = new();
@@ -175,6 +181,9 @@
     {
         await LoadCounterParties();
         ApplyFilter();
+
+        // Signal parent that this component has completed initialization
+        await OnLoadComplete.InvokeAsync();
     }
 
     protected override void OnParametersSet()

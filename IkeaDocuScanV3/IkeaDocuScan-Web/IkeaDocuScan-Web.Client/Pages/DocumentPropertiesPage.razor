@@ -169,52 +169,63 @@
             </div>
 
             @* Main Form - Two Column Layout *@
-            <div class="row">
-                @* Left Column: Document Section *@
-                <div class="col-12 col-md-6">
-                    <div class="card mb-3">
-                        <div class="card-header">
-                            <h5 class="mb-0">Document Information</h5>
+            @if (!isLoading)
+            {
+                <div class="row">
+                    @* Left Column: Document Section *@
+                    <div class="col-12 col-md-6">
+                        <div class="card mb-3">
+                            <div class="card-header">
+                                <h5 class="mb-0">Document Information</h5>
+                            </div>
+                            <div class="card-body">
+                                <DocumentSectionFields @bind-Model="@Model"
+                                                       @bind-Model:after="CheckForChanges"
+                                                       OnLoadComplete="@OnChildComponentLoadComplete" />
+                            </div>
                         </div>
-                        <div class="card-body">
-                            <DocumentSectionFields @bind-Model="@Model" @bind-Model:after="CheckForChanges" />
+                    </div>
+
+                    @* Right Column: Action, Flags, Additional Info Sections *@
+                    <div class="col-12 col-md-6">
+                        @* Action Section *@
+                        <div class="card mb-3">
+                            <div class="card-header">
+                                <h5 class="mb-0">Action Information</h5>
+                            </div>
+                            <div class="card-body">
+                                <ActionSectionFields @bind-Model="@Model"
+                                                    @bind-Model:after="CheckForChanges"
+                                                    OnLoadComplete="@OnChildComponentLoadComplete" />
+                            </div>
+                        </div>
+
+                        @* Flags Section *@
+                        <div class="card mb-3">
+                            <div class="card-header">
+                                <h5 class="mb-0">Flags</h5>
+                            </div>
+                            <div class="card-body">
+                                <FlagsSectionFields @bind-Model="@Model"
+                                                   @bind-Model:after="CheckForChanges"
+                                                   OnLoadComplete="@OnChildComponentLoadComplete" />
+                            </div>
+                        </div>
+
+                        @* Additional Info Section *@
+                        <div class="card mb-3">
+                            <div class="card-header">
+                                <h5 class="mb-0">Additional Information</h5>
+                            </div>
+                            <div class="card-body">
+                                <AdditionalInfoFields @bind-Model="@Model"
+                                                     @bind-Model:after="CheckForChanges"
+                                                     OnLoadComplete="@OnChildComponentLoadComplete" />
+                            </div>
                         </div>
                     </div>
                 </div>
-
-                @* Right Column: Action, Flags, Additional Info Sections *@
-                <div class="col-12 col-md-6">
-                    @* Action Section *@
-                    <div class="card mb-3">
-                        <div class="card-header">
-                            <h5 class="mb-0">Action Information</h5>
-                        </div>
-                        <div class="card-body">
-                            <ActionSectionFields @bind-Model="@Model" @bind-Model:after="CheckForChanges" />
-                        </div>
-                    </div>
-
-                    @* Flags Section *@
-                    <div class="card mb-3">
-                        <div class="card-header">
-                            <h5 class="mb-0">Flags</h5>
-                        </div>
-                        <div class="card-body">
-                            <FlagsSectionFields @bind-Model="@Model" @bind-Model:after="CheckForChanges" />
-                        </div>
-                    </div>
-
-                    @* Additional Info Section *@
-                    <div class="card mb-3">
-                        <div class="card-header">
-                            <h5 class="mb-0">Additional Information</h5>
-                        </div>
-                        <div class="card-body">
-                            <AdditionalInfoFields @bind-Model="@Model" @bind-Model:after="CheckForChanges" />
-                        </div>
-                    </div>
-                </div>
-            </div>
+            }
 
             @* Form Data Actions (Copy/Paste) *@
             <div class="row mb-3">

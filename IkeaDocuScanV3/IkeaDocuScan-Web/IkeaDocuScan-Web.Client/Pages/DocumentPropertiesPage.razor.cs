@@ -50,6 +50,12 @@ public partial class DocumentPropertiesPage : ComponentBase, IDisposable
     private bool isCheckingForChanges = false; // Prevent recursive calls
     private bool enableChangeTracking = false; // Only enable after initial load completes
 
+    // Child component load tracking
+    private const int TotalChildComponents = 6; // DocumentSection, CounterParty, ThirdParty, Action, Flags, AdditionalInfo
+    private int loadedChildComponentCount = 0;
+    private bool acceptChildCallbacks = false; // Only accept callbacks after parent finishes loading
+    private readonly object childLoadLock = new();
+
     // ========================================
     // LIFECYCLE METHODS
     // ========================================
@@ -95,6 +101,13 @@ public partial class DocumentPropertiesPage : ComponentBase, IDisposable
         try {
             isLoading = true;
             enableChangeTracking = false; // Disable during load
+
+            // Stop accepting child callbacks during page load
+            lock (childLoadLock)
+            {
+                acceptChildCallbacks = false;
+            }
+
             errorMessage = null;
             successMessage = null;
             validationErrors.Clear();
@@ -116,20 +129,61 @@ public partial class DocumentPropertiesPage : ComponentBase, IDisposable
             Logger.LogInformation($"Failed to load page: {ex.Message}");
             errorMessage = $"Failed to load page: {ex.Message}";
         } finally {
+            // Reset child component load counter and START accepting callbacks
+            lock (childLoadLock)
+            {
+                loadedChildComponentCount = 0;
+                acceptChildCallbacks = true;
+                Logger.LogInformation("LoadPageAsync complete. Now accepting child callbacks. Waiting for {Total} child components.", TotalChildComponents);
+            }
+
             isLoading = false;
-
-            // Create snapshot of loaded data for change tracking
-            CreateSnapshot();
-
             StateHasChanged();
+        }
+    }
 
-            // Enable change tracking after a delay to ensure child components finish their async loading
-            _ = Task.Run(async () => {
-                await Task.Delay(500); // Wait for child components to load their data
-                await InvokeAsync(() => {
-                    enableChangeTracking = true;
-                    StateHasChanged();
-                });
+    /// <summary>
+    /// Called by each child component when it completes initialization
+    /// </summary>
+    private async Task OnChildComponentLoadComplete()
+    {
+        bool allChildrenLoaded = false;
+        int currentCount = 0;
+        bool shouldProcess = false;
+
+        lock (childLoadLock)
+        {
+            // Only process callbacks after parent finishes loading
+            if (!acceptChildCallbacks)
+            {
+                Logger.LogDebug("Child callback received but parent not ready yet - ignoring");
+                return;
+            }
+
+            shouldProcess = true;
+            loadedChildComponentCount++;
+            currentCount = loadedChildComponentCount;
+            allChildrenLoaded = loadedChildComponentCount >= TotalChildComponents;
+        }
+
+        if (shouldProcess)
+        {
+            Logger.LogInformation("Child component load callback invoked. Progress: {Count}/{Total}, AllLoaded: {AllLoaded}",
+                currentCount, TotalChildComponents, allChildrenLoaded);
+        }
+
+        if (allChildrenLoaded)
+        {
+            // All child components have finished loading - now create snapshot and enable change tracking
+            await InvokeAsync(() => {
+                Logger.LogInformation("Creating snapshot after all children loaded...");
+
+                // Create snapshot NOW, after all children have loaded their data
+                CreateSnapshot();
+
+                enableChangeTracking = true;
+                Logger.LogInformation("All child components loaded. Snapshot created. Change tracking ENABLED: {Enabled}", enableChangeTracking);
+                StateHasChanged();
             });
         }
     }
@@ -860,6 +914,7 @@ public partial class DocumentPropertiesPage : ComponentBase, IDisposable
         // Don't check for changes until initial load is complete
         if (!enableChangeTracking)
         {
+            Logger.LogDebug("CheckForChanges called but change tracking is disabled");
             return;
         }
 
@@ -876,6 +931,7 @@ public partial class DocumentPropertiesPage : ComponentBase, IDisposable
             if (string.IsNullOrEmpty(originalModelJson))
             {
                 hasUnsavedChanges = false;
+                Logger.LogDebug("CheckForChanges: No original snapshot exists");
                 return;
             }
 
@@ -884,6 +940,8 @@ public partial class DocumentPropertiesPage : ComponentBase, IDisposable
             var currentJson = System.Text.Json.JsonSerializer.Serialize(currentSnapshotData);
             var hadChanges = hasUnsavedChanges;
             hasUnsavedChanges = currentJson != originalModelJson;
+
+            Logger.LogInformation("CheckForChanges: hasUnsavedChanges = {HasChanges} (was: {HadChanges})", hasUnsavedChanges, hadChanges);
 
             // Only trigger re-render if the state actually changed
             if (hadChanges != hasUnsavedChanges)
@@ -978,7 +1036,7 @@ public partial class DocumentPropertiesPage : ComponentBase, IDisposable
                     attempt++;
                 }
             }
-
+            Logger.LogInformation("JavaScript navigation interception script loaded: {Loaded}, Attempts: {attempts}", scriptLoaded, attempt);
             if (scriptLoaded)
             {
                 // Call the init function from the external JavaScript file

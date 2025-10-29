@@ -127,6 +127,12 @@
     [Parameter]
     public string? FilterByCounterPartyId { get; set; }
 
+    /// <summary>
+    /// Event callback when component finishes loading
+    /// </summary>
+    [Parameter]
+    public EventCallback OnLoadComplete { get; set; }
+
     // Internal state
     private List<ThirdPartyItem> allThirdParties = new();
     private List<ThirdPartyItem> availableItems = new();
@@ -138,6 +144,9 @@
     {
         await LoadThirdParties();
         UpdateLists();
+
+        // Signal parent that this component has completed initialization
+        await OnLoadComplete.InvokeAsync();
     }
 
     protected override async Task OnParametersSetAsync()

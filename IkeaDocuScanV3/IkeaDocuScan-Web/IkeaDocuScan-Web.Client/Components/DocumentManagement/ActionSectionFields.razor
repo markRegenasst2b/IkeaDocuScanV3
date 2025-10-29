@@ -47,6 +47,9 @@
     <ReadOnlyField Label="Distribution List" Value="@Model.DistributionListLabel" />
 }
 
+@using Microsoft.Extensions.Logging
+@inject ILogger<ActionSectionFields> Logger
+
 @code {
     /// <summary>
     /// The document properties model
@@ -65,6 +68,20 @@
     /// </summary>
     [Parameter]
     public bool IsReadOnly { get; set; }
+
+    /// <summary>
+    /// Event callback when component finishes loading
+    /// </summary>
+    [Parameter]
+    public EventCallback OnLoadComplete { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        Logger.LogInformation("ActionSectionFields OnInitializedAsync called");
+        // This component has no async initialization, signal completion immediately
+        await OnLoadComplete.InvokeAsync();
+        Logger.LogInformation("ActionSectionFields OnLoadComplete invoked");
+    }
 
     private async Task OnFieldChanged()
     {
