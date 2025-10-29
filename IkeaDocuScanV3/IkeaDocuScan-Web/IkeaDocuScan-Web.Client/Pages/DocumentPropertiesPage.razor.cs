@@ -34,6 +34,7 @@ public partial class DocumentPropertiesPage : ComponentBase, IDisposable
     private bool isSaving = false;
     private string? errorMessage;
     private string? successMessage;
+    private string? warningMessage;
     private List<string> validationErrors = new();
 
     // Copy/Paste state
@@ -401,6 +402,9 @@ public partial class DocumentPropertiesPage : ComponentBase, IDisposable
                 SourceFilePath = scannedFile.FullPath
             };
             Logger.LogDebug($"Model FileBytes = {Model?.FileBytes?.Length.ToString() ?? "-unk-"}");
+
+            // Show warning that document was not pre-registered
+            warningMessage = $"The barcode {barcode} has not been previously registered. Please proceed to perform both the registration and check-in processes concurrently, or select 'Cancel' to abort the operation.";
         }
         else
         {
@@ -471,6 +475,7 @@ public partial class DocumentPropertiesPage : ComponentBase, IDisposable
             validationErrors.Clear();
             successMessage = null;
             errorMessage = null;
+            warningMessage = null;
 
             // Validate
             if (!ValidateModel())
@@ -919,7 +924,12 @@ public partial class DocumentPropertiesPage : ComponentBase, IDisposable
             hasUnsavedChanges = false;
         }
 
-        NavigationManager.NavigateTo("/documents");
+        // Navigate based on mode
+        var destination = Model.Mode == DocumentPropertyMode.CheckIn
+            ? "/checkin-scanned"
+            : "/documents";
+
+        NavigationManager.NavigateTo(destination);
     }
 
     // ========================================

@@ -18,10 +18,7 @@ The file extension '.pdf' will be appended automatically.
 The total number of PDF files (including the first one) to create.
 
 .EXAMPLE
-.\Create-NumberedPdfs.ps1 -DestinationFolder "C:\Reports\Monthly" `
-                         -SourcePdfPath "C:\Templates\BlankReport.pdf" `
-                         -InitialInteger 100 `
-                         -Count 5
+C:\Users\markr\source\repos\markRegenasst2b\IkeaDocuScan-V3\IkeaDocuScanV3\Dev-Tools\Scripts\CreateCheckInPdfs.ps1 -DestinationFolder "C:\temp\checkin" -SourcePdfPath "C:\Users\markr\OneDrive\_work\t2b\IKEA-docuscan-V3\document-samples\1000011.pdf" -InitialInteger 1000111 -Count 50
 
 This will create:
 C:\Reports\Monthly\100.pdf

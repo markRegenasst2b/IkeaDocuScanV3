@@ -12,13 +12,13 @@
             <select multiple
                     size="7"
                     class="form-select third-party-listbox"
-                    @ondblclick="AddSelectedItems"
                     disabled="@Disabled">
                 @foreach (var item in availableItems)
                 {
                     <option value="@item.Id"
                             selected="@selectedAvailableIds.Contains(item.Id)"
-                            @onclick="@(() => ToggleAvailableSelection(item.Id))">
+                            @onclick="@(() => ToggleAvailableSelection(item.Id))"
+                            @ondblclick="@(() => AddSingleItem(item.Id))">
                         @item.DisplayText
                     </option>
                 }
@@ -50,13 +50,13 @@
             <select multiple
                     size="5"
                     class="form-select third-party-listbox"
-                    @ondblclick="RemoveSelectedItems"
                     disabled="@Disabled">
                 @foreach (var item in selectedItems)
                 {
                     <option value="@item.Id"
                             selected="@selectedSelectedIds.Contains(item.Id)"
-                            @onclick="@(() => ToggleSelectedSelection(item.Id))">
+                            @onclick="@(() => ToggleSelectedSelection(item.Id))"
+                            @ondblclick="@(() => RemoveSingleItem(item.Id))">
                         @item.DisplayText
                     </option>
                 }
@@ -235,18 +235,39 @@
             selectedSelectedIds.Add(id);
     }
 
+    private async Task AddSingleItem(string id)
+    {
+        if (Disabled)
+            return;
+
+        var item = availableItems.FirstOrDefault(i => i.Id == id);
+        if (item != null && !SelectedThirdPartyIds.Contains(item.Id))
+        {
+            SelectedThirdPartyIds.Add(item.Id);
+            SelectedThirdPartyNames.Add(item.Name);
+
+            // Clear selection
+            selectedAvailableIds.Remove(id);
+
+            // Update lists
+            UpdateLists();
+
+            // Notify parent
+            await SelectedThirdPartyIdsChanged.InvokeAsync(SelectedThirdPartyIds);
+            await SelectedThirdPartyNamesChanged.InvokeAsync(SelectedThirdPartyNames);
+
+            Logger.LogInformation("Added third party {Name}, total selected: {Total}",
+                item.Name, SelectedThirdPartyIds.Count);
+        }
+    }
+
     private async Task AddSelectedItems()
     {
         if (Disabled)
             return;
 
-        // If no items selected in available list, select all highlighted items
         if (!selectedAvailableIds.Any())
-        {
-            // On double-click, get the item that was double-clicked
-            // For now, we'll move all selected items
             return;
-        }
 
         // Move selected items from available to selected
         foreach (var id in selectedAvailableIds.ToList())
@@ -259,6 +280,8 @@
             }
         }
 
+        var count = selectedAvailableIds.Count;
+
         // Clear selection
         selectedAvailableIds.Clear();
 
@@ -270,7 +293,33 @@
         await SelectedThirdPartyNamesChanged.InvokeAsync(SelectedThirdPartyNames);
 
         Logger.LogInformation("Added {Count} third parties, total selected: {Total}",
-            selectedAvailableIds.Count, SelectedThirdPartyIds.Count);
+            count, SelectedThirdPartyIds.Count);
+    }
+
+    private async Task RemoveSingleItem(string id)
+    {
+        if (Disabled)
+            return;
+
+        var item = selectedItems.FirstOrDefault(i => i.Id == id);
+        if (item != null)
+        {
+            SelectedThirdPartyIds.Remove(item.Id);
+            SelectedThirdPartyNames.Remove(item.Name);
+
+            // Clear selection
+            selectedSelectedIds.Remove(id);
+
+            // Update lists
+            UpdateLists();
+
+            // Notify parent
+            await SelectedThirdPartyIdsChanged.InvokeAsync(SelectedThirdPartyIds);
+            await SelectedThirdPartyNamesChanged.InvokeAsync(SelectedThirdPartyNames);
+
+            Logger.LogInformation("Removed third party {Name}, total selected: {Total}",
+                item.Name, SelectedThirdPartyIds.Count);
+        }
     }
 
     private async Task RemoveSelectedItems()
@@ -280,6 +329,8 @@
 
         if (!selectedSelectedIds.Any())
             return;
+
+        var count = selectedSelectedIds.Count;
 
         // Move selected items from selected back to available
         foreach (var id in selectedSelectedIds.ToList())
@@ -303,6 +354,6 @@
         await SelectedThirdPartyNamesChanged.InvokeAsync(SelectedThirdPartyNames);
 
         Logger.LogInformation("Removed {Count} third parties, total selected: {Total}",
-            selectedSelectedIds.Count, SelectedThirdPartyIds.Count);
+            count, SelectedThirdPartyIds.Count);
     }
 }
