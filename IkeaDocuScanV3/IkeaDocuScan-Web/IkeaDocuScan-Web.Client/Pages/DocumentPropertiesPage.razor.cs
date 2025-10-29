@@ -30,6 +30,7 @@ public partial class DocumentPropertiesPage : ComponentBase, IDisposable
 
     private DocumentPropertiesViewModel Model { get; set; } = new();
     private bool isLoading = true;
+    private bool isLoadingChildren = false; // True while waiting for child components to load
     private bool isSaving = false;
     private string? errorMessage;
     private string? successMessage;
@@ -128,6 +129,10 @@ public partial class DocumentPropertiesPage : ComponentBase, IDisposable
         } catch (Exception ex) {
             Logger.LogInformation($"Failed to load page: {ex.Message}");
             errorMessage = $"Failed to load page: {ex.Message}";
+
+            // On error, turn off loading immediately
+            isLoading = false;
+            isLoadingChildren = false;
         } finally {
             // Reset child component load counter and START accepting callbacks
             lock (childLoadLock)
@@ -137,7 +142,9 @@ public partial class DocumentPropertiesPage : ComponentBase, IDisposable
                 Logger.LogInformation("LoadPageAsync complete. Now accepting child callbacks. Waiting for {Total} child components.", TotalChildComponents);
             }
 
+            // Parent data loaded - now allow children to mount and start loading their data
             isLoading = false;
+            isLoadingChildren = true; // Keep overlay visible while children load
             StateHasChanged();
         }
     }
@@ -182,7 +189,8 @@ public partial class DocumentPropertiesPage : ComponentBase, IDisposable
                 CreateSnapshot();
 
                 enableChangeTracking = true;
-                Logger.LogInformation("All child components loaded. Snapshot created. Change tracking ENABLED: {Enabled}", enableChangeTracking);
+                isLoadingChildren = false; // Hide the loading overlay now
+                Logger.LogInformation("All child components loaded. Snapshot created. Change tracking ENABLED: {Enabled}. Loading complete.", enableChangeTracking);
                 StateHasChanged();
             });
         }
