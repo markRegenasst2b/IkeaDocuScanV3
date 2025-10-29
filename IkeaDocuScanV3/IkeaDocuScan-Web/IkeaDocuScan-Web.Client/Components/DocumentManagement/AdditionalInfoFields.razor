@@ -31,67 +31,97 @@
 
 @* Document No. *@
 <div class="row mb-3 field-horizontal">
-    <label class="col-sm-3 col-form-label text-end">Document No.<span class="required">*</span></label>
+    <label class="col-sm-3 col-form-label text-end">
+        Document No.
+        @if (Model.IsFieldMandatory("DocumentNo"))
+        {
+            <span class="required">*</span>
+        }
+    </label>
     <div class="col-sm-9">
         <input type="text"
                class="form-control compact-input"
                @bind="Model.DocumentNo"
                @bind:after="OnFieldChanged"
                maxlength="255"
-               disabled="@IsReadOnly"
+               disabled="@(IsReadOnly || Model.IsFieldDisabled("DocumentNo"))"
                placeholder="Enter document number" />
     </div>
 </div>
 
 @* Version No. *@
 <div class="row mb-3 field-horizontal">
-    <label class="col-sm-3 col-form-label text-end">Version No.<span class="required">*</span></label>
+    <label class="col-sm-3 col-form-label text-end">
+        Version No.
+        @if (Model.IsFieldMandatory("VersionNo"))
+        {
+            <span class="required">*</span>
+        }
+    </label>
     <div class="col-sm-9">
         <input type="text"
                class="form-control compact-input"
                @bind="Model.VersionNo"
                @bind:after="OnFieldChanged"
                maxlength="255"
-               disabled="@IsReadOnly"
+               disabled="@(IsReadOnly || Model.IsFieldDisabled("VersionNo"))"
                placeholder="Enter version number" />
     </div>
 </div>
 
 @* Associated to PUA/Agreement No. *@
 <div class="row mb-3 field-horizontal">
-    <label class="col-sm-3 col-form-label text-end">Assoc. to PUA/Agr. No.</label>
+    <label class="col-sm-3 col-form-label text-end">
+        Assoc. to PUA/Agr. No.
+        @if (Model.IsFieldMandatory("AssociatedToPua"))
+        {
+            <span class="required">*</span>
+        }
+    </label>
     <div class="col-sm-9">
         <input type="text"
                class="form-control compact-input"
                @bind="Model.AssociatedToPUA"
                @bind:after="OnFieldChanged"
                maxlength="255"
-               disabled="@IsReadOnly"
+               disabled="@(IsReadOnly || Model.IsFieldDisabled("AssociatedToPua"))"
                placeholder="Enter PUA/Agreement number" />
     </div>
 </div>
 
 @* Associated to Appendix No. *@
 <div class="row mb-3 field-horizontal">
-    <label class="col-sm-3 col-form-label text-end">Assoc. to Appendix No.</label>
+    <label class="col-sm-3 col-form-label text-end">
+        Assoc. to Appendix No.
+        @if (Model.IsFieldMandatory("AssociatedToAppendix"))
+        {
+            <span class="required">*</span>
+        }
+    </label>
     <div class="col-sm-9">
         <input type="text"
                class="form-control compact-input"
                @bind="Model.AssociatedToAppendix"
                @bind:after="OnFieldChanged"
                maxlength="255"
-               disabled="@IsReadOnly"
+               disabled="@(IsReadOnly || Model.IsFieldDisabled("AssociatedToAppendix"))"
                placeholder="Enter appendix number" />
     </div>
 </div>
 
 @* Valid Until/As Of *@
 <div class="row mb-3 field-horizontal">
-    <label class="col-sm-3 col-form-label text-end">Valid Until/As Of</label>
+    <label class="col-sm-3 col-form-label text-end">
+        Valid Until/As Of
+        @if (Model.IsFieldMandatory("ValidUntil"))
+        {
+            <span class="required">*</span>
+        }
+    </label>
     <div class="col-sm-9">
         <DocumentDatePicker @bind-Value="@Model.ValidUntil"
                            @bind-Value:after="OnFieldChanged"
-                           Disabled="@IsReadOnly"
+                           Disabled="@(IsReadOnly || Model.IsFieldDisabled("ValidUntil"))"
                            Label="Valid Until/As Of"
                            Class="compact-date" />
     </div>
@@ -99,14 +129,20 @@
 
 @* Amount *@
 <div class="row mb-3 field-horizontal">
-    <label class="col-sm-3 col-form-label text-end">Amount</label>
+    <label class="col-sm-3 col-form-label text-end">
+        Amount
+        @if (Model.IsFieldMandatory("Amount"))
+        {
+            <span class="required">*</span>
+        }
+    </label>
     <div class="col-sm-9">
         <input type="number"
                class="form-control"
                style="max-width: 10em;"
                @bind="Model.Amount"
                @bind:after="OnFieldChanged"
-               disabled="@IsReadOnly"
+               disabled="@(IsReadOnly || Model.IsFieldDisabled("Amount"))"
                placeholder="0.00"
                step="0.01" />
         <small class="text-muted">If Amount is entered, Currency must be selected</small>
@@ -117,13 +153,13 @@
 <div class="row mb-3 field-horizontal">
     <label class="col-sm-3 col-form-label text-end">
         Currency
-        @if (Model.Amount.HasValue)
+        @if (Model.Amount.HasValue || Model.IsFieldMandatory("Currency"))
         {
             <span class="required">*</span>
         }
     </label>
     <div class="col-sm-9">
-        <select class="form-select compact-dropdown" @bind="Model.CurrencyCode" @bind:after="OnFieldChanged" disabled="@IsReadOnly">
+        <select class="form-select compact-dropdown" @bind="Model.CurrencyCode" @bind:after="OnFieldChanged" disabled="@(IsReadOnly || Model.IsFieldDisabled("Currency"))">
             <option value="">-- Select Currency --</option>
             @foreach (var currency in currencies)
             {
@@ -143,25 +179,37 @@
 
 @* Authorisation to *@
 <div class="row mb-3 field-horizontal">
-    <label class="col-sm-3 col-form-label text-end">Authorisation to</label>
+    <label class="col-sm-3 col-form-label text-end">
+        Authorisation to
+        @if (Model.IsFieldMandatory("Authorisation"))
+        {
+            <span class="required">*</span>
+        }
+    </label>
     <div class="col-sm-9">
         <input type="text"
                class="form-control compact-input"
                @bind="Model.Authorisation"
                @bind:after="OnFieldChanged"
                maxlength="255"
-               disabled="@IsReadOnly"
+               disabled="@(IsReadOnly || Model.IsFieldDisabled("Authorisation"))"
                placeholder="Enter authorisation" />
     </div>
 </div>
 
 @* Bank Confirmation *@
 <div class="row mb-3 field-horizontal">
-    <label class="col-sm-3 col-form-label text-end">Bank Confirmation<span class="required">*</span></label>
+    <label class="col-sm-3 col-form-label text-end">
+        Bank Confirmation
+        @if (Model.IsFieldMandatory("BankConfirmation"))
+        {
+            <span class="required">*</span>
+        }
+    </label>
     <div class="col-sm-9">
         <TriStateDropdown @bind-Value="@Model.BankConfirmation"
                          @bind-Value:after="OnFieldChanged"
-                         Disabled="@IsReadOnly"
+                         Disabled="@(IsReadOnly || Model.IsFieldDisabled("BankConfirmation"))"
                          Label="Bank Confirmation" />
     </div>
 </div>

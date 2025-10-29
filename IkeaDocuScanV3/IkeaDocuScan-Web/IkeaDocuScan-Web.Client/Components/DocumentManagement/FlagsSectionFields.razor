@@ -3,44 +3,68 @@
 
 @* Fax *@
 <div class="row mb-3 field-horizontal">
-    <label class="col-sm-3 col-form-label text-end">Fax<span class="required">*</span></label>
+    <label class="col-sm-3 col-form-label text-end">
+        Fax
+        @if (Model.IsFieldMandatory("Fax"))
+        {
+            <span class="required">*</span>
+        }
+    </label>
     <div class="col-sm-9">
         <TriStateDropdown @bind-Value="@Model.Fax"
                          @bind-Value:after="OnFieldChanged"
-                         Disabled="@IsReadOnly"
+                         Disabled="@(IsReadOnly || Model.IsFieldDisabled("Fax"))"
                          Label="Fax" />
     </div>
 </div>
 
 @* Original Received *@
 <div class="row mb-3 field-horizontal">
-    <label class="col-sm-3 col-form-label text-end">Original Received<span class="required">*</span></label>
+    <label class="col-sm-3 col-form-label text-end">
+        Original Received
+        @if (Model.IsFieldMandatory("OriginalReceived"))
+        {
+            <span class="required">*</span>
+        }
+    </label>
     <div class="col-sm-9">
         <TriStateDropdown @bind-Value="@Model.OriginalReceived"
                          @bind-Value:after="OnFieldChanged"
-                         Disabled="@IsReadOnly"
+                         Disabled="@(IsReadOnly || Model.IsFieldDisabled("OriginalReceived"))"
                          Label="Original Received" />
     </div>
 </div>
 
 @* Translation Received *@
 <div class="row mb-3 field-horizontal">
-    <label class="col-sm-3 col-form-label text-end">Translation Received<span class="required">*</span></label>
+    <label class="col-sm-3 col-form-label text-end">
+        Translation Received
+        @if (Model.IsFieldMandatory("TranslatedVersionReceived"))
+        {
+            <span class="required">*</span>
+        }
+    </label>
     <div class="col-sm-9">
         <TriStateDropdown @bind-Value="@Model.TranslationReceived"
                          @bind-Value:after="OnFieldChanged"
-                         Disabled="@IsReadOnly"
+                         Disabled="@(IsReadOnly || Model.IsFieldDisabled("TranslatedVersionReceived"))"
                          Label="Translation Received" />
     </div>
 </div>
 
 @* Confidential *@
 <div class="row mb-3 field-horizontal">
-    <label class="col-sm-3 col-form-label text-end">Confidential<span class="required">*</span></label>
+    <label class="col-sm-3 col-form-label text-end">
+        Confidential
+        @if (Model.IsFieldMandatory("Confidential"))
+        {
+            <span class="required">*</span>
+        }
+    </label>
     <div class="col-sm-9">
         <TriStateDropdown @bind-Value="@Model.Confidential"
                          @bind-Value:after="OnFieldChanged"
-                         Disabled="@IsReadOnly"
+                         Disabled="@(IsReadOnly || Model.IsFieldDisabled("Confidential"))"
                          Label="Confidential" />
     </div>
 </div>

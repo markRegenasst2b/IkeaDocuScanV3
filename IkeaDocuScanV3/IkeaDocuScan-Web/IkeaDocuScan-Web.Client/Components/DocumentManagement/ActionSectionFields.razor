@@ -3,11 +3,17 @@
 
 @* Action Date *@
 <div class="row mb-3 field-horizontal">
-    <label class="col-sm-3 col-form-label text-end">Action Date</label>
+    <label class="col-sm-3 col-form-label text-end">
+        Action Date
+        @if (Model.IsFieldMandatory("ActionDate"))
+        {
+            <span class="required">*</span>
+        }
+    </label>
     <div class="col-sm-9">
         <DocumentDatePicker @bind-Value="@Model.ActionDate"
                            @bind-Value:after="OnFieldChanged"
-                           Disabled="@IsReadOnly"
+                           Disabled="@(IsReadOnly || Model.IsFieldDisabled("ActionDate"))"
                            Label="Action Date"
                            Class="compact-date" />
         <small class="text-muted">If any action field is filled, all must be filled</small>
@@ -16,13 +22,19 @@
 
 @* Action Description *@
 <div class="mb-3">
-    <label class="form-label">Action Description</label>
+    <label class="form-label">
+        Action Description
+        @if (Model.IsFieldMandatory("ActionDescription"))
+        {
+            <span class="required">*</span>
+        }
+    </label>
     <textarea class="form-control"
               @bind="Model.ActionDescription"
               @bind:after="OnFieldChanged"
               rows="3"
               maxlength="255"
-              disabled="@IsReadOnly"
+              disabled="@(IsReadOnly || Model.IsFieldDisabled("ActionDescription"))"
               placeholder="Enter action description (max 255 characters)"></textarea>
     @if (!string.IsNullOrEmpty(Model.ActionDescription))
     {
@@ -32,14 +44,26 @@
 
 @* Email Reminder Group (Hidden by default, can be enabled via DocumentType) *@
 <div class="row mb-3 field-horizontal" style="display: none;">
-    <label class="col-sm-3 col-form-label text-end">E-Mail Reminder Group</label>
+    <label class="col-sm-3 col-form-label text-end">
+        E-Mail Reminder Group
+        @if (Model.IsFieldMandatory("ReminderGroup"))
+        {
+            <span class="required">*</span>
+        }
+    </label>
     <div class="col-sm-9">
-        <select class="form-select compact-dropdown" @bind="Model.EmailReminderGroup" disabled="@IsReadOnly">
+        <select class="form-select compact-dropdown" @bind="Model.EmailReminderGroup" disabled="@(IsReadOnly || Model.IsFieldDisabled("ReminderGroup"))">
             <option value="">-- Select Group --</option>
             @* TODO: Load from LDAP/Active Directory *@
         </select>
     </div>
 </div>
+
+<style>
+    .required {
+        color: red;
+    }
+</style>
 
 @* Distribution List Label (Read-only display) *@
 @if (!string.IsNullOrEmpty(Model.DistributionListLabel))

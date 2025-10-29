@@ -23,7 +23,7 @@
 <div class="mb-3">
     <CounterPartySelector @bind-SelectedCounterPartyId="@Model.CounterPartyId"
                          OnCounterPartySelected="@OnCounterPartySelectedFromSelector"
-                         Disabled="@IsReadOnly"
+                         Disabled="@(IsReadOnly || Model.IsFieldDisabled("CounterParty"))"
                          CounterParties="@CounterParties"
                          OnLoadComplete="@OnLoadComplete" />
 </div>
@@ -39,11 +39,17 @@
 
 @* Date of Contract *@
 <div class="row mb-3 field-horizontal">
-    <label class="col-sm-3 col-form-label text-end">Date of Contract<span class="required">*</span></label>
+    <label class="col-sm-3 col-form-label text-end">
+        Date of Contract
+        @if (Model.IsFieldMandatory("DateOfContract"))
+        {
+            <span class="required">*</span>
+        }
+    </label>
     <div class="col-sm-9">
         <DocumentDatePicker @bind-Value="@Model.DateOfContract"
                            @bind-Value:after="OnDateChanged"
-                           Disabled="@IsReadOnly"
+                           Disabled="@(IsReadOnly || Model.IsFieldDisabled("DateOfContract"))"
                            Label="Date of Contract"
                            Class="compact-date" />
     </div>
@@ -51,11 +57,17 @@
 
 @* Receiving Date *@
 <div class="row mb-3 field-horizontal">
-    <label class="col-sm-3 col-form-label text-end">Receiving Date<span class="required">*</span></label>
+    <label class="col-sm-3 col-form-label text-end">
+        Receiving Date
+        @if (Model.IsFieldMandatory("ReceivingDate"))
+        {
+            <span class="required">*</span>
+        }
+    </label>
     <div class="col-sm-9">
         <DocumentDatePicker @bind-Value="@Model.ReceivingDate"
                            @bind-Value:after="OnDateChanged"
-                           Disabled="@IsReadOnly"
+                           Disabled="@(IsReadOnly || Model.IsFieldDisabled("ReceivingDate"))"
                            Label="Receiving Date"
                            Class="compact-date" />
     </div>
@@ -63,11 +75,17 @@
 
 @* Sending Out Date *@
 <div class="row mb-3 field-horizontal">
-    <label class="col-sm-3 col-form-label text-end">Sending Out Date<span class="required">*</span></label>
+    <label class="col-sm-3 col-form-label text-end">
+        Sending Out Date
+        @if (Model.IsFieldMandatory("SendingOutDate"))
+        {
+            <span class="required">*</span>
+        }
+    </label>
     <div class="col-sm-9">
         <DocumentDatePicker @bind-Value="@Model.SendingOutDate"
                            @bind-Value:after="OnDateChanged"
-                           Disabled="@IsReadOnly"
+                           Disabled="@(IsReadOnly || Model.IsFieldDisabled("SendingOutDate"))"
                            Label="Sending Out Date"
                            Class="compact-date" />
     </div>
@@ -75,11 +93,17 @@
 
 @* Forwarded To Signatories Date *@
 <div class="row mb-3 field-horizontal">
-    <label class="col-sm-3 col-form-label text-end">Fwd. to Signatories Date<span class="required">*</span></label>
+    <label class="col-sm-3 col-form-label text-end">
+        Fwd. to Signatories Date
+        @if (Model.IsFieldMandatory("ForwardedToSignatoriesDate"))
+        {
+            <span class="required">*</span>
+        }
+    </label>
     <div class="col-sm-9">
         <DocumentDatePicker @bind-Value="@Model.ForwardedToSignatoriesDate"
                            @bind-Value:after="OnDateChanged"
-                           Disabled="@IsReadOnly"
+                           Disabled="@(IsReadOnly || Model.IsFieldDisabled("ForwardedToSignatoriesDate"))"
                            Label="Forwarded To Signatories Date"
                            Class="compact-date" />
     </div>
@@ -89,7 +113,7 @@
 <div class="row mb-3 field-horizontal">
     <label class="col-sm-3 col-form-label text-end">
         Dispatch Date
-        @if (Model.IsDispatchDateEnabled)
+        @if (Model.IsDispatchDateEnabled && Model.IsFieldMandatory("DispatchDate"))
         {
             <span class="required">*</span>
         }
@@ -97,7 +121,7 @@
     <div class="col-sm-9">
         <DocumentDatePicker @bind-Value="@Model.DispatchDate"
                            @bind-Value:after="OnDateChanged"
-                           Disabled="@(!Model.IsDispatchDateEnabled || IsReadOnly)"
+                           Disabled="@(!Model.IsDispatchDateEnabled || IsReadOnly || Model.IsFieldDisabled("DispatchDate"))"
                            Label="Dispatch Date"
                            Class="compact-date" />
         @if (!Model.IsDispatchDateEnabled)
@@ -109,13 +133,19 @@
 
 @* Comment *@
 <div class="mb-3">
-    <label class="form-label">Comment <span class="required">*</span></label>
+    <label class="form-label">
+        Comment
+        @if (Model.IsFieldMandatory("Comment"))
+        {
+            <span class="required">*</span>
+        }
+    </label>
     <textarea class="form-control"
               @bind="Model.Comment"
               @bind:after="OnCommentChanged"
               rows="3"
               maxlength="255"
-              disabled="@IsReadOnly"
+              disabled="@(IsReadOnly || Model.IsFieldDisabled("Comment"))"
               placeholder="Enter comment (max 255 characters)"></textarea>
     @if (!string.IsNullOrEmpty(Model.Comment))
     {

@@ -51,6 +51,7 @@ public partial class DocumentPropertiesPage : ComponentBase, IDisposable
     private bool hasUnsavedChanges = false;
     private bool isCheckingForChanges = false; // Prevent recursive calls
     private bool enableChangeTracking = false; // Only enable after initial load completes
+    private int? lastDocumentTypeId = null; // Track DocumentType changes to apply field configuration
 
     // Reference data loaded once and shared with all child components
     private List<IkeaDocuScan.Shared.DTOs.DocumentTypes.DocumentTypeDto> documentTypes = new();
@@ -677,7 +678,7 @@ public partial class DocumentPropertiesPage : ComponentBase, IDisposable
     {
         validationErrors.Clear();
 
-        // Barcode validation
+        // Barcode validation (always required)
         if (string.IsNullOrWhiteSpace(Model.BarCode))
         {
             validationErrors.Add("Bar Code is required.");
@@ -687,68 +688,82 @@ public partial class DocumentPropertiesPage : ComponentBase, IDisposable
             validationErrors.Add("Bar Code must be a valid integer.");
         }
 
-        // Required fields
+        // Document Type (always required)
         if (!Model.DocumentTypeId.HasValue)
-            validationErrors.Add("Document Type is required.");
-
-        if (string.IsNullOrWhiteSpace(Model.CounterPartyId))
-            validationErrors.Add("Counterparty is required.");
-
-        if (!Model.DateOfContract.HasValue)
-            validationErrors.Add("Date of Contract is required.");
-
-        if (!Model.ReceivingDate.HasValue)
-            validationErrors.Add("Receiving Date is required.");
-
-        if (!Model.SendingOutDate.HasValue)
-            validationErrors.Add("Sending Out Date is required.");
-
-        if (!Model.ForwardedToSignatoriesDate.HasValue)
-            validationErrors.Add("Forwarded to Signatories Date is required.");
-
-        if (Model.IsDispatchDateEnabled && !Model.DispatchDate.HasValue)
-            validationErrors.Add("Dispatch Date is required.");
-
-        if (string.IsNullOrWhiteSpace(Model.Comment))
-            validationErrors.Add("Comment is required.");
-
-        if (string.IsNullOrWhiteSpace(Model.DocumentNo))
-            validationErrors.Add("Document No. is required.");
-
-        if (string.IsNullOrWhiteSpace(Model.VersionNo))
-            validationErrors.Add("Version No. is required.");
-
-        // Conditional validations
-        if (Model.Amount.HasValue && string.IsNullOrWhiteSpace(Model.CurrencyCode))
         {
-            validationErrors.Add("Currency is required when Amount is entered.");
+            validationErrors.Add("Document Type is required.");
         }
 
-        // Action section: all or none
+        // Dynamic field validation based on DocumentType configuration
+        // DOCUMENT SECTION
+        ValidateMandatoryField("CounterParty", string.IsNullOrWhiteSpace(Model.CounterPartyId), "Counterparty");
+        ValidateMandatoryField("DateOfContract", !Model.DateOfContract.HasValue, "Date of Contract");
+        ValidateMandatoryField("ReceivingDate", !Model.ReceivingDate.HasValue, "Receiving Date");
+        ValidateMandatoryField("SendingOutDate", !Model.SendingOutDate.HasValue, "Sending Out Date");
+        ValidateMandatoryField("ForwardedToSignatoriesDate", !Model.ForwardedToSignatoriesDate.HasValue, "Forwarded to Signatories Date");
+
+        // DispatchDate: validate if enabled AND mandatory
+        if (Model.IsDispatchDateEnabled)
+        {
+            ValidateMandatoryField("DispatchDate", !Model.DispatchDate.HasValue, "Dispatch Date");
+        }
+
+        ValidateMandatoryField("Comment", string.IsNullOrWhiteSpace(Model.Comment), "Comment");
+
+        // ACTION SECTION
+        ValidateMandatoryField("ActionDate", !Model.ActionDate.HasValue, "Action Date");
+        ValidateMandatoryField("ActionDescription", string.IsNullOrWhiteSpace(Model.ActionDescription), "Action Description");
+
+        // Action section: all or none (only if at least one is mandatory or filled)
         bool hasActionDate = Model.ActionDate.HasValue;
         bool hasActionDesc = !string.IsNullOrWhiteSpace(Model.ActionDescription);
-        if (hasActionDate != hasActionDesc)
+        bool isActionDateMandatory = Model.IsFieldMandatory("ActionDate");
+        bool isActionDescMandatory = Model.IsFieldMandatory("ActionDescription");
+
+        if ((hasActionDate || hasActionDesc || isActionDateMandatory || isActionDescMandatory) &&
+            (hasActionDate != hasActionDesc))
         {
             validationErrors.Add("Action Date and Action Description must both be filled or both be empty.");
         }
 
-        // Flags must be true or false, not null
-        if (!Model.Fax.HasValue)
-            validationErrors.Add("Fax flag must be set to Yes or No.");
+        // FLAGS SECTION
+        ValidateMandatoryField("Fax", !Model.Fax.HasValue, "Fax", "flag must be set to Yes or No");
+        ValidateMandatoryField("OriginalReceived", !Model.OriginalReceived.HasValue, "Original Received", "flag must be set to Yes or No");
+        ValidateMandatoryField("TranslatedVersionReceived", !Model.TranslationReceived.HasValue, "Translation Received", "flag must be set to Yes or No");
+        ValidateMandatoryField("Confidential", !Model.Confidential.HasValue, "Confidential", "flag must be set to Yes or No");
 
-        if (!Model.OriginalReceived.HasValue)
-            validationErrors.Add("Original Received flag must be set to Yes or No.");
+        // ADDITIONAL INFO SECTION
+        ValidateMandatoryField("DocumentNo", string.IsNullOrWhiteSpace(Model.DocumentNo), "Document No.");
+        ValidateMandatoryField("VersionNo", string.IsNullOrWhiteSpace(Model.VersionNo), "Version No.");
+        ValidateMandatoryField("AssociatedToPua", string.IsNullOrWhiteSpace(Model.AssociatedToPUA), "Associated to PUA/Agreement No.");
+        ValidateMandatoryField("AssociatedToAppendix", string.IsNullOrWhiteSpace(Model.AssociatedToAppendix), "Associated to Appendix No.");
+        ValidateMandatoryField("ValidUntil", !Model.ValidUntil.HasValue, "Valid Until/As Of");
+        ValidateMandatoryField("Amount", !Model.Amount.HasValue, "Amount");
+        ValidateMandatoryField("Authorisation", string.IsNullOrWhiteSpace(Model.Authorisation), "Authorisation to");
+        ValidateMandatoryField("BankConfirmation", !Model.BankConfirmation.HasValue, "Bank Confirmation", "flag must be set to Yes or No");
 
-        if (!Model.TranslationReceived.HasValue)
-            validationErrors.Add("Translation Received flag must be set to Yes or No.");
-
-        if (!Model.Confidential.HasValue)
-            validationErrors.Add("Confidential flag must be set to Yes or No.");
-
-        if (!Model.BankConfirmation.HasValue)
-            validationErrors.Add("Bank Confirmation flag must be set to Yes or No.");
+        // Currency: required if Amount entered OR if Currency field is mandatory
+        if (Model.Amount.HasValue && string.IsNullOrWhiteSpace(Model.CurrencyCode))
+        {
+            validationErrors.Add("Currency is required when Amount is entered.");
+        }
+        else if (Model.IsFieldMandatory("Currency") && string.IsNullOrWhiteSpace(Model.CurrencyCode))
+        {
+            validationErrors.Add("Currency is required.");
+        }
 
         return validationErrors.Count == 0;
+    }
+
+    /// <summary>
+    /// Validates a field only if it is marked as mandatory in the field configuration
+    /// </summary>
+    private void ValidateMandatoryField(string fieldName, bool isEmpty, string displayName, string suffix = "is required")
+    {
+        if (Model.IsFieldMandatory(fieldName) && isEmpty)
+        {
+            validationErrors.Add($"{displayName} {suffix}.");
+        }
     }
 
     // ========================================
@@ -878,6 +893,9 @@ public partial class DocumentPropertiesPage : ComponentBase, IDisposable
             Model.Authorisation = copiedModel.Authorisation;
             Model.BankConfirmation = copiedModel.BankConfirmation;
 
+            // Apply field configuration based on pasted document type
+            ApplyDocumentTypeFieldConfiguration(Model.DocumentTypeId);
+
             // Trigger change detection to enable Save button
             CheckForChanges();
 
@@ -992,6 +1010,68 @@ public partial class DocumentPropertiesPage : ComponentBase, IDisposable
         return System.IO.Path.GetFileNameWithoutExtension(fileName);
     }
 
+    private void ApplyDocumentTypeFieldConfiguration(int? documentTypeId)
+    {
+        // Clear existing configuration
+        Model.FieldConfig.Clear();
+
+        if (!documentTypeId.HasValue)
+        {
+            Logger.LogInformation("No document type selected, clearing field configuration");
+            return;
+        }
+
+        // Find the document type
+        var documentType = documentTypes.FirstOrDefault(dt => dt.DtId == documentTypeId.Value);
+        if (documentType == null)
+        {
+            Logger.LogWarning("Document type {DocumentTypeId} not found", documentTypeId.Value);
+            return;
+        }
+
+        Logger.LogInformation("Applying field configuration for document type: {DocumentTypeName} (ID: {DocumentTypeId})",
+            documentType.DtName, documentType.DtId);
+
+        // Map DocumentType properties to FieldConfig
+        // M = Mandatory, O = Optional, N = Not Applicable (disabled)
+        Model.FieldConfig["CounterParty"] = ParseFieldVisibility(documentType.CounterParty);
+        Model.FieldConfig["DateOfContract"] = ParseFieldVisibility(documentType.DateOfContract);
+        Model.FieldConfig["Comment"] = ParseFieldVisibility(documentType.Comment);
+        Model.FieldConfig["ReceivingDate"] = ParseFieldVisibility(documentType.ReceivingDate);
+        Model.FieldConfig["DispatchDate"] = ParseFieldVisibility(documentType.DispatchDate);
+        Model.FieldConfig["SendingOutDate"] = ParseFieldVisibility(documentType.SendingOutDate);
+        Model.FieldConfig["ForwardedToSignatoriesDate"] = ParseFieldVisibility(documentType.ForwardedToSignatoriesDate);
+        Model.FieldConfig["Fax"] = ParseFieldVisibility(documentType.Fax);
+        Model.FieldConfig["OriginalReceived"] = ParseFieldVisibility(documentType.OriginalReceived);
+        Model.FieldConfig["TranslatedVersionReceived"] = ParseFieldVisibility(documentType.TranslatedVersionReceived);
+        Model.FieldConfig["Confidential"] = ParseFieldVisibility(documentType.Confidential);
+        Model.FieldConfig["DocumentNo"] = ParseFieldVisibility(documentType.DocumentNo);
+        Model.FieldConfig["VersionNo"] = ParseFieldVisibility(documentType.VersionNo);
+        Model.FieldConfig["AssociatedToPua"] = ParseFieldVisibility(documentType.AssociatedToPua);
+        Model.FieldConfig["AssociatedToAppendix"] = ParseFieldVisibility(documentType.AssociatedToAppendix);
+        Model.FieldConfig["ValidUntil"] = ParseFieldVisibility(documentType.ValidUntil);
+        Model.FieldConfig["Currency"] = ParseFieldVisibility(documentType.Currency);
+        Model.FieldConfig["Amount"] = ParseFieldVisibility(documentType.Amount);
+        Model.FieldConfig["Authorisation"] = ParseFieldVisibility(documentType.Authorisation);
+        Model.FieldConfig["BankConfirmation"] = ParseFieldVisibility(documentType.BankConfirmation);
+        Model.FieldConfig["ActionDate"] = ParseFieldVisibility(documentType.ActionDate);
+        Model.FieldConfig["ActionDescription"] = ParseFieldVisibility(documentType.ActionDescription);
+        Model.FieldConfig["ReminderGroup"] = ParseFieldVisibility(documentType.ReminderGroup);
+
+        Logger.LogInformation("Field configuration applied: {Count} fields configured", Model.FieldConfig.Count);
+    }
+
+    private FieldVisibility ParseFieldVisibility(string code)
+    {
+        return code?.ToUpperInvariant() switch
+        {
+            "M" => FieldVisibility.Mandatory,
+            "O" => FieldVisibility.Optional,
+            "N" => FieldVisibility.NotApplicable,
+            _ => FieldVisibility.Optional // Default to Optional if unknown
+        };
+    }
+
     // ========================================
     // DTO MAPPING
     // ========================================
@@ -1079,6 +1159,9 @@ public partial class DocumentPropertiesPage : ComponentBase, IDisposable
 
         model.SetThirdPartyIdsFromString(dto.ThirdPartyId);
         model.SetThirdPartyNamesFromString(dto.ThirdParty);
+
+        // Apply field configuration based on document type
+        ApplyDocumentTypeFieldConfiguration(dto.DocumentTypeId);
     }
 
     private UpdateDocumentDto MapToUpdateDto()
@@ -1201,6 +1284,15 @@ public partial class DocumentPropertiesPage : ComponentBase, IDisposable
         try
         {
             isCheckingForChanges = true;
+
+            // Check if DocumentType has changed and apply field configuration
+            if (Model.DocumentTypeId != lastDocumentTypeId)
+            {
+                Logger.LogInformation("DocumentType changed from {Old} to {New}, applying field configuration",
+                    lastDocumentTypeId, Model.DocumentTypeId);
+                ApplyDocumentTypeFieldConfiguration(Model.DocumentTypeId);
+                lastDocumentTypeId = Model.DocumentTypeId;
+            }
 
             if (string.IsNullOrEmpty(originalModelJson))
             {

@@ -408,4 +408,30 @@ public class DocumentPropertiesViewModel
                 .ToList();
         }
     }
+
+    /// <summary>
+    /// Gets the field visibility for a given field name
+    /// </summary>
+    public FieldVisibility GetFieldVisibility(string fieldName)
+    {
+        return FieldConfig.TryGetValue(fieldName, out var visibility)
+            ? visibility
+            : FieldVisibility.Optional; // Default to Optional if not configured
+    }
+
+    /// <summary>
+    /// Checks if a field is mandatory based on its configuration
+    /// </summary>
+    public bool IsFieldMandatory(string fieldName)
+    {
+        return GetFieldVisibility(fieldName) == FieldVisibility.Mandatory;
+    }
+
+    /// <summary>
+    /// Checks if a field is disabled (Not Applicable) based on its configuration
+    /// </summary>
+    public bool IsFieldDisabled(string fieldName)
+    {
+        return GetFieldVisibility(fieldName) == FieldVisibility.NotApplicable;
+    }
 }
