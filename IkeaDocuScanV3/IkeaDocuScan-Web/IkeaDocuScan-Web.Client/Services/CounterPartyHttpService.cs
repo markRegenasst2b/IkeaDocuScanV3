@@ -7,11 +7,18 @@ namespace IkeaDocuScan_Web.Client.Services;
 /// <summary>
 /// HTTP client service for CounterParty operations
 /// Implements ICounterPartyService interface to call server APIs
+/// Includes client-side in-memory caching for performance
 /// </summary>
 public class CounterPartyHttpService : ICounterPartyService
 {
     private readonly HttpClient _http;
     private readonly ILogger<CounterPartyHttpService> _logger;
+
+    // Client-side cache
+    private static List<CounterPartyDto>? _cachedCounterParties;
+    private static DateTime? _cacheExpiration;
+    private static readonly TimeSpan CacheDuration = TimeSpan.FromMinutes(5);
+    private static readonly SemaphoreSlim _cacheLock = new(1, 1);
 
     public CounterPartyHttpService(HttpClient http, ILogger<CounterPartyHttpService> logger)
     {
@@ -37,16 +44,44 @@ public class CounterPartyHttpService : ICounterPartyService
 
     public async Task<List<CounterPartyDto>> GetAllAsync()
     {
+        // Check cache first
+        if (_cachedCounterParties != null && _cacheExpiration.HasValue && DateTime.Now < _cacheExpiration.Value)
+        {
+            _logger.LogInformation("Returning {Count} counter parties from client-side cache", _cachedCounterParties.Count);
+            return _cachedCounterParties;
+        }
+
+        // Cache miss or expired - fetch from server
+        await _cacheLock.WaitAsync();
         try
         {
-            _logger.LogInformation("Fetching all counter parties from API");
+            // Double-check after acquiring lock (another thread might have updated cache)
+            if (_cachedCounterParties != null && _cacheExpiration.HasValue && DateTime.Now < _cacheExpiration.Value)
+            {
+                _logger.LogInformation("Returning {Count} counter parties from client-side cache (after lock)", _cachedCounterParties.Count);
+                return _cachedCounterParties;
+            }
+
+            _logger.LogInformation("Fetching all counter parties from API (client cache miss)");
             var result = await _http.GetFromJsonAsync<List<CounterPartyDto>>("/api/counterparties");
+
+            if (result != null)
+            {
+                _cachedCounterParties = result;
+                _cacheExpiration = DateTime.Now.Add(CacheDuration);
+                _logger.LogInformation("Cached {Count} counter parties on client for {Duration}", result.Count, CacheDuration);
+            }
+
             return result ?? new List<CounterPartyDto>();
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error fetching counter parties");
             throw;
+        }
+        finally
+        {
+            _cacheLock.Release();
         }
     }
 
@@ -84,6 +119,10 @@ public class CounterPartyHttpService : ICounterPartyService
             }
 
             var counterParty = await response.Content.ReadFromJsonAsync<CounterPartyDto>();
+
+            // Invalidate client cache after create
+            ClearCache();
+
             return counterParty ?? throw new InvalidOperationException("Failed to deserialize created counter party");
         }
         catch (HttpRequestException)
@@ -112,6 +151,10 @@ public class CounterPartyHttpService : ICounterPartyService
             }
 
             var counterParty = await response.Content.ReadFromJsonAsync<CounterPartyDto>();
+
+            // Invalidate client cache after update
+            ClearCache();
+
             return counterParty ?? throw new InvalidOperationException("Failed to deserialize updated counter party");
         }
         catch (HttpRequestException)
@@ -131,6 +174,9 @@ public class CounterPartyHttpService : ICounterPartyService
         {
             _logger.LogInformation("Deleting counter party ID: {Id}", id);
             var response = await _http.DeleteAsync($"/api/counterparties/{id}");
+
+            // Invalidate client cache after delete
+            ClearCache();
 
             if (!response.IsSuccessStatusCode)
             {
@@ -200,6 +246,16 @@ public class CounterPartyHttpService : ICounterPartyService
         }
 
         return !string.IsNullOrEmpty(errorContent) ? errorContent : "An error occurred";
+    }
+
+    /// <summary>
+    /// Clears the client-side cache. Call this when counter parties are modified.
+    /// </summary>
+    public void ClearCache()
+    {
+        _cachedCounterParties = null;
+        _cacheExpiration = null;
+        _logger.LogInformation("Client-side counter parties cache cleared");
     }
 
     private class UsageResponse
