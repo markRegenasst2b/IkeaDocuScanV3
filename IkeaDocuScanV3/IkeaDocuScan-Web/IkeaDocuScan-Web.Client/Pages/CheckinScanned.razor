@@ -148,10 +148,19 @@
                 @if (selectedFile != null)
                 {
                     <div class="alert alert-success mt-3">
-                        <i class="fa fa-check-circle"></i> Selected: <strong>@selectedFile.FileName</strong>
-                        <button class="btn btn-sm btn-success float-end" @onclick="() => ViewDetails(selectedFile)">
-                            <i class="fa fa-arrow-right"></i> Proceed to Check-in
-                        </button>
+                        <div class="d-flex align-items-center justify-content-between">
+                            <div>
+                                <i class="fa fa-check-circle"></i> Selected: <strong>@selectedFile.FileName</strong>
+                            </div>
+                            <div>
+                                <button class="btn btn-sm btn-info me-2" @onclick="() => ViewDetails(selectedFile)">
+                                    <i class="fa fa-eye"></i> View Details
+                                </button>
+                                <button class="btn btn-sm btn-success" @onclick="() => CheckInFile(selectedFile)">
+                                    <i class="fa fa-arrow-right"></i> Proceed to Check-in
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 }
             </div>
