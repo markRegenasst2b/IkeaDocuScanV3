@@ -853,7 +853,13 @@ public partial class DocumentPropertiesPage : ComponentBase, IDisposable
             Model.ReceivingDate = copiedModel.ReceivingDate;
             Model.SendingOutDate = copiedModel.SendingOutDate;
             Model.ForwardedToSignatoriesDate = copiedModel.ForwardedToSignatoriesDate;
-            Model.DispatchDate = copiedModel.DispatchDate;
+
+            // Only paste DispatchDate if not in Register mode (PropertySetNumber = 2 means DispatchDate is enabled)
+            if (Model.PropertySetNumber == 2)
+            {
+                Model.DispatchDate = copiedModel.DispatchDate;
+            }
+
             Model.Comment = copiedModel.Comment;
             Model.ActionDate = copiedModel.ActionDate;
             Model.ActionDescription = copiedModel.ActionDescription;
