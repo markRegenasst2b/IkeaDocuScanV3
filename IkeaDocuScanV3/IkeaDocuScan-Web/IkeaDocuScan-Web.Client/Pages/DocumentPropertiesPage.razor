@@ -70,6 +70,7 @@
                                                        class="form-control"
                                                        id="barcodeInput"
                                                        @bind="Model.BarCode"
+                                                       @bind:after="OnBarcodeChanged"
                                                        placeholder="Enter barcode number" />
                                             }
                                             else

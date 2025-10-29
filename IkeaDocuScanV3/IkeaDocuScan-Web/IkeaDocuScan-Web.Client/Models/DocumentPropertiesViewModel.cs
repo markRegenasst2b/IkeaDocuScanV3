@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace IkeaDocuScan_Web.Client.Models;
 
 /// <summary>
@@ -17,7 +19,9 @@ public class DocumentPropertiesViewModel
 
     /// <summary>
     /// Document ID (primary key)
+    /// Excluded from copy/paste - each document should have unique ID
     /// </summary>
+    [JsonIgnore]
     public int? Id { get; set; }
 
     /// <summary>
@@ -254,32 +258,42 @@ public class DocumentPropertiesViewModel
     /// <summary>
     /// Current operational mode (Edit/Register/Check-in)
     /// Determines UI behavior and validation rules
+    /// Excluded from copy/paste - runtime state
     /// </summary>
+    [JsonIgnore]
     public DocumentPropertyMode Mode { get; set; } = DocumentPropertyMode.Register;
 
     /// <summary>
     /// Property Set Number (1 or 2)
     /// - Property Set 1: DispatchDate disabled (Register mode)
     /// - Property Set 2: DispatchDate enabled (Edit/Check-in modes)
+    /// Excluded from copy/paste - runtime configuration
     /// </summary>
+    [JsonIgnore]
     public int PropertySetNumber { get; set; } = 1;
 
     /// <summary>
     /// Field visibility configuration based on selected DocumentType
     /// Key: field name, Value: visibility state (NA/Optional/Mandatory)
+    /// Excluded from copy/paste - dynamic configuration dictionary
     /// </summary>
+    [JsonIgnore]
     public Dictionary<string, FieldVisibility> FieldConfig { get; set; } = new();
 
     /// <summary>
     /// File bytes for upload (Check-in mode)
     /// Populated from CheckinDirectory or manual upload
+    /// Excluded from copy/paste - large binary data (up to 50MB), file-specific
     /// </summary>
+    [JsonIgnore]
     public byte[]? FileBytes { get; set; }
 
     /// <summary>
     /// Source file path (Check-in mode)
     /// Used to delete file from CheckinDirectory after successful save
+    /// Excluded from copy/paste - file system specific path
     /// </summary>
+    [JsonIgnore]
     public string? SourceFilePath { get; set; }
 
     // ========================================
@@ -288,22 +302,30 @@ public class DocumentPropertiesViewModel
 
     /// <summary>
     /// Created on timestamp
+    /// Excluded from copy/paste - audit field
     /// </summary>
+    [JsonIgnore]
     public DateTime? CreatedOn { get; set; }
 
     /// <summary>
     /// Created by user
+    /// Excluded from copy/paste - audit field
     /// </summary>
+    [JsonIgnore]
     public string? CreatedBy { get; set; }
 
     /// <summary>
     /// Modified on timestamp
+    /// Excluded from copy/paste - audit field
     /// </summary>
+    [JsonIgnore]
     public DateTime? ModifiedOn { get; set; }
 
     /// <summary>
     /// Modified by user
+    /// Excluded from copy/paste - audit field
     /// </summary>
+    [JsonIgnore]
     public string? ModifiedBy { get; set; }
 
     // ========================================

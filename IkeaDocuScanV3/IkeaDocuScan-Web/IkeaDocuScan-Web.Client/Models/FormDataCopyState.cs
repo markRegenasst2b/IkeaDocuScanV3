@@ -10,8 +10,9 @@ public class FormDataCopyState
 {
     /// <summary>
     /// Storage key for localStorage
+    /// Version 2: Excludes FileBytes, SourceFilePath, Mode, PropertySetNumber, FieldConfig, Id, and audit fields
     /// </summary>
-    public const string LocalStorageKey = "documentFormCopy";
+    public const string LocalStorageKey = "documentFormCopy_v2";
 
     /// <summary>
     /// Expiration time in days

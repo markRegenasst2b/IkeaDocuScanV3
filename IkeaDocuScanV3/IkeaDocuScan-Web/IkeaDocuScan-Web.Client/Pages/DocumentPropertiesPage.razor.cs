@@ -197,7 +197,8 @@ public partial class DocumentPropertiesPage : ComponentBase, IDisposable
             {
                 Logger.LogInformation("⏱️ PERF: Re-navigation detected. Skipping child callback wait. Components already initialized.");
                 isLoadingChildren = false;
-                CreateSnapshot();
+                // Preserve hasUnsavedChanges if it was set to true (e.g., check-in mode with pre-registered document)
+                CreateSnapshot(preserveUnsavedChanges: hasUnsavedChanges);
                 enableChangeTracking = true;
                 StateHasChanged();
             }
@@ -231,7 +232,8 @@ public partial class DocumentPropertiesPage : ComponentBase, IDisposable
                                 loadedChildComponentCount, TotalChildComponents);
                             _ = InvokeAsync(() =>
                             {
-                                CreateSnapshot();
+                                // Preserve hasUnsavedChanges if it was set to true (e.g., check-in mode with pre-registered document)
+                                CreateSnapshot(preserveUnsavedChanges: hasUnsavedChanges);
                                 enableChangeTracking = true;
                                 isLoadingChildren = false;
                                 StateHasChanged();
@@ -280,7 +282,8 @@ public partial class DocumentPropertiesPage : ComponentBase, IDisposable
                 Logger.LogInformation("Creating snapshot after all children loaded...");
 
                 // Create snapshot NOW, after all children have loaded their data
-                CreateSnapshot();
+                // Preserve hasUnsavedChanges if it was set to true (e.g., check-in mode with pre-registered document)
+                CreateSnapshot(preserveUnsavedChanges: hasUnsavedChanges);
 
                 enableChangeTracking = true;
                 isLoadingChildren = false; // Hide the loading overlay now
@@ -484,6 +487,18 @@ public partial class DocumentPropertiesPage : ComponentBase, IDisposable
                 return;
             }
 
+            // Check if barcode already exists (Register mode only)
+            if (Model.Mode == DocumentPropertyMode.Register)
+            {
+                var existingDoc = await DocumentService.GetByBarCodeAsync(Model.BarCode);
+                if (existingDoc != null)
+                {
+                    warningMessage = $"⚠️ Warning: A document with barcode {Model.BarCode} already exists (Document ID: {existingDoc.Id}, Name: {existingDoc.Name}). Please change the barcode to register a new document.";
+                    Logger.LogWarning("Barcode {BarCode} already exists. Document ID: {DocumentId}", Model.BarCode, existingDoc.Id);
+                    return;
+                }
+            }
+
             // Check for duplicates (Register and Check-in modes only)
             if ((Model.Mode == DocumentPropertyMode.Register || Model.Mode == DocumentPropertyMode.CheckIn)
                 && !duplicateConfirmed)
@@ -506,10 +521,15 @@ public partial class DocumentPropertiesPage : ComponentBase, IDisposable
             Logger.LogInformation($"Saved document. barcode={Model.BarCode}, filename={Model.FileName}, bytes ={Model.FileBytes?.Length.ToString() ?? "-null-"} ");
 
             // Post-save actions based on mode
+            // Note: For Register mode, HandlePostSave will clear the form and create a new snapshot
+            // For Edit/CheckIn modes, HandlePostSave navigates away so no snapshot needed
             await HandlePostSave();
 
-            // Create new snapshot after successful save
-            CreateSnapshot();
+            // Create new snapshot after successful save (for Edit mode only, as Register mode creates its own after clearing)
+            if (Model.Mode == DocumentPropertyMode.Edit)
+            {
+                CreateSnapshot();
+            }
         }
         catch (Exception ex)
         {
@@ -630,6 +650,9 @@ public partial class DocumentPropertiesPage : ComponentBase, IDisposable
                 Mode = currentMode,
                 PropertySetNumber = currentPropertySet
             };
+
+            // Create snapshot of the cleared form to prevent "unsaved changes" warning
+            CreateSnapshot();
 
             await Task.Delay(100);
             await JSRuntime.InvokeVoidAsync("eval",
@@ -849,6 +872,9 @@ public partial class DocumentPropertiesPage : ComponentBase, IDisposable
             Model.Authorisation = copiedModel.Authorisation;
             Model.BankConfirmation = copiedModel.BankConfirmation;
 
+            // Trigger change detection to enable Save button
+            CheckForChanges();
+
             successMessage = "Form data pasted successfully!";
             StateHasChanged();
         }
@@ -905,6 +931,13 @@ public partial class DocumentPropertiesPage : ComponentBase, IDisposable
     {
         // TODO: Implement compare with standard contract functionality
         await Task.CompletedTask;
+    }
+
+    private void OnBarcodeChanged()
+    {
+        // Clear warning message when barcode is changed
+        warningMessage = null;
+        Logger.LogInformation("Barcode changed to {BarCode}, warning cleared", Model.BarCode);
     }
 
     private async Task Cancel()
@@ -1127,14 +1160,21 @@ public partial class DocumentPropertiesPage : ComponentBase, IDisposable
     // CHANGE TRACKING
     // ========================================
 
-    private void CreateSnapshot()
+    private void CreateSnapshot(bool preserveUnsavedChanges = false)
     {
         // Create snapshot excluding FileBytes for performance
         // FileBytes can be very large (MB) and doesn't change after load
         var snapshotData = CreateSnapshotObject();
         originalModelJson = System.Text.Json.JsonSerializer.Serialize(snapshotData);
-        hasUnsavedChanges = false;
-        Logger.LogInformation("Created Snapshot (FileBytes excluded from comparison)");
+
+        // Reset hasUnsavedChanges unless explicitly told to preserve it
+        // (e.g., in check-in mode with pre-registered document, we want to keep it true)
+        if (!preserveUnsavedChanges)
+        {
+            hasUnsavedChanges = false;
+        }
+
+        Logger.LogInformation("Created Snapshot (FileBytes excluded from comparison). hasUnsavedChanges={HasChanges}, preserveUnsavedChanges={Preserve}", hasUnsavedChanges, preserveUnsavedChanges);
     }
 
     private void CheckForChanges()
