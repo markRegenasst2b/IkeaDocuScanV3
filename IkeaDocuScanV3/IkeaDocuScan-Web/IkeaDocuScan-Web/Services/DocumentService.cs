@@ -225,6 +225,31 @@ public class DocumentService : IDocumentService
             }
         }
 
+        // Create DocumentFile if file bytes are provided (for attaching files to existing documents)
+        if (dto.FileBytes != null && dto.FileBytes.Length > 0 && !string.IsNullOrEmpty(dto.FileName))
+        {
+            // Only allow file attachment if document doesn't already have a file
+            if (entity.FileId.HasValue)
+            {
+                throw new ValidationException($"Document already has a file attached (FileId: {entity.FileId}). Cannot attach another file.");
+            }
+
+            _logger.LogInformation("Creating DocumentFile for {FileName} with {FileSize} bytes", dto.FileName, dto.FileBytes.Length);
+
+            var documentFile = new DocumentFile
+            {
+                FileName = dto.FileName,
+                FileType = dto.FileType ?? Path.GetExtension(dto.FileName).TrimStart('.'),
+                Bytes = dto.FileBytes
+            };
+
+            _context.DocumentFiles.Add(documentFile);
+            await _context.SaveChangesAsync(); // Save to get the FileId
+
+            entity.FileId = documentFile.Id;
+            _logger.LogInformation("DocumentFile created with ID {FileId} and attached to document {DocumentId}", documentFile.Id, entity.Id);
+        }
+
         // Capture changes for audit details
         var changes = new List<string>();
         if (entity.Name != dto.Name)
@@ -235,12 +260,18 @@ public class DocumentService : IDocumentService
             changes.Add("CounterParty changed");
         if (entity.Comment != dto.Comment)
             changes.Add("Comment updated");
+        if (dto.FileBytes != null && dto.FileBytes.Length > 0)
+            changes.Add($"File attached: {dto.FileName}");
 
         entity.Name = dto.Name;
         entity.DtId = dto.DocumentTypeId;
         entity.CounterPartyId = dto.CounterPartyId;
         entity.DocumentNameId = dto.DocumentNameId;
-        entity.FileId = dto.FileId;
+        // FileId is set above when creating DocumentFile from FileBytes, or can be set explicitly via dto.FileId
+        if (dto.FileId.HasValue && dto.FileBytes == null)
+        {
+            entity.FileId = dto.FileId;
+        }
         entity.DateOfContract = dto.DateOfContract;
         entity.Comment = dto.Comment;
         entity.ReceivingDate = dto.ReceivingDate;

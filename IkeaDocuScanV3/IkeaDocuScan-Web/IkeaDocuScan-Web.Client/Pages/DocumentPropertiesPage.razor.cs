@@ -358,18 +358,9 @@ public partial class DocumentPropertiesPage : ComponentBase, IDisposable
 
     private async Task LoadCheckInModeAsync(string fileName)
     {
-        // Extract barcode from filename first
+        // Extract barcode from filename
         var barcode = ExtractBarcodeFromFileName(fileName);
-
-        // Check if document with this barcode already exists
-        var existingDocument = await DocumentService.GetByBarCodeAsync(barcode);
-        if (existingDocument != null)
-        {
-            errorMessage = $"A document with barcode '{barcode}' already exists in the system. This file cannot be checked in. Please return to the scanned documents list.";
-            Logger.LogWarning("Attempted to check in file {FileName} with barcode {BarCode} that already exists (Document ID: {DocumentId})",
-                fileName, barcode, existingDocument.Id);
-            return;
-        }
+        Logger.LogInformation("Extracted barcode {BarCode} from filename {FileName}", barcode, fileName);
 
         // Load scanned file from CheckinDirectory via ScannedFileService
         var scannedFile = await ScannedFileService.GetFileByNameAsync(fileName);
@@ -392,17 +383,70 @@ public partial class DocumentPropertiesPage : ComponentBase, IDisposable
             return;
         }
 
-        // Create model with loaded file data
-        Model = new DocumentPropertiesViewModel
+        // Check if document with this barcode already exists
+        var existingDocument = await DocumentService.GetByBarCodeAsync(barcode);
+
+        if (existingDocument == null)
         {
-            Mode = DocumentPropertyMode.CheckIn,
-            PropertySetNumber = 2, // DispatchDate enabled
-            FileName = fileName,
-            BarCode = barcode,
-            FileBytes = fileBytes,
-            SourceFilePath = scannedFile.FullPath
-        };
-        Logger.LogDebug($"Model FileBytes = {Model?.FileBytes?.Length.ToString() ?? "-unk-"}");
+            // CASE A: Document does NOT exist - create new (current behavior)
+            Logger.LogInformation("No existing document found for barcode {BarCode}. Creating new document for check-in.", barcode);
+
+            Model = new DocumentPropertiesViewModel
+            {
+                Mode = DocumentPropertyMode.CheckIn,
+                PropertySetNumber = 2, // DispatchDate enabled
+                FileName = fileName,
+                BarCode = barcode,
+                FileBytes = fileBytes,
+                SourceFilePath = scannedFile.FullPath
+            };
+            Logger.LogDebug($"Model FileBytes = {Model?.FileBytes?.Length.ToString() ?? "-unk-"}");
+        }
+        else
+        {
+            // CASE B/C: Document exists - check if it already has a file
+            if (existingDocument.FileId!=null)
+            {
+                // CASE C: Document exists WITH file - ERROR
+                errorMessage = $"Document with barcode '{barcode}' already has a file attached ('{existingDocument.FileId}'). Cannot check in file '{fileName}'. This scanned file cannot be associated with an existing document that already has a file.";
+                Logger.LogWarning("Check-in prevented: Document {DocumentId} with barcode {BarCode} already has file {ExistingFileId}. Attempted to check in {NewFileName}",
+                    existingDocument.Id, barcode, existingDocument.FileId, fileName);
+                return;
+            }
+            else
+            {
+                // CASE B: Document exists WITHOUT file - load document and attach file
+                Logger.LogInformation("Found existing document {DocumentId} with barcode {BarCode} without file. Loading document properties for check-in of {FileName}",
+                    existingDocument.Id, barcode, fileName);
+
+                // Create a new ViewModel and populate it from the existing document
+                Model = new DocumentPropertiesViewModel
+                {
+                    Mode = DocumentPropertyMode.CheckIn,
+                    PropertySetNumber = 2, // DispatchDate enabled
+                    FileBytes = fileBytes,
+                    FileName = fileName,
+                    SourceFilePath = scannedFile.FullPath
+                };
+
+                // Update the model with data from existing document
+                UpdateModelFromDto(Model, existingDocument);
+
+                // Ensure Check-In mode settings are preserved
+                Model.Mode = DocumentPropertyMode.CheckIn;
+                Model.PropertySetNumber = 2;
+                Model.FileBytes = fileBytes;
+                Model.FileName = fileName;
+                Model.SourceFilePath = scannedFile.FullPath;
+
+                successMessage = $"Loaded existing document with barcode '{barcode}'. You can modify the document properties and attach the file '{fileName}' by clicking Save.";
+
+                // Enable Save button since we're attaching a file (this is a change)
+                hasUnsavedChanges = true;
+
+                Logger.LogInformation("Successfully loaded existing document {DocumentId} for file check-in. File will be attached on save.", existingDocument.Id);
+            }
+        }
     }
 
     private void LoadRegisterMode()
@@ -489,16 +533,35 @@ public partial class DocumentPropertiesPage : ComponentBase, IDisposable
 
     private async Task SaveRegisterOrCheckInModeAsync()
     {
-        var createDto = MapToCreateDto();
-        var result = await DocumentService.CreateAsync(createDto);
+        // Check if we're updating an existing document (CASE B: Check-in to existing document)
+        // or creating a new one (CASE A: New document check-in or Register mode)
+        if (Model.Id.HasValue && Model.Id.Value > 0)
+        {
+            // Update existing document with file attachment
+            Logger.LogInformation("Updating existing document {DocumentId} and attaching file in Check-In mode", Model.Id.Value);
 
-        Model.Id = result.Id;
+            var updateDto = MapToUpdateDto();
+            var result = await DocumentService.UpdateAsync(updateDto);
 
-        successMessage = Model.Mode == DocumentPropertyMode.Register
-            ? "Successfully registered document!"
-            : "Successfully checked in document!";
+            successMessage = "Successfully updated document and attached file!";
+            Logger.LogInformation("Document {DocumentId} updated successfully with file attachment", result.Id);
+        }
+        else
+        {
+            // Create new document
+            Logger.LogInformation("Creating new document in {Mode} mode", Model.Mode);
 
-        Logger.LogInformation("Document created successfully with ID {DocumentId}", result.Id);
+            var createDto = MapToCreateDto();
+            var result = await DocumentService.CreateAsync(createDto);
+
+            Model.Id = result.Id;
+
+            successMessage = Model.Mode == DocumentPropertyMode.Register
+                ? "Successfully registered document!"
+                : "Successfully checked in document!";
+
+            Logger.LogInformation("Document created successfully with ID {DocumentId}", result.Id);
+        }
 
         if (Model.Mode == DocumentPropertyMode.CheckIn) {
             await AuditTrailService.LogAsync(
@@ -1002,7 +1065,11 @@ public partial class DocumentPropertiesPage : ComponentBase, IDisposable
             Amount = Model.Amount,
             CurrencyCode = Model.CurrencyCode,
             Authorisation = Model.Authorisation,
-            BankConfirmation = Model.BankConfirmation
+            BankConfirmation = Model.BankConfirmation,
+            // File upload (for attaching files to existing documents during check-in)
+            FileBytes = Model.FileBytes,
+            FileName = Model.FileName,
+            FileType = Model.FileName != null ? Path.GetExtension(Model.FileName).TrimStart('.') : null
         };
     }
 

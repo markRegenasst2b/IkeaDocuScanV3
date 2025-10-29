@@ -43,4 +43,9 @@ public class UpdateDocumentDto
     public bool? BankConfirmation { get; set; }
     public bool? TranslatedVersionReceived { get; set; }
     public bool? Confidential { get; set; }
+
+    // File upload (for attaching files to existing documents during check-in)
+    public byte[]? FileBytes { get; set; }
+    public string? FileName { get; set; }
+    public string? FileType { get; set; }
 }

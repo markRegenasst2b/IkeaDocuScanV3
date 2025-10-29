@@ -1,7 +1,6 @@
 using IkeaDocuScan.Shared.Configuration;
 using IkeaDocuScan.Shared.DTOs.ScannedFiles;
 using IkeaDocuScan.Shared.Interfaces;
-using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
 
 namespace IkeaDocuScan_Web.Services;
@@ -13,17 +12,13 @@ namespace IkeaDocuScan_Web.Services;
 public class ScannedFileService : IScannedFileService
 {
     private readonly IkeaDocuScanOptions _options;
-    private readonly IMemoryCache _cache;
     private readonly ILogger<ScannedFileService> _logger;
-    private const string CacheKey = "ScannedFilesList";
 
     public ScannedFileService(
         IOptions<IkeaDocuScanOptions> options,
-        IMemoryCache cache,
         ILogger<ScannedFileService> logger)
     {
         _options = options.Value;
-        _cache = cache;
         _logger = logger;
     }
 
@@ -32,13 +27,6 @@ public class ScannedFileService : IScannedFileService
     {
         try
         {
-            // Check cache first
-            if (_options.EnableFileListCaching && _cache.TryGetValue(CacheKey, out List<ScannedFileDto>? cachedFiles))
-            {
-                _logger.LogDebug("Returning {Count} files from cache", cachedFiles?.Count ?? 0);
-                return cachedFiles ?? new List<ScannedFileDto>();
-            }
-
             // Validate folder exists
             if (!Directory.Exists(_options.ScannedFilesPath))
             {
@@ -65,16 +53,6 @@ public class ScannedFileService : IScannedFileService
                 .ToList();
 
             _logger.LogInformation("Found {Count} scanned files", files.Count);
-
-            // Cache the results
-            if (_options.EnableFileListCaching)
-            {
-                var cacheOptions = new MemoryCacheEntryOptions()
-                    .SetAbsoluteExpiration(TimeSpan.FromSeconds(_options.CacheDurationSeconds));
-
-                _cache.Set(CacheKey, files, cacheOptions);
-                _logger.LogDebug("Cached {Count} files for {Duration} seconds", files.Count, _options.CacheDurationSeconds);
-            }
 
             return await Task.FromResult(files);
         }
@@ -320,13 +298,6 @@ public class ScannedFileService : IScannedFileService
 
             // Delete the file
             File.Delete(filePath);
-
-            // Invalidate cache after deletion
-            if (_options.EnableFileListCaching)
-            {
-                _cache.Remove(CacheKey);
-                _logger.LogDebug("Cache invalidated after file deletion");
-            }
 
             _logger.LogInformation("Successfully deleted file: {FileName}", fileName);
 
