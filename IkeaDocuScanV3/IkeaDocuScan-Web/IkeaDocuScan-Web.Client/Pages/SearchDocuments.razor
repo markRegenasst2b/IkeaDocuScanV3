@@ -51,10 +51,10 @@
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Document Types</label>
-                            <select class="form-select" size="5" multiple @bind="searchRequest.DocumentTypeIds">
+                            <select class="form-select" size="5" multiple @onchange="OnDocumentTypesChanged">
                                 @foreach (var dt in documentTypes)
                                 {
-                                    <option value="@dt.DtId">@dt.DtName</option>
+                                    <option value="@dt.DtId" selected="@searchRequest.DocumentTypeIds.Contains(dt.DtId)">@dt.DtName</option>
                                 }
                             </select>
                             <small class="text-muted">Hold Ctrl/Cmd to select multiple</small>
@@ -298,11 +298,13 @@
         </div>
     </div>
 
-    @* Results Section - Placeholder for Phase 4 *@
+    @* Results Section *@
     <div class="card">
-        <div class="card-header bg-secondary text-white">
-            <h5 class="mb-0">
-                <i class="bi bi-list-ul"></i> Search Results
+        <div class="card-header bg-secondary text-white d-flex justify-content-between align-items-center">
+            <div>
+                <h5 class="mb-0 d-inline">
+                    <i class="bi bi-list-ul"></i> Search Results
+                </h5>
                 @if (searchResults != null)
                 {
                     <span class="badge bg-light text-dark ms-2">@searchResults.TotalCount result(s)</span>
@@ -311,7 +313,21 @@
                         <span class="badge bg-warning text-dark ms-2">Max limit reached (@searchResults.MaxLimit)</span>
                     }
                 }
-            </h5>
+            </div>
+            @if (searchResults != null && searchResults.Items.Any())
+            {
+                <div class="btn-group btn-group-sm">
+                    <button class="btn btn-light" @onclick="SelectAllOnPage" disabled="@(selectedDocumentIds.Count == searchResults.Items.Count)">
+                        <i class="bi bi-check-square"></i> Select All
+                    </button>
+                    <button class="btn btn-light" @onclick="DeselectAll" disabled="@(!selectedDocumentIds.Any())">
+                        <i class="bi bi-square"></i> Deselect All
+                    </button>
+                    <button class="btn btn-light" @onclick="InvertSelection">
+                        <i class="bi bi-arrow-repeat"></i> Invert
+                    </button>
+                </div>
+            }
         </div>
         <div class="card-body">
             @if (errorMessage != null)
@@ -338,10 +354,182 @@
             }
             else
             {
-                <div class="alert alert-info">
-                    <i class="bi bi-info-circle"></i> Results list UI will be implemented in Phase 4
+                @* Selection Info and Bulk Actions *@
+                @if (selectedDocumentIds.Any())
+                {
+                    <div class="alert alert-info d-flex justify-content-between align-items-center">
+                        <span><i class="bi bi-info-circle"></i> <strong>@selectedDocumentIds.Count</strong> document(s) selected</span>
+                        <div class="btn-group btn-group-sm">
+                            <button class="btn btn-danger" disabled>
+                                <i class="bi bi-trash"></i> Delete Selected
+                            </button>
+                            <button class="btn btn-primary" disabled>
+                                <i class="bi bi-printer"></i> Print Summary
+                            </button>
+                            <button class="btn btn-primary" disabled>
+                                <i class="bi bi-printer-fill"></i> Print Detailed
+                            </button>
+                            <button class="btn btn-success" disabled>
+                                <i class="bi bi-envelope"></i> Email (Attach)
+                            </button>
+                            <button class="btn btn-success" disabled>
+                                <i class="bi bi-link-45deg"></i> Email (Link)
+                            </button>
+                        </div>
+                    </div>
+                }
+
+                @* Results Table *@
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover">
+                        <thead class="table-light sticky-top">
+                            <tr>
+                                <th style="width: 40px;">
+                                    <input type="checkbox" class="form-check-input"
+                                           checked="@(selectedDocumentIds.Count == searchResults.Items.Count && searchResults.Items.Any())"
+                                           @onchange="@((e) => ToggleSelectAll((bool)e.Value!))" />
+                                </th>
+                                <th style="width: 100px;">
+                                    <a href="#" @onclick="@(() => ToggleSort("barcode"))" @onclick:preventDefault class="text-decoration-none text-dark">
+                                        Bar Code @GetSortIcon("barcode")
+                                    </a>
+                                </th>
+                                <th>
+                                    <a href="#" @onclick="@(() => ToggleSort("documenttype"))" @onclick:preventDefault class="text-decoration-none text-dark">
+                                        Document Type @GetSortIcon("documenttype")
+                                    </a>
+                                </th>
+                                <th>
+                                    <a href="#" @onclick="@(() => ToggleSort("documentname"))" @onclick:preventDefault class="text-decoration-none text-dark">
+                                        Document Name @GetSortIcon("documentname")
+                                    </a>
+                                </th>
+                                <th>
+                                    <a href="#" @onclick="@(() => ToggleSort("counterparty"))" @onclick:preventDefault class="text-decoration-none text-dark">
+                                        Counterparty @GetSortIcon("counterparty")
+                                    </a>
+                                </th>
+                                <th style="width: 120px;">
+                                    <a href="#" @onclick="@(() => ToggleSort("counterpartyno"))" @onclick:preventDefault class="text-decoration-none text-dark">
+                                        CP No. @GetSortIcon("counterpartyno")
+                                    </a>
+                                </th>
+                                <th>
+                                    <a href="#" @onclick="@(() => ToggleSort("country"))" @onclick:preventDefault class="text-decoration-none text-dark">
+                                        Country @GetSortIcon("country")
+                                    </a>
+                                </th>
+                                <th>Third Party</th>
+                                <th style="width: 110px;">
+                                    <a href="#" @onclick="@(() => ToggleSort("dateofcontract"))" @onclick:preventDefault class="text-decoration-none text-dark">
+                                        Contract Date @GetSortIcon("dateofcontract")
+                                    </a>
+                                </th>
+                                <th>Comment</th>
+                                <th style="width: 60px;">Fax</th>
+                                <th style="width: 80px;">Original</th>
+                                <th>Doc No.</th>
+                                <th>PUA/Agr.</th>
+                                <th>Version</th>
+                                <th style="width: 80px;">Currency</th>
+                                <th style="width: 120px;" class="text-end">Amount</th>
+                                <th style="width: 100px;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var doc in searchResults.Items)
+                            {
+                                <tr class="@(selectedDocumentIds.Contains(doc.Id) ? "table-active" : "")">
+                                    <td>
+                                        <input type="checkbox" class="form-check-input"
+                                               checked="@selectedDocumentIds.Contains(doc.Id)"
+                                               @onchange="@((e) => ToggleSelectDocument(doc.Id, (bool)e.Value!))" />
+                                    </td>
+                                    <td>
+                                        <a href="/documents/edit/@doc.BarCode" class="text-decoration-none">
+                                            @doc.BarCode
+                                        </a>
+                                    </td>
+                                    <td><small>@doc.DocumentType</small></td>
+                                    <td><small>@doc.DocumentName</small></td>
+                                    <td><small>@doc.Counterparty</small></td>
+                                    <td><small>@doc.CounterpartyNo</small></td>
+                                    <td><small>@doc.Country</small></td>
+                                    <td><small class="text-muted">@doc.ThirdParty</small></td>
+                                    <td><small>@doc.DateOfContract?.ToString("yyyy-MM-dd")</small></td>
+                                    <td><small class="text-truncate" style="max-width: 150px;" title="@doc.Comment">@doc.Comment</small></td>
+                                    <td><small>@FormatBoolean(doc.Fax)</small></td>
+                                    <td><small>@FormatBoolean(doc.OriginalReceived)</small></td>
+                                    <td><small>@doc.DocumentNo</small></td>
+                                    <td><small>@doc.AssociatedToPua</small></td>
+                                    <td><small>@doc.VersionNo</small></td>
+                                    <td><small>@doc.CurrencyCode</small></td>
+                                    <td class="text-end"><small>@doc.Amount?.ToString("N2")</small></td>
+                                    <td>
+                                        <div class="dropdown">
+                                            <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                                <i class="bi bi-three-dots"></i>
+                                            </button>
+                                            <ul class="dropdown-menu">
+                                                <li><a class="dropdown-item disabled" href="#"><i class="bi bi-file-pdf"></i> Open PDF</a></li>
+                                                <li><a class="dropdown-item disabled" href="#"><i class="bi bi-eye"></i> View Properties</a></li>
+                                                <li><a class="dropdown-item" href="/documents/edit/@doc.BarCode"><i class="bi bi-pencil"></i> Edit Properties</a></li>
+                                                <li><hr class="dropdown-divider"></li>
+                                                <li><a class="dropdown-item disabled" href="#"><i class="bi bi-envelope"></i> Email (Attach)</a></li>
+                                                <li><a class="dropdown-item disabled" href="#"><i class="bi bi-link-45deg"></i> Email (Link)</a></li>
+                                                <li><hr class="dropdown-divider"></li>
+                                                <li><a class="dropdown-item disabled text-danger" href="#"><i class="bi bi-trash"></i> Delete</a></li>
+                                            </ul>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
                 </div>
-                <p>Found @searchResults.TotalCount document(s) - showing @searchResults.Items.Count on this page</p>
+
+                @* Pagination Controls *@
+                <div class="d-flex justify-content-between align-items-center mt-3">
+                    <div>
+                        <small class="text-muted">
+                            Showing @((searchResults.CurrentPage - 1) * searchResults.PageSize + 1)
+                            to @Math.Min(searchResults.CurrentPage * searchResults.PageSize, searchResults.TotalCount)
+                            of @searchResults.TotalCount results
+                        </small>
+                    </div>
+                    <div class="d-flex gap-2 align-items-center">
+                        <label class="me-2"><small>Page size:</small></label>
+                        <select class="form-select form-select-sm" style="width: auto;" @bind="searchRequest.PageSize" @bind:after="OnPageSizeChanged">
+                            <option value="10">10</option>
+                            <option value="25">25</option>
+                            <option value="100">100</option>
+                        </select>
+
+                        <nav>
+                            <ul class="pagination pagination-sm mb-0">
+                                <li class="page-item @(searchResults.HasPreviousPage ? "" : "disabled")">
+                                    <a class="page-link" href="#" @onclick="@(() => GoToPage(searchResults.CurrentPage - 1))" @onclick:preventDefault>
+                                        Previous
+                                    </a>
+                                </li>
+                                @for (int i = GetStartPage(); i <= GetEndPage(); i++)
+                                {
+                                    var pageNum = i;
+                                    <li class="page-item @(pageNum == searchResults.CurrentPage ? "active" : "")">
+                                        <a class="page-link" href="#" @onclick="@(() => GoToPage(pageNum))" @onclick:preventDefault>
+                                            @pageNum
+                                        </a>
+                                    </li>
+                                }
+                                <li class="page-item @(searchResults.HasNextPage ? "" : "disabled")">
+                                    <a class="page-link" href="#" @onclick="@(() => GoToPage(searchResults.CurrentPage + 1))" @onclick:preventDefault>
+                                        Next
+                                    </a>
+                                </li>
+                            </ul>
+                        </nav>
+                    </div>
+                </div>
             }
         </div>
     </div>

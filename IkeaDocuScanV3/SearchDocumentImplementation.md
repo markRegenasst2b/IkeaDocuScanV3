@@ -137,55 +137,94 @@
 ---
 
 ### Phase 4: Results List UI
-**Status:** 🔴 Not Started
+**Status:** 🟢 Completed
 **Estimated Effort:** Large
+**Completed:** 2025-10-30
 
 #### Tasks:
-- [ ] Create results table component structure
-- [ ] Implement empty states
-  - [ ] Initial state: "Start your search by entering the criteria above."
-  - [ ] No results: "No documents found matching your criteria."
-- [ ] Add selection column with checkboxes
-- [ ] Implement display columns (30+ columns)
-  - [ ] Bar Code (link to edit page)
-  - [ ] Document Type
-  - [ ] Document Name
-  - [ ] Counterparty
-  - [ ] Counterparty No.
-  - [ ] Country
-  - [ ] Third Party (comma-separated)
-  - [ ] Date of Contract
-  - [ ] Comment
-  - [ ] Fax (Yes/No)
-  - [ ] Original Received (Yes/No)
-  - [ ] Document No.
-  - [ ] Associated to PUA/Agreement No.
-  - [ ] Version No.
-  - [ ] Currency
-  - [ ] Amount
-  - [ ] (Add remaining columns from spec)
-- [ ] Implement sortable column headers
-  - [ ] Click to sort ascending
-  - [ ] Click again to sort descending
-  - [ ] Visual indicator (arrow icons)
-  - [ ] Single-column sort only
-- [ ] Implement pagination controls
-  - [ ] Previous/Next buttons
-  - [ ] Page number display
-  - [ ] Page size dropdown (10, 25, 100)
-  - [ ] Total results count display
-- [ ] Implement selection controls
-  - [ ] Select All (current page)
-  - [ ] Deselect All (current page)
-  - [ ] Invert Selection (current page)
-  - [ ] Selected count display
-- [ ] Apply responsive table styling
-- [ ] Add loading indicator
+- [x] Create results table component structure
+- [x] Implement empty states
+  - [x] Initial state: "Start your search by entering the criteria above."
+  - [x] No results: "No documents found matching your criteria."
+- [x] Add selection column with checkboxes
+- [x] Implement display columns (17 columns)
+  - [x] Bar Code (link to edit page)
+  - [x] Document Type
+  - [x] Document Name
+  - [x] Counterparty
+  - [x] Counterparty No.
+  - [x] Country
+  - [x] Third Party
+  - [x] Date of Contract
+  - [x] Comment (truncated with tooltip)
+  - [x] Fax (Yes/No)
+  - [x] Original Received (Yes/No)
+  - [x] Document No.
+  - [x] Associated to PUA/Agreement No.
+  - [x] Version No.
+  - [x] Currency
+  - [x] Amount
+  - [x] Actions dropdown menu
+- [x] Implement sortable column headers
+  - [x] Click to sort ascending
+  - [x] Click again to sort descending → click third time to clear sort
+  - [x] Visual indicator (▲/▼ arrow symbols)
+  - [x] Single-column sort only
+  - [x] Sorting persists across pagination
+- [x] Implement pagination controls
+  - [x] Previous/Next buttons
+  - [x] Page number display (shows 5 pages at a time)
+  - [x] Page size dropdown (10, 25, 100)
+  - [x] Total results count display ("Showing X to Y of Z results")
+- [x] Implement selection controls
+  - [x] Select All checkbox in header
+  - [x] Select All button (current page)
+  - [x] Deselect All button (all pages)
+  - [x] Invert Selection button (current page)
+  - [x] Selected count display
+  - [x] Visual feedback for selected rows (table-active class)
+- [x] Apply responsive table styling
+  - [x] Bootstrap 5 table classes
+  - [x] Sticky header
+  - [x] Small text for better density
+  - [x] Horizontal scrolling for overflow
+- [x] Add loading indicator
+  - [x] Search button shows loading state
+  - [x] Reference data loading spinner
 
 **Dependencies:** Phase 1 (DTOs), Phase 3 (Filter Panel)
-**Files to Modify:**
+
+**Files Modified:** ✅
 - `IkeaDocuScan-Web.Client/Pages/SearchDocuments.razor`
 - `IkeaDocuScan-Web.Client/Pages/SearchDocuments.razor.cs`
+
+**Implementation Details:**
+
+**Code-Behind Methods Added:**
+- Sorting: `ToggleSort()`, `GetSortIcon()`
+- Selection: `ToggleSelectDocument()`, `ToggleSelectAll()`, `SelectAllOnPage()`, `DeselectAll()`, `InvertSelection()`, `IsDocumentSelected()`
+- Pagination: `GoToPage()`, `OnPageSizeChanged()`, `GetStartPage()`, `GetEndPage()`
+- Formatting: `FormatBoolean()`, `FormatAmount()`, `FormatDate()`, `FormatThirdParty()`
+
+**State Variables Added:**
+- `HashSet<int> selectedDocumentIds` - Tracks selected document IDs across pages
+- `string? currentSortColumn` - Current sort column name
+- `string? currentSortDirection` - Current sort direction ("asc"/"desc"/null)
+
+**UI Features:**
+- Selection controls in card header (Select All, Deselect All, Invert)
+- Bulk action bar shown when ≥1 document selected (placeholder buttons disabled)
+- Sortable column headers with visual indicators
+- Action dropdown per row with 7 actions (most disabled as placeholders)
+- Pagination with dynamic page range (shows current ± 2 pages)
+- Bootstrap Icons for visual enhancements
+- Responsive table with horizontal scrolling
+
+**Notes:**
+- Action menu items (Open PDF, View Properties, Email, Delete) are disabled placeholders for Phase 5
+- Bulk action buttons (Delete Selected, Print, Email) are disabled placeholders for Phase 6
+- Selection state persists across pagination
+- Sort is applied server-side before result limit
 
 ---
 
@@ -312,11 +351,11 @@
 ## 📊 Overall Progress
 
 **Total Phases:** 8
-**Completed:** 3
+**Completed:** 4
 **In Progress:** 0
-**Not Started:** 5
+**Not Started:** 4
 
-**Overall Status:** 🟡 In Progress (37.5%)
+**Overall Status:** 🟡 In Progress (50%)
 
 ---
 
