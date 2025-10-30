@@ -17,30 +17,32 @@ public class EmailSearchResultsOptions
     public string DefaultRecipient { get; set; } = "legal@ikea.com";
 
     /// <summary>
-    /// Subject line template for emails with attachments
-    /// Placeholders: {DocumentCount}
-    /// </summary>
-    public string AttachSubjectTemplate { get; set; } = "IKEA Document(s): {DocumentCount} file(s)";
-
-    /// <summary>
-    /// Email body template for emails with attachments
+    /// HTML email template for emails with attachments
     /// Placeholders: {DocumentCount}, {Barcodes}
     /// </summary>
-    public string AttachBodyTemplate { get; set; } =
-        "Please find attached {DocumentCount} document(s) with the following barcodes:\n\n{Barcodes}\n\nBest regards,\nIKEA DocuScan System";
+    public string AttachEmailTemplate { get; set; } =
+        "<!DOCTYPE html><html><body><p>Please find attached {DocumentCount} document(s):</p>{Barcodes}</body></html>";
 
     /// <summary>
-    /// Subject line template for emails with download links
-    /// Placeholders: {DocumentCount}
+    /// HTML template for individual barcode items in attachment emails
+    /// Placeholders: {Barcode}, {DocumentName}, {DocumentType}
     /// </summary>
-    public string LinkSubjectTemplate { get; set; } = "IKEA Document Links: {DocumentCount} file(s)";
+    public string AttachBarcodeItemTemplate { get; set; } =
+        "<div>Barcode: {Barcode} - {DocumentName} ({DocumentType})</div>";
 
     /// <summary>
-    /// Email body template for emails with download links
+    /// HTML email template for emails with download links
     /// Placeholders: {DocumentCount}, {Links}
     /// </summary>
-    public string LinkBodyTemplate { get; set; } =
-        "You can access the following {DocumentCount} document(s):\n\n{Links}\n\nBest regards,\nIKEA DocuScan System";
+    public string LinkEmailTemplate { get; set; } =
+        "<!DOCTYPE html><html><body><p>Access {DocumentCount} document(s):</p>{Links}</body></html>";
+
+    /// <summary>
+    /// HTML template for individual link items in link emails
+    /// Placeholders: {Barcode}, {DocumentName}, {DocumentType}, {DownloadUrl}
+    /// </summary>
+    public string LinkItemTemplate { get; set; } =
+        "<div>Barcode: {Barcode} - {DocumentName} ({DocumentType})<br><a href='{DownloadUrl}'>Download</a></div>";
 
     /// <summary>
     /// Validate configuration options
@@ -52,60 +54,67 @@ public class EmailSearchResultsOptions
             throw new InvalidOperationException("DefaultRecipient email address is required");
         }
 
-        if (string.IsNullOrWhiteSpace(AttachSubjectTemplate))
+        if (string.IsNullOrWhiteSpace(AttachEmailTemplate))
         {
-            throw new InvalidOperationException("AttachSubjectTemplate is required");
+            throw new InvalidOperationException("AttachEmailTemplate is required");
         }
 
-        if (string.IsNullOrWhiteSpace(AttachBodyTemplate))
+        if (string.IsNullOrWhiteSpace(AttachBarcodeItemTemplate))
         {
-            throw new InvalidOperationException("AttachBodyTemplate is required");
+            throw new InvalidOperationException("AttachBarcodeItemTemplate is required");
         }
 
-        if (string.IsNullOrWhiteSpace(LinkSubjectTemplate))
+        if (string.IsNullOrWhiteSpace(LinkEmailTemplate))
         {
-            throw new InvalidOperationException("LinkSubjectTemplate is required");
+            throw new InvalidOperationException("LinkEmailTemplate is required");
         }
 
-        if (string.IsNullOrWhiteSpace(LinkBodyTemplate))
+        if (string.IsNullOrWhiteSpace(LinkItemTemplate))
         {
-            throw new InvalidOperationException("LinkBodyTemplate is required");
+            throw new InvalidOperationException("LinkItemTemplate is required");
         }
     }
 
     /// <summary>
-    /// Formats the subject line for attachment emails
+    /// Formats a single barcode item for attachment emails
     /// </summary>
-    public string FormatAttachSubject(int documentCount)
+    public string FormatBarcodeItem(int barcode, string documentName, string documentType)
     {
-        return AttachSubjectTemplate.Replace("{DocumentCount}", documentCount.ToString());
+        return AttachBarcodeItemTemplate
+            .Replace("{Barcode}", barcode.ToString())
+            .Replace("{DocumentName}", documentName ?? "N/A")
+            .Replace("{DocumentType}", documentType ?? "N/A");
     }
 
     /// <summary>
-    /// Formats the body for attachment emails
+    /// Formats the complete HTML body for attachment emails
     /// </summary>
-    public string FormatAttachBody(int documentCount, string barcodes)
+    public string FormatAttachEmail(int documentCount, string barcodeItems)
     {
-        return AttachBodyTemplate
+        return AttachEmailTemplate
             .Replace("{DocumentCount}", documentCount.ToString())
-            .Replace("{Barcodes}", barcodes);
+            .Replace("{Barcodes}", barcodeItems);
     }
 
     /// <summary>
-    /// Formats the subject line for link emails
+    /// Formats a single link item for link emails
     /// </summary>
-    public string FormatLinkSubject(int documentCount)
+    public string FormatLinkItem(int barcode, string documentName, string documentType, string downloadUrl)
     {
-        return LinkSubjectTemplate.Replace("{DocumentCount}", documentCount.ToString());
+        return LinkItemTemplate
+            .Replace("{Barcode}", barcode.ToString())
+            .Replace("{DocumentName}", documentName ?? "N/A")
+            .Replace("{DocumentType}", documentType ?? "N/A")
+            .Replace("{DownloadUrl}", downloadUrl);
     }
 
     /// <summary>
-    /// Formats the body for link emails
+    /// Formats the complete HTML body for link emails
     /// </summary>
-    public string FormatLinkBody(int documentCount, string links)
+    public string FormatLinkEmail(int documentCount, string linkItems)
     {
-        return LinkBodyTemplate
+        return LinkEmailTemplate
             .Replace("{DocumentCount}", documentCount.ToString())
-            .Replace("{Links}", links);
+            .Replace("{Links}", linkItems);
     }
 }

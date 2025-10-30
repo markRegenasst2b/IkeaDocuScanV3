@@ -26,6 +26,7 @@ builder.Services.AddScoped<IScannedFileService, ScannedFileHttpService>();
 builder.Services.AddScoped<IAuditTrailService, AuditTrailHttpService>();
 builder.Services.AddScoped<IDocumentNameService, DocumentNameHttpService>();
 builder.Services.AddScoped<ICurrencyService, CurrencyHttpService>();
+builder.Services.AddScoped<EmailHttpService>();
 
 await builder.Build().RunAsync();
 

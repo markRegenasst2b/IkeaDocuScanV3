@@ -179,5 +179,6 @@ app.MapScannedFileEndpoints();
 app.MapAuditTrailEndpoints();
 app.MapDocumentNameEndpoints();
 app.MapCurrencyEndpoints();
+app.MapEmailEndpoints();
 
 app.Run();

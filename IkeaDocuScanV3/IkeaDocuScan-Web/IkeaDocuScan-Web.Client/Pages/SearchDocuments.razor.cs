@@ -545,53 +545,21 @@ public partial class SearchDocuments : ComponentBase
     }
 
     /// <summary>
-    /// Generates mailto: link for sending document as email attachment
+    /// Navigates to compose email page for sending document as attachment
     /// </summary>
     private void SendEmailAttach(int documentId)
     {
-        Logger.LogInformation("Generating email (attach) link for document ID: {DocumentId}", documentId);
-
-        var doc = searchResults?.Items.FirstOrDefault(d => d.Id == documentId);
-        if (doc == null) return;
-
-        var emailConfig = EmailOptions?.Value;
-        var recipient = emailConfig?.DefaultRecipient ?? "legal@ikea.com";
-
-        var subjectText = emailConfig?.FormatAttachSubject(1) ?? $"IKEA Document: {doc.BarCode}";
-        var bodyText = emailConfig?.FormatAttachBody(1, doc.BarCode.ToString())
-            ?? $"Please find attached document with barcode: {doc.BarCode}\n\nDocument Name: {doc.DocumentName}\nCounterparty: {doc.Counterparty}";
-
-        var subject = Uri.EscapeDataString(subjectText);
-        var body = Uri.EscapeDataString(bodyText);
-
-        var mailtoLink = $"mailto:{recipient}?subject={subject}&body={body}";
-        NavigationManager.NavigateTo(mailtoLink, true);
+        Logger.LogInformation("Opening compose email page (attach) for document ID: {DocumentId}", documentId);
+        NavigationManager.NavigateTo($"/documents/compose-email?DocumentIds={documentId}&Type=attach");
     }
 
     /// <summary>
-    /// Generates mailto: link for sending document link via email
+    /// Navigates to compose email page for sending document link
     /// </summary>
     private void SendEmailLink(int documentId)
     {
-        Logger.LogInformation("Generating email (link) link for document ID: {DocumentId}", documentId);
-
-        var doc = searchResults?.Items.FirstOrDefault(d => d.Id == documentId);
-        if (doc == null) return;
-
-        var emailConfig = EmailOptions?.Value;
-        var recipient = emailConfig?.DefaultRecipient ?? "legal@ikea.com";
-        var downloadUrl = $"{NavigationManager.BaseUri}api/documents/{documentId}/download";
-
-        var subjectText = emailConfig?.FormatLinkSubject(1) ?? $"IKEA Document Link: {doc.BarCode}";
-        var links = $"Document {doc.BarCode}: {downloadUrl}";
-        var bodyText = emailConfig?.FormatLinkBody(1, links)
-            ?? $"You can access the document using the following link:\n\n{downloadUrl}\n\nDocument Details:\nBarcode: {doc.BarCode}\nDocument Name: {doc.DocumentName}\nCounterparty: {doc.Counterparty}";
-
-        var subject = Uri.EscapeDataString(subjectText);
-        var body = Uri.EscapeDataString(bodyText);
-
-        var mailtoLink = $"mailto:{recipient}?subject={subject}&body={body}";
-        NavigationManager.NavigateTo(mailtoLink, true);
+        Logger.LogInformation("Opening compose email page (link) for document ID: {DocumentId}", documentId);
+        NavigationManager.NavigateTo($"/documents/compose-email?DocumentIds={documentId}&Type=link");
     }
 
     /// <summary>
@@ -774,27 +742,8 @@ public partial class SearchDocuments : ComponentBase
 
         if (!selectedDocumentIds.Any()) return;
 
-        var selectedDocs = searchResults?.Items
-            .Where(d => selectedDocumentIds.Contains(d.Id))
-            .ToList();
-
-        if (selectedDocs == null || !selectedDocs.Any()) return;
-
-        var emailConfig = EmailOptions?.Value;
-        var recipient = emailConfig?.DefaultRecipient ?? "legal@ikea.com";
-
-        var barcodes = string.Join(", ", selectedDocs.Select(d => d.BarCode));
-        var count = selectedDocs.Count;
-
-        var subjectText = emailConfig?.FormatAttachSubject(count) ?? $"IKEA Document(s): {count} file(s)";
-        var bodyText = emailConfig?.FormatAttachBody(count, barcodes)
-            ?? $"Please find attached {count} document(s) with the following barcodes:\n\n{barcodes}\n\nBest regards,\nIKEA DocuScan System";
-
-        var subject = Uri.EscapeDataString(subjectText);
-        var body = Uri.EscapeDataString(bodyText);
-
-        var mailtoLink = $"mailto:{recipient}?subject={subject}&body={body}";
-        NavigationManager.NavigateTo(mailtoLink, true);
+        var documentIds = string.Join(",", selectedDocumentIds);
+        NavigationManager.NavigateTo($"/documents/compose-email?DocumentIds={documentIds}&Type=attach");
     }
 
     /// <summary>
@@ -806,28 +755,8 @@ public partial class SearchDocuments : ComponentBase
 
         if (!selectedDocumentIds.Any()) return;
 
-        var selectedDocs = searchResults?.Items
-            .Where(d => selectedDocumentIds.Contains(d.Id))
-            .ToList();
-
-        if (selectedDocs == null || !selectedDocs.Any()) return;
-
-        var emailConfig = EmailOptions?.Value;
-        var recipient = emailConfig?.DefaultRecipient ?? "legal@ikea.com";
-        var count = selectedDocs.Count;
-
-        var links = string.Join("\n", selectedDocs.Select(d =>
-            $"• Barcode {d.BarCode}: {NavigationManager.BaseUri}api/documents/{d.Id}/download"));
-
-        var subjectText = emailConfig?.FormatLinkSubject(count) ?? $"IKEA Document Links: {count} file(s)";
-        var bodyText = emailConfig?.FormatLinkBody(count, links)
-            ?? $"You can access the following {count} document(s):\n\n{links}\n\nBest regards,\nIKEA DocuScan System";
-
-        var subject = Uri.EscapeDataString(subjectText);
-        var body = Uri.EscapeDataString(bodyText);
-
-        var mailtoLink = $"mailto:{recipient}?subject={subject}&body={body}";
-        NavigationManager.NavigateTo(mailtoLink, true);
+        var documentIds = string.Join(",", selectedDocumentIds);
+        NavigationManager.NavigateTo($"/documents/compose-email?DocumentIds={documentIds}&Type=link");
     }
 
     /// <summary>

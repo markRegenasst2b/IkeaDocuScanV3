@@ -1,0 +1,411 @@
+@page "/documents/compose-email"
+@rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
+@using IkeaDocuScan.Shared.DTOs.Documents
+@using IkeaDocuScan.Shared.DTOs.Email
+@using IkeaDocuScan.Shared.Interfaces
+@using IkeaDocuScan.Shared.Configuration
+@using IkeaDocuScan_Web.Client.Services
+@using Microsoft.Extensions.Options
+@inject IDocumentService DocumentService
+@inject EmailHttpService EmailService
+@inject NavigationManager Navigation
+@inject ILogger<ComposeDocumentEmail> Logger
+@inject IOptions<EmailSearchResultsOptions> EmailOptions
+
+<PageTitle>Compose Email - Documents</PageTitle>
+
+<div class="container-fluid mt-3">
+    <div class="row mb-3">
+        <div class="col">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item">
+                        <a href="/documents/search" style="cursor: pointer;">
+                            <i class="bi bi-search"></i> Search Documents
+                        </a>
+                    </li>
+                    <li class="breadcrumb-item active" aria-current="page">Compose Email</li>
+                </ol>
+            </nav>
+        </div>
+    </div>
+
+    @if (errorMessage != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="bi bi-exclamation-circle"></i> @errorMessage
+            <button type="button" class="btn-close" @onclick="() => errorMessage = null"></button>
+        </div>
+    }
+
+    @if (successMessage != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="bi bi-check-circle"></i> @successMessage
+            <button type="button" class="btn-close" @onclick="() => successMessage = null"></button>
+        </div>
+    }
+
+    @if (isLoading)
+    {
+        <div class="text-center p-5">
+            <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-3">Loading documents...</p>
+        </div>
+    }
+    else
+    {
+        <div class="row">
+            <!-- Left: Email Form -->
+            <div class="col-lg-6">
+                <div class="card">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">
+                            <i class="bi bi-envelope"></i> Compose Email
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <form>
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">To:</label>
+                                <input type="email" class="form-control" @bind="recipient"
+                                       placeholder="recipient@example.com" required />
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Subject:</label>
+                                <input type="text" class="form-control" @bind="subject" required />
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Documents:</label>
+                                <div class="alert alert-info">
+                                    <i class="bi bi-info-circle"></i>
+                                    <strong>@documentIds.Count</strong> document(s) will be @(emailType == "attach" ? "attached" : "included as links")
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Additional Message (Optional):</label>
+                                <textarea class="form-control" rows="5" @bind="additionalText"
+                                          placeholder="Add any additional information here..."></textarea>
+                                <small class="text-muted">This text will be inserted at the beginning of the email body.</small>
+                            </div>
+
+                            <div class="d-grid gap-2">
+                                <button type="button" class="btn btn-success btn-lg"
+                                        @onclick="SendEmail" disabled="@isSending">
+                                    @if (isSending)
+                                    {
+                                        <span class="spinner-border spinner-border-sm me-2"></span>
+                                        <span>Sending...</span>
+                                    }
+                                    else
+                                    {
+                                        <i class="bi bi-send me-2"></i>
+                                        <span>Send Email</span>
+                                    }
+                                </button>
+                                <button type="button" class="btn btn-outline-secondary"
+                                        @onclick="Cancel" disabled="@isSending">
+                                    <i class="bi bi-x-circle me-2"></i> Cancel
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right: Email Preview -->
+            <div class="col-lg-6">
+                <div class="card">
+                    <div class="card-header bg-secondary text-white">
+                        <h5 class="mb-0">
+                            <i class="bi bi-eye"></i> Email Preview
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="email-preview">
+                            <div class="preview-header mb-3 pb-2 border-bottom">
+                                <div class="mb-2"><strong>To:</strong> @recipient</div>
+                                <div><strong>Subject:</strong> @subject</div>
+                            </div>
+                            <div class="preview-body">
+                                @if (!string.IsNullOrWhiteSpace(additionalText))
+                                {
+                                    <div class="additional-text alert alert-light border">
+                                        <strong>Your Message:</strong>
+                                        <div class="mt-2" style="white-space: pre-wrap;">@additionalText</div>
+                                    </div>
+                                }
+                                <iframe srcdoc="@emailBodyHtml"
+                                        style="width: 100%; min-height: 600px; border: 1px solid #ddd; border-radius: 4px;">
+                                </iframe>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [SupplyParameterFromQuery]
+    public string? DocumentIds { get; set; }
+
+    [SupplyParameterFromQuery]
+    public string? Type { get; set; }
+
+    private List<int> documentIds = new();
+    private string emailType = "attach"; // "attach" or "link"
+    private List<DocumentDto> documents = new();
+
+    private string recipient = "";
+    private string subject = "";
+    private string additionalText = "";
+    private string emailBodyHtml = "";
+
+    private bool isLoading = true;
+    private bool isSending = false;
+    private string? errorMessage;
+    private string? successMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            // Parse query parameters
+            if (!string.IsNullOrEmpty(DocumentIds))
+            {
+                documentIds = DocumentIds.Split(',')
+                    .Where(s => int.TryParse(s, out _))
+                    .Select(int.Parse)
+                    .ToList();
+            }
+
+            emailType = Type?.ToLower() == "link" ? "link" : "attach";
+
+            if (documentIds.Count == 0)
+            {
+                errorMessage = "No documents specified.";
+                isLoading = false;
+                return;
+            }
+
+            // Set default recipient
+            var emailConfig = EmailOptions?.Value;
+            recipient = emailConfig?.DefaultRecipient ?? "legal@ikea.com";
+
+            // Load documents
+            await LoadDocuments();
+
+            // Generate subject and body
+            GenerateEmailContent();
+
+            isLoading = false;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error initializing compose email page");
+            errorMessage = $"Error loading page: {ex.Message}";
+            isLoading = false;
+        }
+    }
+
+    private async Task LoadDocuments()
+    {
+        foreach (var id in documentIds)
+        {
+            try
+            {
+                var doc = await DocumentService.GetByIdAsync(id);
+                if (doc != null)
+                {
+                    documents.Add(doc);
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Error loading document {DocumentId}", id);
+            }
+        }
+
+        if (documents.Count == 0)
+        {
+            errorMessage = "Could not load any documents.";
+        }
+    }
+
+    private void GenerateEmailContent()
+    {
+        var emailConfig = EmailOptions?.Value;
+        if (emailConfig == null)
+        {
+            errorMessage = "Email configuration not found.";
+            return;
+        }
+
+        // Generate subject
+        subject = emailType == "attach"
+            ? $"IKEA Documents: {documents.Count} file(s)"
+            : $"IKEA Document Links: {documents.Count} file(s)";
+
+        // Generate body based on type
+        if (emailType == "attach")
+        {
+            GenerateAttachmentEmailBody(emailConfig);
+        }
+        else
+        {
+            GenerateLinkEmailBody(emailConfig);
+        }
+    }
+
+    private void GenerateAttachmentEmailBody(EmailSearchResultsOptions config)
+    {
+        var barcodeItems = new System.Text.StringBuilder();
+
+        foreach (var doc in documents)
+        {
+            var item = config.FormatBarcodeItem(
+                doc.BarCode,
+                doc.Name ?? "Unknown",
+                doc.DocumentTypeName ?? "Unknown"
+            );
+            barcodeItems.AppendLine(item);
+        }
+
+        emailBodyHtml = config.FormatAttachEmail(documents.Count, barcodeItems.ToString());
+    }
+
+    private void GenerateLinkEmailBody(EmailSearchResultsOptions config)
+    {
+        var linkItems = new System.Text.StringBuilder();
+
+        foreach (var doc in documents)
+        {
+            var downloadUrl = $"{Navigation.BaseUri}api/documents/{doc.Id}/download";
+            var item = config.FormatLinkItem(
+                doc.BarCode,
+                doc.Name ?? "Unknown",
+                doc.DocumentTypeName ?? "Unknown",
+                downloadUrl
+            );
+            linkItems.AppendLine(item);
+        }
+
+        emailBodyHtml = config.FormatLinkEmail(documents.Count, linkItems.ToString());
+    }
+
+    private async Task SendEmail()
+    {
+        try
+        {
+            isSending = true;
+            errorMessage = null;
+            successMessage = null;
+
+            // Validate inputs
+            if (string.IsNullOrWhiteSpace(recipient))
+            {
+                errorMessage = "Recipient email is required.";
+                isSending = false;
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(subject))
+            {
+                errorMessage = "Subject is required.";
+                isSending = false;
+                return;
+            }
+
+            // Prepare final email body with additional text
+            var finalBody = emailBodyHtml;
+            if (!string.IsNullOrWhiteSpace(additionalText))
+            {
+                // Insert additional text at the beginning of the email body (after greeting)
+                var greetingIndex = finalBody.IndexOf("class='greeting'");
+                if (greetingIndex >= 0)
+                {
+                    var greetingEnd = finalBody.IndexOf("</div>", greetingIndex);
+                    if (greetingEnd > 0)
+                    {
+                        var additionalHtml = $"<div class='alert alert-light border' style='background-color:#f8f9fa;border:1px solid #dee2e6;padding:15px;margin:15px 0;'><div style='white-space:pre-wrap;'>{System.Web.HttpUtility.HtmlEncode(additionalText)}</div></div>";
+                        finalBody = finalBody.Insert(greetingEnd + 6, additionalHtml);
+                    }
+                }
+                else
+                {
+                    // If no greeting found, insert at the beginning of the content section
+                    var contentIndex = finalBody.IndexOf("<div class='content'>");
+                    if (contentIndex >= 0)
+                    {
+                        var insertPosition = finalBody.IndexOf(">", contentIndex) + 1;
+                        var additionalHtml = $"<div class='alert alert-light border' style='background-color:#f8f9fa;border:1px solid #dee2e6;padding:15px;margin:15px 0;'><div style='white-space:pre-wrap;'>{System.Web.HttpUtility.HtmlEncode(additionalText)}</div></div>";
+                        finalBody = finalBody.Insert(insertPosition, additionalHtml);
+                    }
+                }
+            }
+
+            Logger.LogInformation("Sending email to {Recipient} with {Count} documents (type: {Type})",
+                recipient, documents.Count, emailType);
+
+            // Send email based on type
+            bool success;
+            if (emailType == "attach")
+            {
+                // Send with attachments
+                var request = new SendEmailWithAttachmentsRequest
+                {
+                    ToEmail = recipient,
+                    Subject = subject,
+                    HtmlBody = finalBody,
+                    DocumentIds = documentIds
+                };
+                success = await EmailService.SendEmailWithAttachmentsAsync(request);
+            }
+            else
+            {
+                // Send with links (no attachments)
+                var request = new SendEmailRequest
+                {
+                    ToEmail = recipient,
+                    Subject = subject,
+                    HtmlBody = finalBody
+                };
+                success = await EmailService.SendEmailAsync(request);
+            }
+
+            if (!success)
+            {
+                errorMessage = "Failed to send email. Please check the logs for details.";
+                isSending = false;
+                return;
+            }
+
+            successMessage = $"Email sent successfully to {recipient}!";
+
+            // Navigate back after a short delay
+            await Task.Delay(2000);
+            Navigation.NavigateTo("/documents/search");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error sending email");
+            errorMessage = $"Failed to send email: {ex.Message}";
+        }
+        finally
+        {
+            isSending = false;
+        }
+    }
+
+    private void Cancel()
+    {
+        Navigation.NavigateTo("/documents/search");
+    }
+}
