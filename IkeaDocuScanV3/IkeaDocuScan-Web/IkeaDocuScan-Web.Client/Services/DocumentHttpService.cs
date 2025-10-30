@@ -120,4 +120,21 @@ public class DocumentHttpService : IDocumentService
             throw;
         }
     }
+
+    public async Task<DocumentSearchResultDto> SearchAsync(DocumentSearchRequestDto request)
+    {
+        try
+        {
+            _logger.LogInformation("Searching documents via API");
+            var response = await _http.PostAsJsonAsync("/api/documents/search", request);
+            response.EnsureSuccessStatusCode();
+            var result = await response.Content.ReadFromJsonAsync<DocumentSearchResultDto>();
+            return result!;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error searching documents");
+            throw;
+        }
+    }
 }

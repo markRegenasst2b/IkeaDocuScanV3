@@ -1,4 +1,6 @@
 using System.Text.Json.Serialization;
+using IkeaDocuScan_Web.Client.Pages;
+using Microsoft.Extensions.Logging;
 
 namespace IkeaDocuScan_Web.Client.Models;
 
@@ -13,6 +15,16 @@ namespace IkeaDocuScan_Web.Client.Models;
 /// </summary>
 public class DocumentPropertiesViewModel
 {
+    // ========================================
+    // INJECTED DEPENDENCIES
+    // ========================================
+
+    /// <summary>
+    /// Logger instance (injected from component)
+    /// Excluded from copy/paste - runtime dependency
+    /// </summary>
+    [JsonIgnore]
+    public ILogger<DocumentPropertiesPage>? Logger { get; set; }
     // ========================================
     // HEADER FIELDS
     // ========================================
@@ -414,9 +426,11 @@ public class DocumentPropertiesViewModel
     /// </summary>
     public FieldVisibility GetFieldVisibility(string fieldName)
     {
-        return FieldConfig.TryGetValue(fieldName, out var visibility)
-            ? visibility
-            : FieldVisibility.Optional; // Default to Optional if not configured
+        if (FieldConfig.TryGetValue(fieldName, out var visibility)) {
+            return visibility;
+        }
+        Logger?.LogWarning($"Field visibility for '{fieldName}' not found in configuration. Defaulting to Optional.");
+        return FieldVisibility.Optional; // Default to Optional if not configured
     }
 
     /// <summary>

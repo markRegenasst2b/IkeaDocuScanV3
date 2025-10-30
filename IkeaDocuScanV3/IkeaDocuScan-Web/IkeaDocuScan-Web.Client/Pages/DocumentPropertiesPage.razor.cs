@@ -398,6 +398,7 @@ public partial class DocumentPropertiesPage : ComponentBase, IDisposable
 
             Model = new DocumentPropertiesViewModel
             {
+                Logger = Logger,
                 Mode = DocumentPropertyMode.CheckIn,
                 PropertySetNumber = 2, // DispatchDate enabled
                 FileName = fileName,
@@ -430,6 +431,7 @@ public partial class DocumentPropertiesPage : ComponentBase, IDisposable
                 // Create a new ViewModel and populate it from the existing document
                 Model = new DocumentPropertiesViewModel
                 {
+                    Logger = Logger,
                     Mode = DocumentPropertyMode.CheckIn,
                     PropertySetNumber = 2, // DispatchDate enabled
                     FileBytes = fileBytes,
@@ -461,6 +463,7 @@ public partial class DocumentPropertiesPage : ComponentBase, IDisposable
     {
         Model = new DocumentPropertiesViewModel
         {
+            Logger = Logger,
             Mode = DocumentPropertyMode.Register,
             PropertySetNumber = 1, // DispatchDate disabled
             FileName = null
@@ -648,6 +651,7 @@ public partial class DocumentPropertiesPage : ComponentBase, IDisposable
 
             Model = new DocumentPropertiesViewModel
             {
+                Logger = Logger,
                 Mode = currentMode,
                 PropertySetNumber = currentPropertySet
             };
@@ -1080,6 +1084,7 @@ public partial class DocumentPropertiesPage : ComponentBase, IDisposable
     {
         var model = new DocumentPropertiesViewModel
         {
+            Logger = Logger,
             Id = dto.Id,
             BarCode = dto.BarCode.ToString(),
             Name = dto.Name,
@@ -1123,6 +1128,7 @@ public partial class DocumentPropertiesPage : ComponentBase, IDisposable
 
     private void UpdateModelFromDto(DocumentPropertiesViewModel model, DocumentDto dto)
     {
+        model.Logger = Logger;
         model.Id = dto.Id;
         model.BarCode = dto.BarCode.ToString();
         model.Name = dto.Name;

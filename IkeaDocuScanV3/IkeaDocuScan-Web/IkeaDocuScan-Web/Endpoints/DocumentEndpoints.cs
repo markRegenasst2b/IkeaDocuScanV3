@@ -70,5 +70,14 @@ public static class DocumentEndpoints
         .WithName("DeleteDocument")
         .Produces(204)
         .Produces(404);
+
+        group.MapPost("/search", async (DocumentSearchRequestDto request, IDocumentService service) =>
+        {
+            var results = await service.SearchAsync(request);
+            return Results.Ok(results);
+        })
+        .WithName("SearchDocuments")
+        .Produces<DocumentSearchResultDto>(200)
+        .Produces(400);
     }
 }

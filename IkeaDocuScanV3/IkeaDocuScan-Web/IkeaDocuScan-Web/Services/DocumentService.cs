@@ -345,6 +345,321 @@ public class DocumentService : IDocumentService
         await _hubContext.Clients.All.SendAsync("DocumentDeleted", id);
     }
 
+    public async Task<DocumentSearchResultDto> SearchAsync(DocumentSearchRequestDto request)
+    {
+        _logger.LogInformation("Searching documents with filters");
+
+        // Start with base query including all necessary navigation properties
+        IQueryable<Document> query = _context.Documents
+            .Include(d => d.Dt)
+            .Include(d => d.DocumentName)
+            .Include(d => d.CounterParty)
+                .ThenInclude(cp => cp!.CountryNavigation)
+            .AsQueryable();
+
+        // Apply filters
+        query = ApplySearchFilters(query, request);
+
+        // Apply sorting BEFORE limiting results
+        query = ApplySorting(query, request.SortColumn, request.SortDirection);
+
+        // Get max results limit from configuration (default: 1000)
+        const int maxResults = 1000; // TODO: Load from configuration
+
+        // Count total matches (before pagination, limited by max results)
+        var totalQuery = query.Take(maxResults);
+        var totalCount = await totalQuery.CountAsync();
+        var maxLimitReached = totalCount >= maxResults;
+
+        // Apply pagination
+        var pagedQuery = totalQuery
+            .Skip((request.PageNumber - 1) * request.PageSize)
+            .Take(request.PageSize);
+
+        // Execute query and map to DTOs
+        var documents = await pagedQuery.ToListAsync();
+        var items = documents.Select(MapToSearchItemDto).ToList();
+
+        // Calculate pagination metadata
+        var totalPages = (int)Math.Ceiling(totalCount / (double)request.PageSize);
+
+        return new DocumentSearchResultDto
+        {
+            Items = items,
+            TotalCount = totalCount,
+            CurrentPage = request.PageNumber,
+            PageSize = request.PageSize,
+            TotalPages = totalPages,
+            MaxLimitReached = maxLimitReached,
+            MaxLimit = maxResults
+        };
+    }
+
+    private IQueryable<Document> ApplySearchFilters(IQueryable<Document> query, DocumentSearchRequestDto request)
+    {
+        // Full-text search in PDF content (iFilter)
+        if (!string.IsNullOrWhiteSpace(request.SearchString))
+        {
+            // TODO: Implement full-text search using CONTAINS or FREETEXT
+            // This requires full-text indexing on DocumentFile.Bytes
+            // For now, we'll skip this filter with a warning
+            _logger.LogWarning("Full-text search in PDF content not yet implemented");
+        }
+
+        // Barcode filter (OR logic)
+        var barcodes = request.GetBarcodeList();
+        if (barcodes.Any())
+        {
+            query = query.Where(d => barcodes.Contains(d.BarCode));
+        }
+
+        // Document Types (multi-select, OR logic)
+        if (request.DocumentTypeIds.Any())
+        {
+            query = query.Where(d => d.DtId.HasValue && request.DocumentTypeIds.Contains(d.DtId.Value));
+        }
+
+        // Document Name
+        if (request.DocumentNameId.HasValue)
+        {
+            query = query.Where(d => d.DocumentNameId == request.DocumentNameId.Value);
+        }
+
+        // Document Number (contains)
+        if (!string.IsNullOrWhiteSpace(request.DocumentNumber))
+        {
+            query = query.Where(d => d.DocumentNo != null && d.DocumentNo.Contains(request.DocumentNumber));
+        }
+
+        // Version No (contains)
+        if (!string.IsNullOrWhiteSpace(request.VersionNo))
+        {
+            query = query.Where(d => d.VersionNo != null && d.VersionNo.Contains(request.VersionNo));
+        }
+
+        // Associated to PUA (contains)
+        if (!string.IsNullOrWhiteSpace(request.AssociatedToPua))
+        {
+            query = query.Where(d => d.AssociatedToPua != null && d.AssociatedToPua.Contains(request.AssociatedToPua));
+        }
+
+        // Associated to Appendix (contains)
+        if (!string.IsNullOrWhiteSpace(request.AssociatedToAppendix))
+        {
+            query = query.Where(d => d.AssociatedToAppendix != null && d.AssociatedToAppendix.Contains(request.AssociatedToAppendix));
+        }
+
+        // Counterparty Name (free-text search in counterparty and third-party names)
+        if (!string.IsNullOrWhiteSpace(request.CounterpartyName))
+        {
+            query = query.Where(d =>
+                (d.CounterParty != null && d.CounterParty.Name.Contains(request.CounterpartyName)) ||
+                (d.ThirdParty != null && d.ThirdParty.Contains(request.CounterpartyName)));
+        }
+
+        // Counterparty No (exact match)
+        if (!string.IsNullOrWhiteSpace(request.CounterpartyNo))
+        {
+            query = query.Where(d => d.CounterParty != null && d.CounterParty.CounterPartyNoAlpha == request.CounterpartyNo);
+        }
+
+        // Counterparty Country (exact match on country code or country name)
+        if (!string.IsNullOrWhiteSpace(request.CounterpartyCountry))
+        {
+            query = query.Where(d => d.CounterParty != null &&
+                (d.CounterParty.Country == request.CounterpartyCountry ||
+                 (d.CounterParty.CountryNavigation != null && d.CounterParty.CountryNavigation.Name == request.CounterpartyCountry)));
+        }
+
+        // Counterparty City (contains)
+        if (!string.IsNullOrWhiteSpace(request.CounterpartyCity))
+        {
+            query = query.Where(d => d.CounterParty != null && d.CounterParty.City != null && d.CounterParty.City.Contains(request.CounterpartyCity));
+        }
+
+        // Boolean attributes
+        if (request.Fax.HasValue)
+        {
+            query = query.Where(d => d.Fax == request.Fax.Value);
+        }
+
+        if (request.OriginalReceived.HasValue)
+        {
+            query = query.Where(d => d.OriginalReceived == request.OriginalReceived.Value);
+        }
+
+        if (request.Confidential.HasValue)
+        {
+            query = query.Where(d => d.Confidential == request.Confidential.Value);
+        }
+
+        if (request.BankConfirmation.HasValue)
+        {
+            query = query.Where(d => d.BankConfirmation == request.BankConfirmation.Value);
+        }
+
+        // Authorisation (contains)
+        if (!string.IsNullOrWhiteSpace(request.Authorisation))
+        {
+            query = query.Where(d => d.Authorisation != null && d.Authorisation.Contains(request.Authorisation));
+        }
+
+        // Amount range
+        if (request.AmountFrom.HasValue)
+        {
+            query = query.Where(d => d.Amount >= request.AmountFrom.Value);
+        }
+
+        if (request.AmountTo.HasValue)
+        {
+            query = query.Where(d => d.Amount <= request.AmountTo.Value);
+        }
+
+        // Currency (exact match)
+        if (!string.IsNullOrWhiteSpace(request.CurrencyCode))
+        {
+            query = query.Where(d => d.CurrencyCode == request.CurrencyCode);
+        }
+
+        // Date ranges
+        if (request.DateOfContractFrom.HasValue)
+        {
+            query = query.Where(d => d.DateOfContract >= request.DateOfContractFrom.Value);
+        }
+
+        if (request.DateOfContractTo.HasValue)
+        {
+            query = query.Where(d => d.DateOfContract <= request.DateOfContractTo.Value);
+        }
+
+        if (request.ReceivingDateFrom.HasValue)
+        {
+            query = query.Where(d => d.ReceivingDate >= request.ReceivingDateFrom.Value);
+        }
+
+        if (request.ReceivingDateTo.HasValue)
+        {
+            query = query.Where(d => d.ReceivingDate <= request.ReceivingDateTo.Value);
+        }
+
+        if (request.SendingOutDateFrom.HasValue)
+        {
+            query = query.Where(d => d.SendingOutDate >= request.SendingOutDateFrom.Value);
+        }
+
+        if (request.SendingOutDateTo.HasValue)
+        {
+            query = query.Where(d => d.SendingOutDate <= request.SendingOutDateTo.Value);
+        }
+
+        if (request.ForwardedToSignatoriesDateFrom.HasValue)
+        {
+            query = query.Where(d => d.ForwardedToSignatoriesDate >= request.ForwardedToSignatoriesDateFrom.Value);
+        }
+
+        if (request.ForwardedToSignatoriesDateTo.HasValue)
+        {
+            query = query.Where(d => d.ForwardedToSignatoriesDate <= request.ForwardedToSignatoriesDateTo.Value);
+        }
+
+        if (request.DispatchDateFrom.HasValue)
+        {
+            query = query.Where(d => d.DispatchDate >= request.DispatchDateFrom.Value);
+        }
+
+        if (request.DispatchDateTo.HasValue)
+        {
+            query = query.Where(d => d.DispatchDate <= request.DispatchDateTo.Value);
+        }
+
+        if (request.ActionDateFrom.HasValue)
+        {
+            query = query.Where(d => d.ActionDate >= request.ActionDateFrom.Value);
+        }
+
+        if (request.ActionDateTo.HasValue)
+        {
+            query = query.Where(d => d.ActionDate <= request.ActionDateTo.Value);
+        }
+
+        return query;
+    }
+
+    private IQueryable<Document> ApplySorting(IQueryable<Document> query, string? sortColumn, string? sortDirection)
+    {
+        if (string.IsNullOrWhiteSpace(sortColumn))
+            return query; // No sorting
+
+        var isDescending = sortDirection?.ToLower() == "desc";
+
+        // Map column names to entity properties
+        query = sortColumn.ToLower() switch
+        {
+            "barcode" => isDescending ? query.OrderByDescending(d => d.BarCode) : query.OrderBy(d => d.BarCode),
+            "documenttype" => isDescending ? query.OrderByDescending(d => d.Dt!.DtName) : query.OrderBy(d => d.Dt!.DtName),
+            "documentname" => isDescending ? query.OrderByDescending(d => d.DocumentName!.Name) : query.OrderBy(d => d.DocumentName!.Name),
+            "counterparty" => isDescending ? query.OrderByDescending(d => d.CounterParty!.Name) : query.OrderBy(d => d.CounterParty!.Name),
+            "counterpartyno" => isDescending ? query.OrderByDescending(d => d.CounterParty!.CounterPartyNoAlpha) : query.OrderBy(d => d.CounterParty!.CounterPartyNoAlpha),
+            "country" => isDescending ? query.OrderByDescending(d => d.CounterParty!.CountryNavigation!.Name) : query.OrderBy(d => d.CounterParty!.CountryNavigation!.Name),
+            "dateofcontract" => isDescending ? query.OrderByDescending(d => d.DateOfContract) : query.OrderBy(d => d.DateOfContract),
+            "receivingdate" => isDescending ? query.OrderByDescending(d => d.ReceivingDate) : query.OrderBy(d => d.ReceivingDate),
+            "sendingoutdate" => isDescending ? query.OrderByDescending(d => d.SendingOutDate) : query.OrderBy(d => d.SendingOutDate),
+            "forwardedtosignatoriesdate" => isDescending ? query.OrderByDescending(d => d.ForwardedToSignatoriesDate) : query.OrderBy(d => d.ForwardedToSignatoriesDate),
+            "dispatchdate" => isDescending ? query.OrderByDescending(d => d.DispatchDate) : query.OrderBy(d => d.DispatchDate),
+            "actiondate" => isDescending ? query.OrderByDescending(d => d.ActionDate) : query.OrderBy(d => d.ActionDate),
+            "comment" => isDescending ? query.OrderByDescending(d => d.Comment) : query.OrderBy(d => d.Comment),
+            "documentno" => isDescending ? query.OrderByDescending(d => d.DocumentNo) : query.OrderBy(d => d.DocumentNo),
+            "versionno" => isDescending ? query.OrderByDescending(d => d.VersionNo) : query.OrderBy(d => d.VersionNo),
+            "associatedtopua" => isDescending ? query.OrderByDescending(d => d.AssociatedToPua) : query.OrderBy(d => d.AssociatedToPua),
+            "amount" => isDescending ? query.OrderByDescending(d => d.Amount) : query.OrderBy(d => d.Amount),
+            "currency" => isDescending ? query.OrderByDescending(d => d.CurrencyCode) : query.OrderBy(d => d.CurrencyCode),
+            _ => query // Unknown column, no sorting
+        };
+
+        return query;
+    }
+
+    private DocumentSearchItemDto MapToSearchItemDto(Document entity)
+    {
+        return new DocumentSearchItemDto
+        {
+            Id = entity.Id,
+            BarCode = entity.BarCode,
+            DocumentType = entity.Dt?.DtName,
+            DocumentName = entity.DocumentName?.Name,
+            Counterparty = entity.CounterParty?.Name,
+            CounterpartyNo = entity.CounterParty?.CounterPartyNoAlpha,
+            Country = entity.CounterParty?.CountryNavigation?.Name,
+            ThirdParty = entity.ThirdParty, // Already comma-separated in DB
+            DateOfContract = entity.DateOfContract,
+            ReceivingDate = entity.ReceivingDate,
+            SendingOutDate = entity.SendingOutDate,
+            ForwardedToSignatoriesDate = entity.ForwardedToSignatoriesDate,
+            DispatchDate = entity.DispatchDate,
+            ActionDate = entity.ActionDate,
+            Comment = entity.Comment,
+            Fax = entity.Fax,
+            OriginalReceived = entity.OriginalReceived,
+            TranslationReceived = entity.TranslatedVersionReceived,
+            Confidential = entity.Confidential,
+            DocumentNo = entity.DocumentNo,
+            AssociatedToPua = entity.AssociatedToPua,
+            AssociatedToAppendix = entity.AssociatedToAppendix,
+            VersionNo = entity.VersionNo,
+            ValidUntil = entity.ValidUntil,
+            CurrencyCode = entity.CurrencyCode,
+            Amount = entity.Amount,
+            Authorisation = entity.Authorisation,
+            BankConfirmation = entity.BankConfirmation,
+            City = entity.CounterParty?.City,
+            AffiliatedTo = entity.CounterParty?.AffiliatedTo,
+            ActionDescription = entity.ActionDescription,
+            HasFile = entity.FileId.HasValue,
+            FileId = entity.FileId,
+            Name = entity.Name
+        };
+    }
+
     /// <summary>
     /// Manual mapping from Entity to DTO
     /// </summary>

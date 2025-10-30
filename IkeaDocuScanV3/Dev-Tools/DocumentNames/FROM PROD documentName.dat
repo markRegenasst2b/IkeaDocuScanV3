@@ -1,0 +1,536 @@
+ID,Name,DocumentTypeId
+1,Loan Agreement,11
+2,Leasing Agreement,11
+3,Advance Payment Agreement,11
+4,Statement of Work,34
+5,Leasing Agreement,30
+6,Loan Agreement,30
+7,Deed of Guarantee,36
+8,Bank Guarantee,36
+9,Pledge on Machinery,36
+10,Mortgage on Land and Building,36
+11,Agreement for Fiduciary Transfer of Ownership Title to Assets as Security for Debt Repayment,36
+12,Agreement for Repairing and Selling Pallets,49
+13,Agreement for Selling,49
+14,Agreement for Sorting Pallets,49
+16,Compensation Agreement,26
+18,IWAY,3
+21,Suretyship Agreement,36
+22,Purchase Agreement,8
+23,Credit Agreement,8
+26,Promissory Note,36
+27,Agreement for Selling of Handling Material,49
+28,Notification on Sale of Part of Business and Transfer of Receivables,26
+30,Cooperation Agreement,26
+34,Debt Repayment Agreement,26
+35,Agreement on Compensation for low Emission Testing,26
+36,Pledge on Stock of Raw Material,36
+38,Mortgage on Land,36
+39,Mortgage on Building,36
+40,Pledge on Shares,36
+41,Option/Pledge Agreement,36
+42,Pledge Release,36
+43,Settlement Agreement,26
+44,Offset Agreement of Counter-Claims,26
+45,Confirmation of Replacement,26
+46,Notice of Assignment,26
+47,Service Agreement (Handling Material),8
+48,Barter Agreement,11
+49,Bill of Exchange,36
+50,Pledge on Movables,36
+52,Agreement on Assignments of Rights,26
+54,Frame Agreement,26
+55,Statement,26
+56,Letter of Agreement regarding Assignment,26
+57,Agreement about Long-Term Cooperation,26
+58,Account Statement,26
+59,Confirmation on Pledge Cancellation,36
+60,Letter regarding taking over,26
+61,Prolonging of the termination period,26
+62,Order of additional pieces,26
+63,Purchase Agreement on Components,26
+64,Agreement,26
+65,Agreement for Material Supply,26
+66,Internal Agreement,26
+67,Saldo Confirmation,26
+68,Protocol,26
+69,Consultancy Agreement,26
+71,Personal Commitment,26
+72,Cancellation of mortgage,36
+73,Information regarding drop of prosecution,26
+74,Cession Agreement,26
+75,Letter regarding compensation for Mr. Jan Rakowicz,26
+76,Letter regarding commencement of the privatization process,26
+77,Supply Agreement,26
+79,Property Insurance Conditions,26
+80,Agreement for Investment,26
+82,Letter regarding Shares of Magura 2000 SA,26
+83,Letter regarding Repayment Schedule,26
+86,Överlatelseavtal,26
+87,Order,26
+88,Declaration of none received goods,26
+89,Notification Letter,26
+90,Tool Agreement,8
+91,Service Agreement,26
+93,Letter from the liquidator,26
+95,Product Development Agreement,26
+96,Declaration of bankruptcy,26
+97,Letter,26
+98,Confirmation about effected Tool-Payment,26
+99,Letter regarding Alteration,26
+100,Precourt Claim,26
+101,Excerpt from loan balance,26
+102,Letter regarding new bank details,26
+103,Questionnaire,26
+104,Confirmation of investigation regarding project "Drying Terminal in Njandoma",26
+105,Confirmation of IOS,26
+106,Notifciation of Transfer of Rights,26
+107,Notice of Bankcruptcy,26
+108,Balance Agreement,26
+109,Sale and Purchase Agreement,26
+110,Confirmation of Fulfillment,26
+111,Undertaking,26
+112,Transport Agreement,8
+113,Statement of the estates's affairs,26
+114,Covenant to the Province of Nova Scotia,26
+115,Explanation of co-operation,26
+116,Letter regarding Temporary Payment Terms,26
+117,Cancellation of Purchase Orders,26
+118,Documentation Court Case,26
+119,Confirmation of claim registration,26
+120,Request for injunction to pay/enforcement assistence,26
+121,Notification of change in price and termination of contract prices,26
+122,Letter of agreement,26
+123,Claim,26
+124,Warning Letter,26
+125,Minutes,26
+126,Letter regarding change of payment destination,26
+127,Letter regarding open contracts/payments,26
+128,Transfer of Ownership of Monetary Funds,36
+129,Debt Write Off Agreement,26
+130,Reconciliation Report,26
+131,Buyer Claim,26
+132,Contract of Sale,26
+133,Cancellation of Agreement,26
+134,Financing activities IKEA Supply AG,26
+136,Agreement for Supply of Tools,26
+137,Court Paper,26
+138,Cancellation of Declaration of Assignment,26
+139,Approval 1st Rank mortgage,36
+140,Approval 2nd Rank Mortgage,36
+141,Vendor Managed Inventory,26
+142,Agreement for Repair of Metal Handling Materials,49
+144,Notification of change of name,26
+146,Free Sample and confidentiality Agreement,49
+148,Certificate of Registration,26
+149,Instruction on Invoice Payments,26
+150,Notification of change of address,26
+151,Confirmation of Funding,26
+153,Advance Payment Guarantee,36
+154,Agreement for Sorting and Repair of Pallets,49
+155,Agreement for Sorting and Repair of Pallets,56
+156,Agreement for Sorting and Repair of Pallets,48
+157,Agreement about logistic and warehousing services,26
+158,Cancellation of Declaration of Payment Destination,26
+159,Change of Bank Details,26
+160,Agreement on Sales and Purchase Volumes,8
+161,Information Tax Payment,26
+162,Vendor Letter,26
+163,Clarification Declaration,26
+164,Letter according Repayment,26
+166,General Agreement on Wood Supply,26
+167,Agreement for Selling of Handling Material,56
+168,Confirmation regarding Payment Agent,26
+169,Information about Decreasing of Charter Capital,26
+170,Letter regarding Termination of Agreement,26
+171,Bank Information,26
+172,Equipment Supply Agreement,26
+173,Additional terms for new domestic seller,26
+174,Notification of Assignment of Receivables,26
+175,Agreement for Warehousing of Handling Material,49
+176,Status Informtion,26
+177,Statement of IKEA Supply AG,36
+178,Company Change because of Insolvency,26
+179,Transfer Agreement of the Pledge Agreement,26
+180,Notification of Transfer of rights regarding Pledge Agreement,26
+181,Purchase Order,26
+182,IKEA HS SBI Parties,26
+183,Agreement for Sale of Pallets,49
+184,Pledge on Stock of raw material and ready-made articles,36
+186,Letter regarding IWAY fulfillment,26
+187,Agreement on Sales and Supply of Components,26
+188,Others,8
+189,Business Report,26
+190,Request for Compensation Payment,26
+191,Assignment Agreement,26
+192,Handover Protocol,26
+193,Confirmation,26
+194,Cancellation of Termination of Agreement,26
+195,Pledge on Machinery Cancellation,36
+197,Mortgage Release,26
+198,General Agreement,8
+200,Amendment to the Purchase Agreement,26
+201,Cancellation Agreement,26
+202,Report on Transfer and Acceptance,26
+203,Declaration,26
+204,Agreement for Sale of Pallets,48
+205,Supplementary Agreement,26
+206,Meeting Minutes,26
+207,Guarantee,26
+208,Notice on assigning claim,26
+210,General Purchasing Conditions for the supply of products to IKEA Components AB and/or
+IKEA Components s.r.o,26
+211,Equipment Sale and Purchase Agreement,26
+212,Act on Transfer and Acceptance under Equipment Sale and Purchase Agreement,26
+213,Addendum to the Equipment Sale and Purchase Agreement,26
+214,Tool Acceptance Report,26
+215,Tool Acceptance Report,26
+216,Notification of Factoring,26
+217,Frame Agreement,8
+218,ICON License Agreement,26
+219,Quick Response Supplier,26
+220,General Delivery Agreement,26
+222,Agreement for Storage Platform,48
+224,Handling Agreement,49
+225,Agreement for Repair of Metal Articles,49
+226,Notification of creation of a lien,26
+227,Information regarding the insolvency proceedings,26
+228,Payment Instruction,26
+229,CP Agreement,8
+230,Confirmation of lower prices,26
+231,Information Letter about merger,26
+232,Credit Repayment Confirmation,26
+233,Equipment Scrapping Letter,26
+234,Declaration of Assignment,8
+235,Increase of Prices,26
+236,Purchase Agreement,24
+237,Tool Agreement,24
+239,Manifest Correction,57
+241,Confirmation of application for a loan,26
+242,Passport Contract,8
+244,Purchase and Service Agreement,26
+245,Instalment Payment Agreement,11
+246,Price Corrections,26
+247,Sublease Agreement,26
+248,Call Option Agreement,26
+249,Agreement regarding compensation for price decreases,26
+251,Agreement regarding compensation for non-fulfilled volumes,26
+252,Agreement for Sale, Purchase and Use of Pallets,49
+253,Pledge on Machinery Commercial Mortgage on Machinery,36
+254,Consent Letter,36
+255,Delivery Agreement,8
+256,Pledge on Machinery and Pledge on stock of components,36
+257,Cancellation of Pledge,36
+258,Attachment to Power of Attorney,26
+259,Notice of effected transfer of receivables,26
+260,Letter regarding price increase,26
+262,Acknowledgment,26
+263,Information about assignment to Bank,26
+264,Legal Assistance Agreement,26
+265,Notice of Satisfaction of Judgement,26
+266,License Agreement,26
+267,Arrangement Act of Settlement between companies,26
+268,Creditor's Notice,26
+269,Statement to Account,26
+270,IKEA Scope & Terms for Transport Services,41
+271,Demurrage / Detention,41
+272,A Concept for handling of Transport Services Invoices,57
+273,Speficitaion List,26
+275,Receipt Confirmation of Supplier Handbook,26
+276,Cession of Claim Rights,26
+277,IKEA Extra Cost for Transport Services,41
+278,IWAY Standard General Section,26
+279,Amendment,59
+280,Amendment,57
+281,Amendment,20
+282,Framework Development Agreement,66
+284,Amendment,41
+285,Connected to General Agreement,26
+287,Asset Purchase Agreement,26
+288,Amendment,62
+289,Consent of Merge,26
+290,Additional Documents to Purchase Agreement,26
+291,App. WEB communication,57
+292,Amendment,17
+293,A Concept for handling of Transport Services Invoices,41
+294,Framework,34
+296,Framework,70
+297,Order,70
+298,Framework,71
+299,Order,71
+300,Consultancy Service Agreement,72
+301,Mutual,73
+303,Unilateral,73
+304,Intellectual Property,66
+305,Annex,70
+306,Letter regarding cooperation during termination period,26
+307,Trademark and Domain Name Assignment,66
+308,Agent's Report,26
+309,Credit Agreement,26
+310,Patent,66
+311,Amendment,9
+312,Deed of Acknowledgement,26
+313,Rekonstruktion Plan,26
+314,Amendment,91
+315,Legal,49
+317,Letter concerning Deed of Guarantee,26
+319,Amendment,74
+320,Mortgage on Company,36
+321,Dissolution of Agreement,36
+322,Agreement for Selling of Handling Material,48
+323,Sale Agreement,26
+324,Collaboration Agreement,26
+325,Amendment,21
+326,Appendix,21
+327,Additional Agreement,21
+328,Termination of Patronage Letter,36
+329,Notification and request for consent,26
+330,Notification of change of bank details,26
+331,Insurance,17
+332,Addendum,21
+333,Confirmation for Ukrainian Customs,26
+334,Wood Welding technlogy,66
+335,IKEA EU VAT Receiot confirmation for Seller,26
+338,Company Registry,26
+339,Purchase of indirect Products and Services,26
+341,Electronic Archive Registration of Pledge on Machinery,36
+342,Land Book registration of Mortgage on Building,36
+343,Amendment,14
+346,Supply Quality,69
+347,Amendment
+Agreement on Transfer
+
+
+Agreement on Transfer,87
+352,Supply Quality,67
+353,Addendum,91
+355,,91
+356,Lease Agreement,14
+357,Travel Agency Agreement,91
+358,Contract,26
+359,Acknowledgment Letter,1
+360,Feasibility Studies,66
+361,Escrow Agreement,66
+362,General Terms & Conditions,88
+363,,26
+364,IKEA Confidentiality Agreement,26
+365,IWAY Compliance Commitment,41
+366,Addendum,1
+367,Timber,89
+368,Transport,24
+369,Membership,26
+371,Acknowledgement letter SCS,87
+372,Acknowledgement SCS,57
+373,Payment Notification,26
+375,Subordination,11
+376,Customs Clearance Confirmation to Authorities,26
+377,Technology,66
+378,Transport,92
+379,Engagement Letter,34
+380,Patent,71
+381,Cancellation,17
+382,Supply of Products,26
+384,Commercial Registry,76
+386,Indemnification Agreement,36
+387,Master Agreement,88
+388,Appendix 3,9
+389,Letter of Authorization for Data Disclosure,57
+390,Consultancy Agreement,88
+391,KYC,88
+393,ISDA & CSA,88
+394,Novation,88
+395,FX Trading,88
+396,MIFID,88
+397,Conversation,88
+400,Agreement on Usage & Call Option of Equipment,8
+401,Amendment,87
+402,Breach,57
+404,Amendment,89
+405,Bankruptcy,57
+406,Assignment order - Development work,66
+407,Visit Vessel in Port,57
+409,General average Declaration,26
+410,Appendix 4,9
+411,Appendix 6,9
+412,Appendix 7,9
+413,Minutes/Decisions,94
+414,Partial settlement,94
+415,Rules/Plans/Investment guide,94
+416,Contracts,94
+417,Permanent file,94
+418,Broker Agreement,101
+419,Amendment/Addendum to Broker Agreement,101
+420,Agreements,101
+421,Frame Agreement (FA),102
+422,Participation Agreement (PA),102
+423,Statement of Work (SOW),102
+424,Data Processing Agreement,26
+425,IT Documents,103
+426,Transfer Agreement,101
+427,Lien Agreement,26
+428,Mutual Non-Disclosure and Non-Use Agreement,103
+429,Unilateral Non-Disclosure and Non-Use Agreement,103
+431,Final Settlement Auction,26
+433,Frame Agreement,49
+434,Customs Bond,101
+435,Agreement,88
+436,Engagement Letter,103
+437,Development Work Agreement,49
+438,PUA Package (PUA, GPC, QCC, IWAY),103
+439,IWAY,103
+440,GPC,103
+441,QCC,103
+442,Product and Prices,103
+443,Product Specification,103
+444,Settlement Agreement,41
+446,Investment aqnd Cooperation Agreement,49
+447,Transfer Agreement,103
+448,Deposit Agreement,26
+449,Corporate Mortgage,36
+450,Job Arrangement Letter,102
+451,Customs,103
+452,Mutual Confidentiality Agreement,49
+453,Pledge of IKEA PUA Receivables,36
+454,Solution Access Agreement,103
+455,Travel,103
+456,IKEA Food Supply AG,102
+457,Side Letter,103
+459,Transport Agreement,103
+460,Frame Agreement,103
+461,Project Order Document (POD),102
+462,Business Solution Development Order (BSDO),102
+463,Letter,101
+464,HFB,104
+465,Transport,104
+467,Notice Letter,85
+469,Guarantee,36
+470,Service Agreement,1
+471,Storage,103
+472,Authorisation for add. Buyers Food PUA,103
+473,Authorization to interchange data,85
+474,PuA Package (non Food),103
+475,Network Access Agreement,102
+476,Network Access Agreement,20
+477,Letter of Credit,26
+478,Logo Licencing Agreement,103
+479,Ecolabel Licensing Agreement,103
+480,Agreement for Testing,102
+481,Off Take Agreement,26
+482,Electronic Signature Framework Agreement,103
+483,Consultancy Agreement,103
+484,Network Access Agreement,107
+485,IWAY Standard Forestry,97
+486,IWAY Standard Forestry,3
+487,Termination of Agreements,103
+488,IWAY Accommodation section,3
+489,Power of Attorney IFSAG,103
+490,Amendment letter,57
+491,Letter,11
+492,Acknowledgment Letter,9
+493,Pledge on finished products,36
+494,Donations,26
+495,Letters,99
+496,Power of Attorney,99
+497,Agreement,99
+498,Power of Attorney,101
+499,Licence Agreement,103
+500,Service Agreement,103
+501,IWAY Transport section,3
+502,IWAY Animal welfare section,3
+503,Amendment,103
+504,Security,103
+506,Scope & Terms,105
+507,Letter of Authorization for Cargo Release,57
+508,Supply Chain Security certification,36
+509,Agreement,103
+510,TAX,103
+511,Letter of Indemnity for cargo release,57
+512,ICOMP,85
+513,Service Agreement,102
+514,Insurance,103
+515,Settlement Agreement,103
+516,Letter,103
+518,Exhibit 1,108
+519,Exhibit 2,108
+520,Transfer Agreement,110
+521,Products and Prices,110
+522,Appendix 5,9
+523,Agreement on Pricing,1
+524,PUA Package (PUA, GPC, QCC, IWAY),110
+525,ESFA Notice Letter,103
+526,Local Agreement,26
+527,Supply Chain Security certification,103
+528,Termination of ESFA,103
+530,Free of Charge Supply Agreement,26
+531,Patent,18
+533,Notice,5
+534,Appendix,49
+535,Amendment,49
+536,Amendment,11
+537,Agreement on Value Sharing,64
+538,Exhibit 1,82
+539,Assignment Agreement,103
+540,Amendment,2
+541,IKEA Supply Services Holding AG,18
+542,IKEA Supply Services Holding AG,26
+543,Stock buyover agreement,110
+544,Consultancy Agreement,72
+545,Service Agreement,110
+546,Warehouse Agreement,110
+547,Frame Agreement,110
+548,Non-Disclosure and Non-Use Agreement,110
+549,Tax,110
+551,Agreement,110
+552,Request to unload cargo at port and related indemnity,57
+553,Warehouse Agreement,103
+554,Statement of Work,103
+555,Trader Agreement,103
+556,Agreement on cost-sharing in respect of Energy Audit,26
+558,Electronic Signature Framework Agreement,8
+559,Deed of Assignment,26
+560,Secondment,34
+561,RSC program (Removing & Storing Carbon),26
+562,Partnership Agreement,92
+563,Participation Agreement,92
+564,Agreement for Performance,92
+565,Nondisclosure Agreement,92
+566,Adherence Agreement,92
+567,Consultancy Agreement,92
+568,Grant Agreement,92
+569,Membership Agreemet,92
+570,Memorandum of Understanding,92
+571,Confidentiality Agreement,92
+572,Transfer Agreement,92
+573,Service Order,92
+574,Project Agreement,92
+575,Data Processing Agreement,92
+576,Certification Agreement,92
+577,Letter,92
+578,Contract of Performance,92
+579,Funding Agreement,92
+580,Sponsorship Agreement,92
+581,Frame Agreement,92
+582,Grant Letter,92
+583,Statement of Work,92
+584,Agreement for the provision of development services,92
+585,Programme Financing Agreement,92
+586,Cost-sharing Agreement,92
+587,Service Agreement,92
+588,Assignment Agreement,92
+589,Contribution Agreement,92
+590,Novation Agreement,92
+591,Order Form,49
+592,Evaluation Agreement,26
+593,Warehousing Services Agreement,49
+594,,92
+595,Donation Agreement,103
+596,Consultancy Agreement,8
+597,Appendix 2,9
+598,Trader Agreement,110
+599,Termination,110
+600,Donation,110
+601,Receipt and Claim Release,103
+602,Power of Attorney/Vollmacht,94
+603,Authorisation for add. Buyers Food PUA,110
+604,Trader Price List,103
+605,Seller Information,103
