@@ -56,7 +56,7 @@
                         <div class="col-md-6">
                             <div class="d-flex align-items-center gap-2">
                                 <label class="form-label-inline">Doc Types:</label>
-                                <select class="form-select form-select-sm flex-grow-1" size="2" multiple @onchange="OnDocumentTypesChanged">
+                                <select class="form-select form-select-sm flex-grow-1 doc-types-select" size="2" multiple @onchange="OnDocumentTypesChanged">
                                     @foreach (var dt in documentTypes)
                                     {
                                         <option value="@dt.DtId" selected="@searchRequest.DocumentTypeIds.Contains(dt.DtId)">@dt.DtName</option>
@@ -67,7 +67,7 @@
                         <div class="col-md-6">
                             <div class="d-flex align-items-center gap-2">
                                 <label class="form-label-inline">Doc Name:</label>
-                                <select class="form-select form-select-sm flex-grow-1" @bind="searchRequest.DocumentNameId">
+                                <select class="form-select form-select-sm flex-grow-1 doc-name-select" @bind="searchRequest.DocumentNameId">
                                     <option value="">-- All --</option>
                                     @foreach (var dn in GetFilteredDocumentNames())
                                     {
@@ -236,7 +236,7 @@
                         <div class="col-md-4">
                             <div class="d-flex align-items-center gap-2">
                                 <label class="form-label-inline-short">Currency:</label>
-                                <select class="form-select form-select-sm flex-grow-1" @bind="searchRequest.CurrencyCode">
+                                <select class="form-select form-select-sm flex-grow-1 currency-select" @bind="searchRequest.CurrencyCode">
                                     <option value="">-- All --</option>
                                     @foreach (var currency in currencies)
                                     {
@@ -648,6 +648,40 @@
 
     .form-control-sm, .form-select-sm {
         font-size: 0.875rem;
+    }
+
+    /* Max-width for filter input fields */
+    .filter-section .form-control-sm,
+    .filter-section .form-select-sm {
+        max-width: 12em;
+    }
+
+    /* Extended max-width for text input fields */
+    .filter-section input[type="text"].form-control-sm {
+        max-width: 30em;
+    }
+
+    /* Extended max-width for Doc Types and Doc Name */
+    .filter-section .doc-types-select,
+    .filter-section .doc-name-select {
+        max-width: 30em;
+    }
+
+    /* Double height for Doc Types multi-select */
+    .filter-section .doc-types-select {
+        height: 4.5em;
+    }
+
+    /* 18em max-width for Currency */
+    .filter-section .currency-select {
+        max-width: 18em;
+    }
+
+    /* Override flex-grow to respect max-width */
+    .filter-section .flex-grow-1 {
+        flex-grow: 1;
+        flex-shrink: 1;
+        min-width: 0;
     }
 
     .card-header {
