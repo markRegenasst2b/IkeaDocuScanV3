@@ -1,0 +1,370 @@
+@page "/documents/preview/{DocumentId:int}"
+@rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
+@using IkeaDocuScan.Shared.DTOs.Documents
+@using IkeaDocuScan.Shared.Interfaces
+@inject IDocumentService DocumentService
+@inject NavigationManager Navigation
+@inject ILogger<DocumentPreview> Logger
+@inject IJSRuntime JS
+
+<PageTitle>Document Preview - @(document?.BarCode.ToString() ?? "Loading...")</PageTitle>
+
+<div class="container-fluid">
+    <div class="row mb-3">
+        <div class="col">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item">
+                        <a href="/documents/search" style="cursor: pointer;">
+                            <i class="bi bi-search"></i> Search Documents
+                        </a>
+                    </li>
+                    <li class="breadcrumb-item active" aria-current="page">
+                        Document Preview @(document?.BarCode != null ? $"- Barcode {document.BarCode}" : "")
+                    </li>
+                </ol>
+            </nav>
+        </div>
+    </div>
+
+    @if (errorMessage != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="bi bi-exclamation-circle"></i> @errorMessage
+            <button type="button" class="btn-close" @onclick="() => errorMessage = null"></button>
+        </div>
+    }
+
+    @if (isLoading)
+    {
+        <div class="text-center p-5">
+            <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-3">Loading document details...</p>
+        </div>
+    }
+    else if (document == null)
+    {
+        <div class="alert alert-warning">
+            <h4><i class="bi bi-exclamation-triangle"></i> Document Not Found</h4>
+            <p>The requested document could not be found.</p>
+            <button class="btn btn-primary" @onclick="GoBack">
+                <i class="bi bi-arrow-left"></i> Back to Search
+            </button>
+        </div>
+    }
+    else
+    {
+        <div class="row">
+            <!-- Left Column: File Preview -->
+            <div class="col-lg-8">
+                <div class="card mb-3">
+                    <div class="card-header bg-dark text-white">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0"><i class="bi bi-eye"></i> Document Preview</h5>
+                            @if (!previewError)
+                            {
+                                <button class="btn btn-sm btn-light" @onclick="ToggleFullScreen" title="Full Screen">
+                                    <i class="bi @(isFullScreen ? "bi-fullscreen-exit" : "bi-fullscreen")"></i>
+                                    @(isFullScreen ? "Exit Full Screen" : "Full Screen")
+                                </button>
+                            }
+                        </div>
+                    </div>
+                    <div class="card-body" style="min-height: 500px; background-color: #f5f5f5; padding: 0;" id="preview-container">
+                        @* Loading Spinner *@
+                        @if (isLoadingPreview && !previewError)
+                        {
+                            <div class="text-center p-5" style="position: absolute; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background-color: rgba(255,255,255,0.9); z-index: 10;">
+                                <div>
+                                    <div class="spinner-border text-primary" role="status" style="width: 4rem; height: 4rem;">
+                                        <span class="visually-hidden">Loading preview...</span>
+                                    </div>
+                                    <p class="mt-3 text-muted">Loading preview...</p>
+                                </div>
+                            </div>
+                        }
+
+                        @* Error Display *@
+                        @if (previewError)
+                        {
+                            <div class="alert alert-danger m-3 text-center" style="margin-top: 200px !important;">
+                                <i class="bi bi-exclamation-circle" style="font-size: 3rem;"></i>
+                                <h5 class="mt-3">Preview Error</h5>
+                                <p>Unable to load the document preview. The file may be corrupted or in an unsupported format.</p>
+                                <p class="mb-3"><strong>Document:</strong> Barcode @document.BarCode - @document.Name</p>
+                                <div>
+                                    <button class="btn btn-primary me-2" @onclick="RetryPreview">
+                                        <i class="bi bi-arrow-clockwise"></i> Retry
+                                    </button>
+                                    <button class="btn btn-secondary" @onclick="DownloadDocument">
+                                        <i class="bi bi-download"></i> Download File
+                                    </button>
+                                </div>
+                            </div>
+                        }
+                        else
+                        {
+                            @* PDF/Document Preview *@
+                            <iframe
+                                id="document-preview-iframe"
+                                src="/api/documents/@DocumentId/stream"
+                                style="width: 100%; height: 700px; border: none; display: @(isLoadingPreview ? "none" : "block");"
+                                title="Document Preview - Barcode @document.BarCode"
+                                @onload="OnPreviewLoaded"
+                                @onerror="OnPreviewError">
+                            </iframe>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column: Document Information & Actions -->
+            <div class="col-lg-4">
+                <!-- Document Information Card -->
+                <div class="card mb-3">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0"><i class="bi bi-info-circle"></i> Document Information</h5>
+                    </div>
+                    <div class="card-body">
+                        <table class="table table-sm">
+                            <tbody>
+                                <tr>
+                                    <td><strong>Barcode:</strong></td>
+                                    <td><span class="badge bg-dark">@document.BarCode</span></td>
+                                </tr>
+                                @if (!string.IsNullOrEmpty(document.DocumentTypeName))
+                                {
+                                    <tr>
+                                        <td><strong>Document Type:</strong></td>
+                                        <td>@document.DocumentTypeName</td>
+                                    </tr>
+                                }
+                                @if (!string.IsNullOrEmpty(document.Name))
+                                {
+                                    <tr>
+                                        <td><strong>Name:</strong></td>
+                                        <td>@document.Name</td>
+                                    </tr>
+                                }
+                                @if (!string.IsNullOrEmpty(document.DocumentNameText))
+                                {
+                                    <tr>
+                                        <td><strong>Document Name:</strong></td>
+                                        <td>@document.DocumentNameText</td>
+                                    </tr>
+                                }
+                                @if (!string.IsNullOrEmpty(document.CounterPartyName))
+                                {
+                                    <tr>
+                                        <td><strong>Counterparty:</strong></td>
+                                        <td>@document.CounterPartyName</td>
+                                    </tr>
+                                }
+                                @if (!string.IsNullOrEmpty(document.ThirdParty))
+                                {
+                                    <tr>
+                                        <td><strong>Third Party:</strong></td>
+                                        <td>@document.ThirdParty</td>
+                                    </tr>
+                                }
+                                @if (document.DateOfContract.HasValue)
+                                {
+                                    <tr>
+                                        <td><strong>Date of Contract:</strong></td>
+                                        <td>@document.DateOfContract.Value.ToString("yyyy-MM-dd")</td>
+                                    </tr>
+                                }
+                                @if (document.Amount.HasValue)
+                                {
+                                    <tr>
+                                        <td><strong>Amount:</strong></td>
+                                        <td>@document.CurrencyCode @document.Amount.Value.ToString("N2")</td>
+                                    </tr>
+                                }
+                                @if (!string.IsNullOrEmpty(document.DocumentNo))
+                                {
+                                    <tr>
+                                        <td><strong>Document No:</strong></td>
+                                        <td>@document.DocumentNo</td>
+                                    </tr>
+                                }
+                                @if (!string.IsNullOrEmpty(document.VersionNo))
+                                {
+                                    <tr>
+                                        <td><strong>Version:</strong></td>
+                                        <td>@document.VersionNo</td>
+                                    </tr>
+                                }
+                                @if (!string.IsNullOrEmpty(document.Comment))
+                                {
+                                    <tr>
+                                        <td><strong>Comment:</strong></td>
+                                        <td>@document.Comment</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Actions Card -->
+                <div class="card mb-3">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="mb-0"><i class="bi bi-gear"></i> Actions</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="d-grid gap-2">
+                            <button class="btn btn-primary" @onclick="EditDocument">
+                                <i class="bi bi-pencil"></i> Edit Properties
+                            </button>
+
+                            <button class="btn btn-outline-primary" @onclick="DownloadDocument">
+                                <i class="bi bi-download"></i> Download
+                            </button>
+
+                            <button class="btn btn-outline-secondary" @onclick="GoBack">
+                                <i class="bi bi-arrow-left"></i> Back to Search
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public int DocumentId { get; set; }
+
+    private DocumentDto? document;
+    private bool isLoading = true;
+    private string? errorMessage;
+
+    // Preview states
+    private bool isLoadingPreview = true;
+    private bool previewError = false;
+    private bool isFullScreen = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDocumentDetails();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && document != null)
+        {
+            // Start showing loading spinner for preview
+            isLoadingPreview = true;
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoadDocumentDetails()
+    {
+        try
+        {
+            isLoading = true;
+            errorMessage = null;
+
+            Logger.LogInformation("Loading document details for ID: {DocumentId}", DocumentId);
+
+            document = await DocumentService.GetByIdAsync(DocumentId);
+
+            if (document == null)
+            {
+                Logger.LogWarning("Document not found: ID {DocumentId}", DocumentId);
+                errorMessage = "Document not found";
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading document details: ID {DocumentId}", DocumentId);
+            errorMessage = $"Error loading document: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void EditDocument()
+    {
+        if (document == null) return;
+        Navigation.NavigateTo($"/documents/edit/{document.BarCode}");
+    }
+
+    private async Task DownloadDocument()
+    {
+        if (document == null) return;
+
+        try
+        {
+            Logger.LogInformation("Download requested for document ID: {DocumentId}, Barcode: {BarCode}", DocumentId, document.BarCode);
+
+            // Use JSInterop to trigger download
+            var downloadUrl = $"/api/documents/{DocumentId}/download";
+            await JS.InvokeVoidAsync("open", downloadUrl, "_blank");
+
+            Logger.LogInformation("Download initiated for document ID: {DocumentId}", DocumentId);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error downloading document ID: {DocumentId}", DocumentId);
+            errorMessage = $"Error downloading document: {ex.Message}";
+        }
+    }
+
+    private void GoBack()
+    {
+        Navigation.NavigateTo("/documents/search");
+    }
+
+    // Preview methods
+    private void OnPreviewLoaded()
+    {
+        isLoadingPreview = false;
+        previewError = false;
+        Logger.LogInformation("Preview loaded successfully for document ID: {DocumentId}", DocumentId);
+        StateHasChanged();
+    }
+
+    private void OnPreviewError()
+    {
+        isLoadingPreview = false;
+        previewError = true;
+        Logger.LogError("Preview failed to load for document ID: {DocumentId}", DocumentId);
+        StateHasChanged();
+    }
+
+    private void RetryPreview()
+    {
+        previewError = false;
+        isLoadingPreview = true;
+        StateHasChanged();
+    }
+
+    private async Task ToggleFullScreen()
+    {
+        try
+        {
+            isFullScreen = await JS.InvokeAsync<bool>("filePreview.toggleFullScreen", "preview-container");
+            Logger.LogInformation("Full screen toggled: {IsFullScreen}", isFullScreen);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error toggling full screen");
+            errorMessage = "Full screen mode is not supported in your browser.";
+        }
+    }
+
+    [JSInvokable]
+    public void OnFullscreenChanged(bool isFullscreen)
+    {
+        isFullScreen = isFullscreen;
+        StateHasChanged();
+    }
+}

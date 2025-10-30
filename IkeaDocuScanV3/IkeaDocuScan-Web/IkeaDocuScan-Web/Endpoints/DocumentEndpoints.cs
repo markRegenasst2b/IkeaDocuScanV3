@@ -80,20 +80,54 @@ public static class DocumentEndpoints
         .Produces<DocumentSearchResultDto>(200)
         .Produces(400);
 
+        group.MapGet("/{id}/stream", async (int id, IDocumentService service) =>
+        {
+            var fileData = await service.GetDocumentFileAsync(id);
+            if (fileData == null)
+                return Results.NotFound(new { error = $"Document file not found for document ID {id}" });
+
+            var contentType = GetContentType(fileData.FileName);
+
+            // Return file without filename parameter to enable inline display
+            return Results.File(fileData.FileBytes, contentType);
+        })
+        .WithName("StreamDocumentFile")
+        .Produces(200)
+        .Produces(404);
+
         group.MapGet("/{id}/download", async (int id, IDocumentService service) =>
         {
             var fileData = await service.GetDocumentFileAsync(id);
             if (fileData == null)
                 return Results.NotFound(new { error = $"Document file not found for document ID {id}" });
 
-            var contentType = fileData.FileName?.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase) == true
-                ? "application/pdf"
-                : "application/octet-stream";
+            var contentType = GetContentType(fileData.FileName);
 
+            // Return file with filename parameter to force download
             return Results.File(fileData.FileBytes, contentType, fileData.FileName);
         })
         .WithName("DownloadDocumentFile")
         .Produces(200)
         .Produces(404);
+    }
+
+    private static string GetContentType(string? fileName)
+    {
+        if (string.IsNullOrEmpty(fileName))
+            return "application/octet-stream";
+
+        var extension = Path.GetExtension(fileName).ToLowerInvariant();
+        return extension switch
+        {
+            ".pdf" => "application/pdf",
+            ".doc" => "application/msword",
+            ".docx" => "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            ".xls" => "application/vnd.ms-excel",
+            ".xlsx" => "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            ".jpg" or ".jpeg" => "image/jpeg",
+            ".png" => "image/png",
+            ".tif" or ".tiff" => "image/tiff",
+            _ => "application/octet-stream"
+        };
     }
 }

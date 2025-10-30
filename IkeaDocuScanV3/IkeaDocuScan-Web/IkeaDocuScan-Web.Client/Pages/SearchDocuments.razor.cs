@@ -528,10 +528,10 @@ public partial class SearchDocuments : ComponentBase
     /// </summary>
     private void OpenPdf(int documentId)
     {
-        Logger.LogInformation("Opening PDF for document ID: {DocumentId}", documentId);
+        Logger.LogInformation("Opening PDF preview for document ID: {DocumentId}", documentId);
 
-        // Open in new tab using download endpoint
-        var url = $"/api/documents/{documentId}/download";
+        // Open preview page in new tab
+        var url = $"/documents/preview/{documentId}";
         NavigationManager.NavigateTo(url, true); // forceLoad = true opens in new context
     }
 
