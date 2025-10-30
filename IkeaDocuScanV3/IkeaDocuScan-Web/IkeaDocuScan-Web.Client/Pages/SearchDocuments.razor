@@ -422,19 +422,19 @@
                     <div class="alert alert-info d-flex justify-content-between align-items-center">
                         <span><i class="bi bi-info-circle"></i> <strong>@selectedDocumentIds.Count</strong> document(s) selected</span>
                         <div class="btn-group btn-group-sm">
-                            <button class="btn btn-danger" disabled>
+                            <button class="btn btn-danger" @onclick="DeleteSelected">
                                 <i class="bi bi-trash"></i> Delete Selected
                             </button>
-                            <button class="btn btn-primary" disabled>
+                            <button class="btn btn-primary" @onclick="PrintSummary">
                                 <i class="bi bi-printer"></i> Print Summary
                             </button>
-                            <button class="btn btn-primary" disabled>
+                            <button class="btn btn-primary" @onclick="PrintDetailed">
                                 <i class="bi bi-printer-fill"></i> Print Detailed
                             </button>
-                            <button class="btn btn-success" disabled>
+                            <button class="btn btn-success" @onclick="BulkEmailAttach">
                                 <i class="bi bi-envelope"></i> Email (Attach)
                             </button>
-                            <button class="btn btn-success" disabled>
+                            <button class="btn btn-success" @onclick="BulkEmailLink">
                                 <i class="bi bi-link-45deg"></i> Email (Link)
                             </button>
                         </div>
@@ -607,6 +607,15 @@
                          IsDeleting="@isDeleting"
                          OnConfirm="@ConfirmDelete"
                          OnCancel="@CancelDelete" />
+
+<BulkDeleteConfirmationModal IsVisible="@showBulkDeleteConfirmationModal"
+                             DocumentCount="@bulkDeleteDocumentCount"
+                             DocumentIdentifiers="@bulkDeleteIdentifiers"
+                             IsDeleting="@isBulkDeleting"
+                             ErrorMessage="@bulkDeleteErrorMessage"
+                             DeleteProgress="@bulkDeleteProgress"
+                             OnConfirm="@ConfirmBulkDelete"
+                             OnCancel="@CancelBulkDelete" />
 
 <style>
     .filter-section {

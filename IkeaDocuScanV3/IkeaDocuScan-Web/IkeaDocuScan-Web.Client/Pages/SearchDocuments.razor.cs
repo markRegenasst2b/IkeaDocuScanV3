@@ -8,6 +8,7 @@ using IkeaDocuScan.Shared.DTOs.Currencies;
 using IkeaDocuScan.Shared.DTOs.Countries;
 using IkeaDocuScan.Shared.Interfaces;
 using IkeaDocuScan.Shared.Configuration;
+using IkeaDocuScan_Web.Client.Models;
 
 namespace IkeaDocuScan_Web.Client.Pages;
 
@@ -53,6 +54,14 @@ public partial class SearchDocuments : ComponentBase
     private string? deleteDocumentIdentifier;
     private int deleteDocumentId;
     private bool isDeleting = false;
+
+    // Bulk delete state
+    private bool showBulkDeleteConfirmationModal = false;
+    private int bulkDeleteDocumentCount = 0;
+    private List<string>? bulkDeleteIdentifiers;
+    private bool isBulkDeleting = false;
+    private string? bulkDeleteErrorMessage;
+    private BulkDeleteProgress? bulkDeleteProgress;
 
     protected override async Task OnInitializedAsync()
     {
@@ -674,6 +683,213 @@ public partial class SearchDocuments : ComponentBase
         showDeleteConfirmationModal = false;
         deleteDocumentId = 0;
         deleteDocumentIdentifier = null;
+        StateHasChanged();
+    }
+
+    // ========== Bulk Action Methods ==========
+
+    /// <summary>
+    /// Shows bulk delete confirmation dialog
+    /// </summary>
+    private void DeleteSelected()
+    {
+        Logger.LogInformation("Bulk delete requested for {Count} documents", selectedDocumentIds.Count);
+
+        if (!selectedDocumentIds.Any()) return;
+
+        var selectedDocs = searchResults?.Items
+            .Where(d => selectedDocumentIds.Contains(d.Id))
+            .ToList();
+
+        bulkDeleteDocumentCount = selectedDocumentIds.Count;
+        bulkDeleteIdentifiers = selectedDocs?
+            .Select(d => $"Barcode: {d.BarCode} - {d.DocumentName}")
+            .ToList();
+
+        bulkDeleteErrorMessage = null;
+        bulkDeleteProgress = null;
+        showBulkDeleteConfirmationModal = true;
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// Confirms and executes bulk deletion
+    /// </summary>
+    private async Task ConfirmBulkDelete()
+    {
+        try
+        {
+            isBulkDeleting = true;
+            bulkDeleteErrorMessage = null;
+
+            var idsToDelete = selectedDocumentIds.ToList();
+            var total = idsToDelete.Count;
+
+            bulkDeleteProgress = new BulkDeleteProgress
+            {
+                Total = total,
+                Completed = 0,
+                Failed = 0
+            };
+
+            StateHasChanged();
+
+            Logger.LogInformation("Starting bulk delete of {Count} documents", total);
+
+            foreach (var id in idsToDelete)
+            {
+                try
+                {
+                    await DocumentService.DeleteAsync(id);
+                    bulkDeleteProgress.Completed++;
+                    selectedDocumentIds.Remove(id);
+                    Logger.LogDebug("Deleted document ID: {Id}", id);
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogError(ex, "Failed to delete document ID: {Id}", id);
+                    bulkDeleteProgress.Failed++;
+                }
+
+                StateHasChanged();
+            }
+
+            Logger.LogInformation("Bulk delete completed: {Success} succeeded, {Failed} failed",
+                bulkDeleteProgress.Completed, bulkDeleteProgress.Failed);
+
+            if (bulkDeleteProgress.Failed > 0)
+            {
+                bulkDeleteErrorMessage = $"{bulkDeleteProgress.Failed} document(s) could not be deleted.";
+            }
+            else
+            {
+                // Close modal if all succeeded
+                await Task.Delay(500); // Brief pause to show completion
+                showBulkDeleteConfirmationModal = false;
+
+                // Re-execute search to refresh results
+                await ExecuteSearch();
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error during bulk delete");
+            bulkDeleteErrorMessage = $"Bulk delete failed: {ex.Message}";
+        }
+        finally
+        {
+            isBulkDeleting = false;
+            StateHasChanged();
+        }
+    }
+
+    /// <summary>
+    /// Cancels bulk deletion
+    /// </summary>
+    private void CancelBulkDelete()
+    {
+        showBulkDeleteConfirmationModal = false;
+        bulkDeleteDocumentCount = 0;
+        bulkDeleteIdentifiers = null;
+        bulkDeleteErrorMessage = null;
+        bulkDeleteProgress = null;
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// Sends multiple documents as email attachments
+    /// </summary>
+    private void BulkEmailAttach()
+    {
+        Logger.LogInformation("Bulk email (attach) requested for {Count} documents", selectedDocumentIds.Count);
+
+        if (!selectedDocumentIds.Any()) return;
+
+        var selectedDocs = searchResults?.Items
+            .Where(d => selectedDocumentIds.Contains(d.Id))
+            .ToList();
+
+        if (selectedDocs == null || !selectedDocs.Any()) return;
+
+        var emailConfig = EmailOptions?.Value;
+        var recipient = emailConfig?.DefaultRecipient ?? "legal@ikea.com";
+
+        var barcodes = string.Join(", ", selectedDocs.Select(d => d.BarCode));
+        var count = selectedDocs.Count;
+
+        var subjectText = emailConfig?.FormatAttachSubject(count) ?? $"IKEA Document(s): {count} file(s)";
+        var bodyText = emailConfig?.FormatAttachBody(count, barcodes)
+            ?? $"Please find attached {count} document(s) with the following barcodes:\n\n{barcodes}\n\nBest regards,\nIKEA DocuScan System";
+
+        var subject = Uri.EscapeDataString(subjectText);
+        var body = Uri.EscapeDataString(bodyText);
+
+        var mailtoLink = $"mailto:{recipient}?subject={subject}&body={body}";
+        NavigationManager.NavigateTo(mailtoLink, true);
+    }
+
+    /// <summary>
+    /// Sends multiple document links via email
+    /// </summary>
+    private void BulkEmailLink()
+    {
+        Logger.LogInformation("Bulk email (link) requested for {Count} documents", selectedDocumentIds.Count);
+
+        if (!selectedDocumentIds.Any()) return;
+
+        var selectedDocs = searchResults?.Items
+            .Where(d => selectedDocumentIds.Contains(d.Id))
+            .ToList();
+
+        if (selectedDocs == null || !selectedDocs.Any()) return;
+
+        var emailConfig = EmailOptions?.Value;
+        var recipient = emailConfig?.DefaultRecipient ?? "legal@ikea.com";
+        var count = selectedDocs.Count;
+
+        var links = string.Join("\n", selectedDocs.Select(d =>
+            $"• Barcode {d.BarCode}: {NavigationManager.BaseUri}api/documents/{d.Id}/download"));
+
+        var subjectText = emailConfig?.FormatLinkSubject(count) ?? $"IKEA Document Links: {count} file(s)";
+        var bodyText = emailConfig?.FormatLinkBody(count, links)
+            ?? $"You can access the following {count} document(s):\n\n{links}\n\nBest regards,\nIKEA DocuScan System";
+
+        var subject = Uri.EscapeDataString(subjectText);
+        var body = Uri.EscapeDataString(bodyText);
+
+        var mailtoLink = $"mailto:{recipient}?subject={subject}&body={body}";
+        NavigationManager.NavigateTo(mailtoLink, true);
+    }
+
+    /// <summary>
+    /// Generates and prints a summary report (placeholder)
+    /// </summary>
+    private void PrintSummary()
+    {
+        Logger.LogInformation("Print summary requested for {Count} documents", selectedDocumentIds.Count);
+
+        if (!selectedDocumentIds.Any()) return;
+
+        // TODO: Implement actual print summary functionality
+        // For now, just show a message
+        Logger.LogWarning("Print summary not yet implemented");
+        errorMessage = "Print Summary feature is not yet implemented. This will generate a summary report of selected documents.";
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// Generates and prints a detailed report (placeholder)
+    /// </summary>
+    private void PrintDetailed()
+    {
+        Logger.LogInformation("Print detailed requested for {Count} documents", selectedDocumentIds.Count);
+
+        if (!selectedDocumentIds.Any()) return;
+
+        // TODO: Implement actual print detailed functionality
+        // For now, just show a message
+        Logger.LogWarning("Print detailed not yet implemented");
+        errorMessage = "Print Detailed feature is not yet implemented. This will generate a detailed report of selected documents with all properties.";
         StateHasChanged();
     }
 }
