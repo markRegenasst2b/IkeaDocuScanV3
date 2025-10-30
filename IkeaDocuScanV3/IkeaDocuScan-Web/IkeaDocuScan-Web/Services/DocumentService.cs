@@ -4,8 +4,10 @@ using IkeaDocuScan.Shared.DTOs.Documents;
 using IkeaDocuScan.Shared.Interfaces;
 using IkeaDocuScan.Shared.Exceptions;
 using IkeaDocuScan.Shared.Enums;
+using IkeaDocuScan.Shared.Configuration;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.Options;
 using IkeaDocuScan_Web.Hubs;
 
 namespace IkeaDocuScan_Web.Services;
@@ -18,6 +20,7 @@ public class DocumentService : IDocumentService
     private readonly IAuditTrailService _auditTrailService;
     private readonly IEmailService _emailService;
     private readonly ILogger<DocumentService> _logger;
+    private readonly DocumentSearchOptions _searchOptions;
 
     public DocumentService(
         AppDbContext context,
@@ -25,7 +28,8 @@ public class DocumentService : IDocumentService
         IHttpContextAccessor httpContextAccessor,
         IAuditTrailService auditTrailService,
         IEmailService emailService,
-        ILogger<DocumentService> logger)
+        ILogger<DocumentService> logger,
+        IOptions<DocumentSearchOptions> searchOptions)
     {
         _context = context;
         _hubContext = hubContext;
@@ -33,6 +37,7 @@ public class DocumentService : IDocumentService
         _auditTrailService = auditTrailService;
         _emailService = emailService;
         _logger = logger;
+        _searchOptions = searchOptions.Value;
     }
 
     public async Task<List<DocumentDto>> GetAllAsync()
@@ -363,8 +368,9 @@ public class DocumentService : IDocumentService
         // Apply sorting BEFORE limiting results
         query = ApplySorting(query, request.SortColumn, request.SortDirection);
 
-        // Get max results limit from configuration (default: 1000)
-        const int maxResults = 1000; // TODO: Load from configuration
+        // Get max results limit from configuration
+        var maxResults = _searchOptions.MaxResults;
+        _logger.LogDebug("Applying max results limit: {MaxResults}", maxResults);
 
         // Count total matches (before pagination, limited by max results)
         var totalQuery = query.Take(maxResults);

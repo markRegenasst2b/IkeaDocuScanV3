@@ -92,12 +92,24 @@ builder.Services.Configure<IkeaDocuScanOptions>(
 builder.Services.Configure<EmailOptions>(
     builder.Configuration.GetSection(EmailOptions.SectionName));
 
+builder.Services.Configure<DocumentSearchOptions>(
+    builder.Configuration.GetSection(DocumentSearchOptions.SectionName));
+
+builder.Services.Configure<EmailSearchResultsOptions>(
+    builder.Configuration.GetSection(EmailSearchResultsOptions.SectionName));
+
 // Validate configuration on startup
 var options = builder.Configuration.GetSection(IkeaDocuScanOptions.SectionName).Get<IkeaDocuScanOptions>();
 options?.Validate();
 
 var emailOptions = builder.Configuration.GetSection(EmailOptions.SectionName).Get<EmailOptions>();
 emailOptions?.Validate();
+
+var searchOptions = builder.Configuration.GetSection(DocumentSearchOptions.SectionName).Get<DocumentSearchOptions>();
+searchOptions?.Validate();
+
+var emailSearchOptions = builder.Configuration.GetSection(EmailSearchResultsOptions.SectionName).Get<EmailSearchResultsOptions>();
+emailSearchOptions?.Validate();
 
 // Memory cache for file list caching
 builder.Services.AddMemoryCache();
