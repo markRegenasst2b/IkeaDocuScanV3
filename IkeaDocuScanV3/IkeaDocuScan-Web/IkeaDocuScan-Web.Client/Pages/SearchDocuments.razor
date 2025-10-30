@@ -1,0 +1,370 @@
+@page "/documents/search"
+@using IkeaDocuScan.Shared.DTOs.Documents
+@using IkeaDocuScan.Shared.DTOs.DocumentTypes
+@using IkeaDocuScan.Shared.DTOs.CounterParties
+@using IkeaDocuScan.Shared.DTOs.Currencies
+@using IkeaDocuScan_Web.Client.Models
+
+<PageTitle>Search Documents</PageTitle>
+
+<div class="container-fluid">
+    <h3 class="mb-4">Search Documents</h3>
+
+    @* Filter Panel *@
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0">
+                <i class="bi bi-funnel"></i> Filter Criteria
+            </h5>
+        </div>
+        <div class="card-body">
+            @if (isLoadingReferenceData)
+            {
+                <div class="text-center py-4">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-2">Loading reference data...</p>
+                </div>
+            }
+            else
+            {
+                @* General Filters Section *@
+                <div class="filter-section mb-4">
+                    <h6 class="filter-section-title">
+                        <i class="bi bi-file-earmark-text"></i> General Filters
+                    </h6>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Search String (PDF Content)</label>
+                            <input type="text" class="form-control" @bind="searchRequest.SearchString"
+                                   placeholder="Search within document content" maxlength="255" />
+                            <small class="text-muted">Full-text search in PDF files</small>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Barcode(s)</label>
+                            <input type="text" class="form-control" @bind="searchRequest.Barcodes"
+                                   placeholder="Enter comma-separated barcodes" maxlength="256" />
+                            <small class="text-muted">Example: 12345,67890,11111</small>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Document Types</label>
+                            <select class="form-select" size="5" multiple @bind="searchRequest.DocumentTypeIds">
+                                @foreach (var dt in documentTypes)
+                                {
+                                    <option value="@dt.DtId">@dt.DtName</option>
+                                }
+                            </select>
+                            <small class="text-muted">Hold Ctrl/Cmd to select multiple</small>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Document Name</label>
+                            <select class="form-select" @bind="searchRequest.DocumentNameId">
+                                <option value="">-- All Document Names --</option>
+                                @foreach (var dn in GetFilteredDocumentNames())
+                                {
+                                    <option value="@dn.Id">@dn.Name</option>
+                                }
+                            </select>
+                            <small class="text-muted">@GetDocumentNameFilterHint()</small>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Document Number</label>
+                            <input type="text" class="form-control" @bind="searchRequest.DocumentNumber"
+                                   placeholder="Search document number" maxlength="255" />
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Version No.</label>
+                            <input type="text" class="form-control" @bind="searchRequest.VersionNo"
+                                   placeholder="Search version number" maxlength="255" />
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Associated to PUA/Agreement No.</label>
+                            <input type="text" class="form-control" @bind="searchRequest.AssociatedToPua"
+                                   placeholder="Search PUA/Agreement number" maxlength="255" />
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Associated to Appendix No.</label>
+                            <input type="text" class="form-control" @bind="searchRequest.AssociatedToAppendix"
+                                   placeholder="Search appendix number" maxlength="255" />
+                        </div>
+                    </div>
+                </div>
+
+                @* Counterparty Filters Section *@
+                <div class="filter-section mb-4">
+                    <h6 class="filter-section-title">
+                        <i class="bi bi-building"></i> Counterparty Filters
+                    </h6>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Counterparty Name</label>
+                            <input type="text" class="form-control" @bind="searchRequest.CounterpartyName"
+                                   placeholder="Search counterparty or third party name" maxlength="255" />
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Counterparty No.</label>
+                            <input type="text" class="form-control" @bind="searchRequest.CounterpartyNo"
+                                   placeholder="Exact counterparty number" maxlength="32" />
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Counterparty Country</label>
+                            <select class="form-select" @bind="searchRequest.CounterpartyCountry">
+                                <option value="">-- All Countries --</option>
+                                @foreach (var country in countries)
+                                {
+                                    <option value="@country.CountryCode">@country.Name</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Counterparty City</label>
+                            <input type="text" class="form-control" @bind="searchRequest.CounterpartyCity"
+                                   placeholder="Search city" maxlength="128" />
+                        </div>
+                    </div>
+                </div>
+
+                @* Document Attributes Section *@
+                <div class="filter-section mb-4">
+                    <h6 class="filter-section-title">
+                        <i class="bi bi-toggles"></i> Document Attributes
+                    </h6>
+                    <div class="row">
+                        <div class="col-md-3 mb-3">
+                            <label class="form-label">Fax</label>
+                            <select class="form-select" @bind="searchRequest.Fax">
+                                <option value="">-- Any --</option>
+                                <option value="true">Yes</option>
+                                <option value="false">No</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label class="form-label">Original Received</label>
+                            <select class="form-select" @bind="searchRequest.OriginalReceived">
+                                <option value="">-- Any --</option>
+                                <option value="true">Yes</option>
+                                <option value="false">No</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label class="form-label">Confidential</label>
+                            <select class="form-select" @bind="searchRequest.Confidential">
+                                <option value="">-- Any --</option>
+                                <option value="true">Yes</option>
+                                <option value="false">No</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label class="form-label">Bank Confirmation</label>
+                            <select class="form-select" @bind="searchRequest.BankConfirmation">
+                                <option value="">-- Any --</option>
+                                <option value="true">Yes</option>
+                                <option value="false">No</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Authorisation To</label>
+                            <input type="text" class="form-control" @bind="searchRequest.Authorisation"
+                                   placeholder="Search authorisation" maxlength="255" />
+                        </div>
+                    </div>
+                </div>
+
+                @* Financial Filters Section *@
+                <div class="filter-section mb-4">
+                    <h6 class="filter-section-title">
+                        <i class="bi bi-currency-dollar"></i> Financial Filters
+                    </h6>
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Amount From</label>
+                            <input type="number" class="form-control" @bind="searchRequest.AmountFrom"
+                                   placeholder="Min amount" step="0.01" />
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Amount To</label>
+                            <input type="number" class="form-control" @bind="searchRequest.AmountTo"
+                                   placeholder="Max amount" step="0.01" />
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Currency</label>
+                            <select class="form-select" @bind="searchRequest.CurrencyCode">
+                                <option value="">-- All Currencies --</option>
+                                @foreach (var currency in currencies)
+                                {
+                                    <option value="@currency.CurrencyCode">@currency.DisplayText</option>
+                                }
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                @* Date Filters Section *@
+                <div class="filter-section mb-4">
+                    <h6 class="filter-section-title">
+                        <i class="bi bi-calendar-range"></i> Date Filters
+                    </h6>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Date of Contract - From</label>
+                            <input type="date" class="form-control" @bind="searchRequest.DateOfContractFrom" />
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Date of Contract - To</label>
+                            <input type="date" class="form-control" @bind="searchRequest.DateOfContractTo" />
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Receiving Date - From</label>
+                            <input type="date" class="form-control" @bind="searchRequest.ReceivingDateFrom" />
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Receiving Date - To</label>
+                            <input type="date" class="form-control" @bind="searchRequest.ReceivingDateTo" />
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Sending Out Date - From</label>
+                            <input type="date" class="form-control" @bind="searchRequest.SendingOutDateFrom" />
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Sending Out Date - To</label>
+                            <input type="date" class="form-control" @bind="searchRequest.SendingOutDateTo" />
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Forwarded to Signatories Date - From</label>
+                            <input type="date" class="form-control" @bind="searchRequest.ForwardedToSignatoriesDateFrom" />
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Forwarded to Signatories Date - To</label>
+                            <input type="date" class="form-control" @bind="searchRequest.ForwardedToSignatoriesDateTo" />
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Dispatch Date - From</label>
+                            <input type="date" class="form-control" @bind="searchRequest.DispatchDateFrom" />
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Dispatch Date - To</label>
+                            <input type="date" class="form-control" @bind="searchRequest.DispatchDateTo" />
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Action Date - From</label>
+                            <input type="date" class="form-control" @bind="searchRequest.ActionDateFrom" />
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Action Date - To</label>
+                            <input type="date" class="form-control" @bind="searchRequest.ActionDateTo" />
+                        </div>
+                    </div>
+                </div>
+
+                @* Action Buttons *@
+                <div class="d-flex justify-content-end gap-2">
+                    <button class="btn btn-secondary" @onclick="ClearFilters">
+                        <i class="bi bi-x-circle"></i> Clear Filters
+                    </button>
+                    <button class="btn btn-primary" @onclick="ExecuteSearch" disabled="@isSearching">
+                        @if (isSearching)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                        }
+                        else
+                        {
+                            <i class="bi bi-search me-2"></i>
+                        }
+                        Search
+                    </button>
+                </div>
+            }
+        </div>
+    </div>
+
+    @* Results Section - Placeholder for Phase 4 *@
+    <div class="card">
+        <div class="card-header bg-secondary text-white">
+            <h5 class="mb-0">
+                <i class="bi bi-list-ul"></i> Search Results
+                @if (searchResults != null)
+                {
+                    <span class="badge bg-light text-dark ms-2">@searchResults.TotalCount result(s)</span>
+                    @if (searchResults.MaxLimitReached)
+                    {
+                        <span class="badge bg-warning text-dark ms-2">Max limit reached (@searchResults.MaxLimit)</span>
+                    }
+                }
+            </h5>
+        </div>
+        <div class="card-body">
+            @if (errorMessage != null)
+            {
+                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                    <i class="bi bi-exclamation-triangle-fill"></i> @errorMessage
+                    <button type="button" class="btn-close" @onclick="@(() => errorMessage = null)"></button>
+                </div>
+            }
+
+            @if (searchResults == null)
+            {
+                <div class="text-center py-5 text-muted">
+                    <i class="bi bi-search" style="font-size: 3rem;"></i>
+                    <p class="mt-3">Start your search by entering the criteria above.</p>
+                </div>
+            }
+            else if (searchResults.Items.Count == 0)
+            {
+                <div class="text-center py-5 text-muted">
+                    <i class="bi bi-inbox" style="font-size: 3rem;"></i>
+                    <p class="mt-3">No documents found matching your criteria.</p>
+                </div>
+            }
+            else
+            {
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle"></i> Results list UI will be implemented in Phase 4
+                </div>
+                <p>Found @searchResults.TotalCount document(s) - showing @searchResults.Items.Count on this page</p>
+            }
+        </div>
+    </div>
+</div>
+
+<style>
+    .filter-section {
+        border-left: 3px solid #0d6efd;
+        padding-left: 1rem;
+    }
+
+    .filter-section-title {
+        color: #0d6efd;
+        font-weight: 600;
+        margin-bottom: 1rem;
+    }
+
+    .form-label {
+        font-weight: 500;
+        margin-bottom: 0.25rem;
+    }
+
+    .card-header {
+        font-weight: 600;
+    }
+</style>
