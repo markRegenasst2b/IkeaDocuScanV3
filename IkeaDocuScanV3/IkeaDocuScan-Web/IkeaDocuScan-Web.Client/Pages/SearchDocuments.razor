@@ -1,9 +1,11 @@
 @page "/documents/search"
+@rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
 @using IkeaDocuScan.Shared.DTOs.Documents
 @using IkeaDocuScan.Shared.DTOs.DocumentTypes
 @using IkeaDocuScan.Shared.DTOs.CounterParties
 @using IkeaDocuScan.Shared.DTOs.Currencies
 @using IkeaDocuScan_Web.Client.Models
+@using IkeaDocuScan_Web.Client.Components
 
 <PageTitle>Search Documents</PageTitle>
 
@@ -450,40 +452,40 @@
                                            @onchange="@((e) => ToggleSelectAll((bool)e.Value!))" />
                                 </th>
                                 <th style="width: 100px;">
-                                    <a href="#" @onclick="@(() => ToggleSort("barcode"))" @onclick:preventDefault class="text-decoration-none text-dark">
+                                    <span class="sortable-header" @onclick="@(() => ToggleSort("barcode"))">
                                         Bar Code @GetSortIcon("barcode")
-                                    </a>
+                                    </span>
                                 </th>
                                 <th>
-                                    <a href="#" @onclick="@(() => ToggleSort("documenttype"))" @onclick:preventDefault class="text-decoration-none text-dark">
+                                    <span class="sortable-header" @onclick="@(() => ToggleSort("documenttype"))">
                                         Document Type @GetSortIcon("documenttype")
-                                    </a>
+                                    </span>
                                 </th>
                                 <th>
-                                    <a href="#" @onclick="@(() => ToggleSort("documentname"))" @onclick:preventDefault class="text-decoration-none text-dark">
+                                    <span class="sortable-header" @onclick="@(() => ToggleSort("documentname"))">
                                         Document Name @GetSortIcon("documentname")
-                                    </a>
+                                    </span>
                                 </th>
                                 <th>
-                                    <a href="#" @onclick="@(() => ToggleSort("counterparty"))" @onclick:preventDefault class="text-decoration-none text-dark">
+                                    <span class="sortable-header" @onclick="@(() => ToggleSort("counterparty"))">
                                         Counterparty @GetSortIcon("counterparty")
-                                    </a>
+                                    </span>
                                 </th>
                                 <th style="width: 120px;">
-                                    <a href="#" @onclick="@(() => ToggleSort("counterpartyno"))" @onclick:preventDefault class="text-decoration-none text-dark">
+                                    <span class="sortable-header" @onclick="@(() => ToggleSort("counterpartyno"))">
                                         CP No. @GetSortIcon("counterpartyno")
-                                    </a>
+                                    </span>
                                 </th>
                                 <th>
-                                    <a href="#" @onclick="@(() => ToggleSort("country"))" @onclick:preventDefault class="text-decoration-none text-dark">
+                                    <span class="sortable-header" @onclick="@(() => ToggleSort("country"))">
                                         Country @GetSortIcon("country")
-                                    </a>
+                                    </span>
                                 </th>
                                 <th>Third Party</th>
                                 <th style="width: 110px;">
-                                    <a href="#" @onclick="@(() => ToggleSort("dateofcontract"))" @onclick:preventDefault class="text-decoration-none text-dark">
+                                    <span class="sortable-header" @onclick="@(() => ToggleSort("dateofcontract"))">
                                         Contract Date @GetSortIcon("dateofcontract")
-                                    </a>
+                                    </span>
                                 </th>
                                 <th>Comment</th>
                                 <th style="width: 60px;">Fax</th>
@@ -531,14 +533,14 @@
                                                 <i class="bi bi-three-dots"></i>
                                             </button>
                                             <ul class="dropdown-menu">
-                                                <li><a class="dropdown-item disabled" href="#"><i class="bi bi-file-pdf"></i> Open PDF</a></li>
-                                                <li><a class="dropdown-item disabled" href="#"><i class="bi bi-eye"></i> View Properties</a></li>
+                                                <li><a class="dropdown-item" href="#" @onclick="@(() => OpenPdf(doc.Id))" @onclick:preventDefault><i class="bi bi-file-pdf"></i> Open PDF</a></li>
+                                                <li><a class="dropdown-item" href="#" @onclick="@(() => ViewProperties(doc.Id))" @onclick:preventDefault><i class="bi bi-eye"></i> View Properties</a></li>
                                                 <li><a class="dropdown-item" href="/documents/edit/@doc.BarCode"><i class="bi bi-pencil"></i> Edit Properties</a></li>
                                                 <li><hr class="dropdown-divider"></li>
-                                                <li><a class="dropdown-item disabled" href="#"><i class="bi bi-envelope"></i> Email (Attach)</a></li>
-                                                <li><a class="dropdown-item disabled" href="#"><i class="bi bi-link-45deg"></i> Email (Link)</a></li>
+                                                <li><a class="dropdown-item" href="#" @onclick="@(() => SendEmailAttach(doc.Id))" @onclick:preventDefault><i class="bi bi-envelope"></i> Email (Attach)</a></li>
+                                                <li><a class="dropdown-item" href="#" @onclick="@(() => SendEmailLink(doc.Id))" @onclick:preventDefault><i class="bi bi-link-45deg"></i> Email (Link)</a></li>
                                                 <li><hr class="dropdown-divider"></li>
-                                                <li><a class="dropdown-item disabled text-danger" href="#"><i class="bi bi-trash"></i> Delete</a></li>
+                                                <li><a class="dropdown-item text-danger" href="#" @onclick="@(() => DeleteDocument(doc.Id, doc.BarCode))" @onclick:preventDefault><i class="bi bi-trash"></i> Delete</a></li>
                                             </ul>
                                         </div>
                                     </td>
@@ -568,23 +570,23 @@
                         <nav>
                             <ul class="pagination pagination-sm mb-0">
                                 <li class="page-item @(searchResults.HasPreviousPage ? "" : "disabled")">
-                                    <a class="page-link" href="#" @onclick="@(() => GoToPage(searchResults.CurrentPage - 1))" @onclick:preventDefault>
+                                    <button type="button" class="page-link" @onclick="@(() => GoToPage(searchResults.CurrentPage - 1))" disabled="@(!searchResults.HasPreviousPage)">
                                         Previous
-                                    </a>
+                                    </button>
                                 </li>
                                 @for (int i = GetStartPage(); i <= GetEndPage(); i++)
                                 {
                                     var pageNum = i;
                                     <li class="page-item @(pageNum == searchResults.CurrentPage ? "active" : "")">
-                                        <a class="page-link" href="#" @onclick="@(() => GoToPage(pageNum))" @onclick:preventDefault>
+                                        <button type="button" class="page-link" @onclick="@(() => GoToPage(pageNum))">
                                             @pageNum
-                                        </a>
+                                        </button>
                                     </li>
                                 }
                                 <li class="page-item @(searchResults.HasNextPage ? "" : "disabled")">
-                                    <a class="page-link" href="#" @onclick="@(() => GoToPage(searchResults.CurrentPage + 1))" @onclick:preventDefault>
+                                    <button type="button" class="page-link" @onclick="@(() => GoToPage(searchResults.CurrentPage + 1))" disabled="@(!searchResults.HasNextPage)">
                                         Next
-                                    </a>
+                                    </button>
                                 </li>
                             </ul>
                         </nav>
@@ -594,6 +596,17 @@
         </div>
     </div>
 </div>
+
+@* Modals *@
+<ViewPropertiesModal IsVisible="@showViewPropertiesModal"
+                     Document="@selectedDocumentForModal"
+                     OnClose="@CloseViewPropertiesModal" />
+
+<DeleteConfirmationModal IsVisible="@showDeleteConfirmationModal"
+                         DocumentIdentifier="@deleteDocumentIdentifier"
+                         IsDeleting="@isDeleting"
+                         OnConfirm="@ConfirmDelete"
+                         OnCancel="@CancelDelete" />
 
 <style>
     .filter-section {
@@ -635,5 +648,17 @@
     /* Compact spacing */
     .row.g-2 {
         --bs-gutter-y: 0.5rem;
+    }
+
+    /* Sortable headers */
+    .sortable-header {
+        cursor: pointer;
+        user-select: none;
+        color: #212529;
+    }
+
+    .sortable-header:hover {
+        color: #0d6efd;
+        text-decoration: underline;
     }
 </style>

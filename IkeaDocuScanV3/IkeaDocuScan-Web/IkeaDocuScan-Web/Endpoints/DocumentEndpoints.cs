@@ -79,5 +79,21 @@ public static class DocumentEndpoints
         .WithName("SearchDocuments")
         .Produces<DocumentSearchResultDto>(200)
         .Produces(400);
+
+        group.MapGet("/{id}/download", async (int id, IDocumentService service) =>
+        {
+            var fileData = await service.GetDocumentFileAsync(id);
+            if (fileData == null)
+                return Results.NotFound(new { error = $"Document file not found for document ID {id}" });
+
+            var contentType = fileData.FileName?.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase) == true
+                ? "application/pdf"
+                : "application/octet-stream";
+
+            return Results.File(fileData.FileBytes, contentType, fileData.FileName);
+        })
+        .WithName("DownloadDocumentFile")
+        .Produces(200)
+        .Produces(404);
     }
 }

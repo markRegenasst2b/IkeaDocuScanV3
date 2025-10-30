@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Components;
+using Microsoft.Extensions.Options;
 using IkeaDocuScan.Shared.DTOs.Documents;
 using IkeaDocuScan.Shared.DTOs.DocumentTypes;
 using IkeaDocuScan.Shared.DTOs.DocumentNames;
@@ -6,6 +7,7 @@ using IkeaDocuScan.Shared.DTOs.CounterParties;
 using IkeaDocuScan.Shared.DTOs.Currencies;
 using IkeaDocuScan.Shared.DTOs.Countries;
 using IkeaDocuScan.Shared.Interfaces;
+using IkeaDocuScan.Shared.Configuration;
 
 namespace IkeaDocuScan_Web.Client.Pages;
 
@@ -18,6 +20,8 @@ public partial class SearchDocuments : ComponentBase
     [Inject] private ICurrencyService CurrencyService { get; set; } = default!;
     [Inject] private ICountryService CountryService { get; set; } = default!;
     [Inject] private ILogger<SearchDocuments> Logger { get; set; } = default!;
+    [Inject] private NavigationManager NavigationManager { get; set; } = default!;
+    [Inject] private IOptions<EmailSearchResultsOptions>? EmailOptions { get; set; }
 
     // Search request and results
     private DocumentSearchRequestDto searchRequest = new();
@@ -41,6 +45,14 @@ public partial class SearchDocuments : ComponentBase
     // Sorting state
     private string? currentSortColumn;
     private string? currentSortDirection;
+
+    // Modal state
+    private bool showViewPropertiesModal = false;
+    private bool showDeleteConfirmationModal = false;
+    private DocumentDto? selectedDocumentForModal;
+    private string? deleteDocumentIdentifier;
+    private int deleteDocumentId;
+    private bool isDeleting = false;
 
     protected override async Task OnInitializedAsync()
     {
@@ -498,5 +510,170 @@ public partial class SearchDocuments : ComponentBase
         // Split by semicolon and rejoin with comma
         var parties = thirdParty.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
         return string.Join(", ", parties);
+    }
+
+    // ========== Per-Row Action Methods ==========
+
+    /// <summary>
+    /// Opens the PDF file in a new browser tab
+    /// </summary>
+    private void OpenPdf(int documentId)
+    {
+        Logger.LogInformation("Opening PDF for document ID: {DocumentId}", documentId);
+
+        // Open in new tab using download endpoint
+        var url = $"/api/documents/{documentId}/download";
+        NavigationManager.NavigateTo(url, true); // forceLoad = true opens in new context
+    }
+
+    /// <summary>
+    /// Shows the View Properties modal
+    /// </summary>
+    private async Task ViewProperties(int documentId)
+    {
+        Logger.LogInformation("Viewing properties for document ID: {DocumentId}", documentId);
+
+        try
+        {
+            // Fetch full document details
+            selectedDocumentForModal = await DocumentService.GetByIdAsync(documentId);
+
+            if (selectedDocumentForModal != null)
+            {
+                showViewPropertiesModal = true;
+                StateHasChanged();
+            }
+            else
+            {
+                Logger.LogWarning("Document {DocumentId} not found", documentId);
+                errorMessage = "Document not found.";
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading document properties");
+            errorMessage = $"Failed to load document properties: {ex.Message}";
+        }
+    }
+
+    /// <summary>
+    /// Closes the View Properties modal
+    /// </summary>
+    private void CloseViewPropertiesModal()
+    {
+        showViewPropertiesModal = false;
+        selectedDocumentForModal = null;
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// Generates mailto: link for sending document as email attachment
+    /// </summary>
+    private void SendEmailAttach(int documentId)
+    {
+        Logger.LogInformation("Generating email (attach) link for document ID: {DocumentId}", documentId);
+
+        var doc = searchResults?.Items.FirstOrDefault(d => d.Id == documentId);
+        if (doc == null) return;
+
+        var emailConfig = EmailOptions?.Value;
+        var recipient = emailConfig?.DefaultRecipient ?? "legal@ikea.com";
+
+        var subjectText = emailConfig?.FormatAttachSubject(1) ?? $"IKEA Document: {doc.BarCode}";
+        var bodyText = emailConfig?.FormatAttachBody(1, doc.BarCode.ToString())
+            ?? $"Please find attached document with barcode: {doc.BarCode}\n\nDocument Name: {doc.DocumentName}\nCounterparty: {doc.Counterparty}";
+
+        var subject = Uri.EscapeDataString(subjectText);
+        var body = Uri.EscapeDataString(bodyText);
+
+        var mailtoLink = $"mailto:{recipient}?subject={subject}&body={body}";
+        NavigationManager.NavigateTo(mailtoLink, true);
+    }
+
+    /// <summary>
+    /// Generates mailto: link for sending document link via email
+    /// </summary>
+    private void SendEmailLink(int documentId)
+    {
+        Logger.LogInformation("Generating email (link) link for document ID: {DocumentId}", documentId);
+
+        var doc = searchResults?.Items.FirstOrDefault(d => d.Id == documentId);
+        if (doc == null) return;
+
+        var emailConfig = EmailOptions?.Value;
+        var recipient = emailConfig?.DefaultRecipient ?? "legal@ikea.com";
+        var downloadUrl = $"{NavigationManager.BaseUri}api/documents/{documentId}/download";
+
+        var subjectText = emailConfig?.FormatLinkSubject(1) ?? $"IKEA Document Link: {doc.BarCode}";
+        var links = $"Document {doc.BarCode}: {downloadUrl}";
+        var bodyText = emailConfig?.FormatLinkBody(1, links)
+            ?? $"You can access the document using the following link:\n\n{downloadUrl}\n\nDocument Details:\nBarcode: {doc.BarCode}\nDocument Name: {doc.DocumentName}\nCounterparty: {doc.Counterparty}";
+
+        var subject = Uri.EscapeDataString(subjectText);
+        var body = Uri.EscapeDataString(bodyText);
+
+        var mailtoLink = $"mailto:{recipient}?subject={subject}&body={body}";
+        NavigationManager.NavigateTo(mailtoLink, true);
+    }
+
+    /// <summary>
+    /// Shows delete confirmation dialog
+    /// </summary>
+    private void DeleteDocument(int documentId, int barcode)
+    {
+        Logger.LogInformation("Delete requested for document ID: {DocumentId}, Barcode: {Barcode}", documentId, barcode);
+
+        deleteDocumentId = documentId;
+        deleteDocumentIdentifier = $"Barcode: {barcode}";
+        showDeleteConfirmationModal = true;
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// Confirms and executes document deletion
+    /// </summary>
+    private async Task ConfirmDelete()
+    {
+        try
+        {
+            isDeleting = true;
+            StateHasChanged();
+
+            Logger.LogInformation("Deleting document ID: {DocumentId}", deleteDocumentId);
+
+            await DocumentService.DeleteAsync(deleteDocumentId);
+
+            Logger.LogInformation("Document {DocumentId} deleted successfully", deleteDocumentId);
+
+            // Remove from selection if it was selected
+            selectedDocumentIds.Remove(deleteDocumentId);
+
+            // Close modal
+            showDeleteConfirmationModal = false;
+
+            // Re-execute search to refresh results
+            await ExecuteSearch();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error deleting document");
+            errorMessage = $"Failed to delete document: {ex.Message}";
+        }
+        finally
+        {
+            isDeleting = false;
+            StateHasChanged();
+        }
+    }
+
+    /// <summary>
+    /// Cancels document deletion
+    /// </summary>
+    private void CancelDelete()
+    {
+        showDeleteConfirmationModal = false;
+        deleteDocumentId = 0;
+        deleteDocumentIdentifier = null;
+        StateHasChanged();
     }
 }

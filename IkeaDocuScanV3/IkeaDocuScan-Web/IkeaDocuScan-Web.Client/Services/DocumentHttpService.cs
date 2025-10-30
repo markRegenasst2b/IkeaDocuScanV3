@@ -137,4 +137,23 @@ public class DocumentHttpService : IDocumentService
             throw;
         }
     }
+
+    public async Task<DocumentFileDto?> GetDocumentFileAsync(int id)
+    {
+        try
+        {
+            _logger.LogInformation("Fetching document file for document {DocumentId} from API", id);
+            return await _http.GetFromJsonAsync<DocumentFileDto>($"/api/documents/{id}/download");
+        }
+        catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
+        {
+            _logger.LogWarning("Document file for document {DocumentId} not found", id);
+            return null;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error fetching document file");
+            throw;
+        }
+    }
 }

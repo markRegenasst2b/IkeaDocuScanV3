@@ -1,0 +1,220 @@
+@using IkeaDocuScan.Shared.DTOs.Documents
+
+@if (IsVisible && Document != null)
+{
+    <div class="modal fade show d-block" tabindex="-1" role="dialog" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="bi bi-eye"></i> Document Properties
+                    </h5>
+                    <button type="button" class="btn-close" @onclick="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="container-fluid">
+                        @* General Information *@
+                        <h6 class="text-primary border-bottom pb-2 mb-3">General Information</h6>
+                        <div class="row mb-2">
+                            <div class="col-4 fw-semibold">Bar Code:</div>
+                            <div class="col-8">@Document.BarCode</div>
+                        </div>
+                        <div class="row mb-2">
+                            <div class="col-4 fw-semibold">Document Name:</div>
+                            <div class="col-8">@Document.Name</div>
+                        </div>
+                        <div class="row mb-2">
+                            <div class="col-4 fw-semibold">Document Type:</div>
+                            <div class="col-8">@Document.DocumentTypeName</div>
+                        </div>
+                        <div class="row mb-2">
+                            <div class="col-4 fw-semibold">Document No:</div>
+                            <div class="col-8">@(Document.DocumentNo ?? "-")</div>
+                        </div>
+                        <div class="row mb-2">
+                            <div class="col-4 fw-semibold">Version No:</div>
+                            <div class="col-8">@(Document.VersionNo ?? "-")</div>
+                        </div>
+
+                        @* Counterparty Information *@
+                        <h6 class="text-primary border-bottom pb-2 mb-3 mt-4">Counterparty Information</h6>
+                        <div class="row mb-2">
+                            <div class="col-4 fw-semibold">Counterparty:</div>
+                            <div class="col-8">@(Document.CounterPartyName ?? "-")</div>
+                        </div>
+                        <div class="row mb-2">
+                            <div class="col-4 fw-semibold">Third Party:</div>
+                            <div class="col-8">@FormatThirdParty(Document.ThirdParty)</div>
+                        </div>
+                        <div class="row mb-2">
+                            <div class="col-4 fw-semibold">Third Party ID:</div>
+                            <div class="col-8">@(Document.ThirdPartyId ?? "-")</div>
+                        </div>
+
+                        @* Financial Information *@
+                        <h6 class="text-primary border-bottom pb-2 mb-3 mt-4">Financial Information</h6>
+                        <div class="row mb-2">
+                            <div class="col-4 fw-semibold">Amount:</div>
+                            <div class="col-8">@FormatAmount(Document.Amount, Document.CurrencyCode)</div>
+                        </div>
+                        <div class="row mb-2">
+                            <div class="col-4 fw-semibold">Currency:</div>
+                            <div class="col-8">@(Document.CurrencyCode ?? "-")</div>
+                        </div>
+
+                        @* Document Attributes *@
+                        <h6 class="text-primary border-bottom pb-2 mb-3 mt-4">Document Attributes</h6>
+                        <div class="row mb-2">
+                            <div class="col-4 fw-semibold">Fax:</div>
+                            <div class="col-8">@FormatBoolean(Document.Fax)</div>
+                        </div>
+                        <div class="row mb-2">
+                            <div class="col-4 fw-semibold">Original Received:</div>
+                            <div class="col-8">@FormatBoolean(Document.OriginalReceived)</div>
+                        </div>
+                        <div class="row mb-2">
+                            <div class="col-4 fw-semibold">Confidential:</div>
+                            <div class="col-8">@FormatBoolean(Document.Confidential)</div>
+                        </div>
+                        <div class="row mb-2">
+                            <div class="col-4 fw-semibold">Bank Confirmation:</div>
+                            <div class="col-8">@FormatBoolean(Document.BankConfirmation)</div>
+                        </div>
+                        <div class="row mb-2">
+                            <div class="col-4 fw-semibold">Translated Version:</div>
+                            <div class="col-8">@FormatBoolean(Document.TranslatedVersionReceived)</div>
+                        </div>
+                        <div class="row mb-2">
+                            <div class="col-4 fw-semibold">Authorisation To:</div>
+                            <div class="col-8">@(Document.Authorisation ?? "-")</div>
+                        </div>
+
+                        @* Dates *@
+                        <h6 class="text-primary border-bottom pb-2 mb-3 mt-4">Dates</h6>
+                        <div class="row mb-2">
+                            <div class="col-4 fw-semibold">Date of Contract:</div>
+                            <div class="col-8">@FormatDate(Document.DateOfContract)</div>
+                        </div>
+                        <div class="row mb-2">
+                            <div class="col-4 fw-semibold">Receiving Date:</div>
+                            <div class="col-8">@FormatDate(Document.ReceivingDate)</div>
+                        </div>
+                        <div class="row mb-2">
+                            <div class="col-4 fw-semibold">Sending Out Date:</div>
+                            <div class="col-8">@FormatDate(Document.SendingOutDate)</div>
+                        </div>
+                        <div class="row mb-2">
+                            <div class="col-4 fw-semibold">Forwarded to Signatories:</div>
+                            <div class="col-8">@FormatDate(Document.ForwardedToSignatoriesDate)</div>
+                        </div>
+                        <div class="row mb-2">
+                            <div class="col-4 fw-semibold">Dispatch Date:</div>
+                            <div class="col-8">@FormatDate(Document.DispatchDate)</div>
+                        </div>
+                        <div class="row mb-2">
+                            <div class="col-4 fw-semibold">Action Date:</div>
+                            <div class="col-8">@FormatDate(Document.ActionDate)</div>
+                        </div>
+                        <div class="row mb-2">
+                            <div class="col-4 fw-semibold">Valid Until:</div>
+                            <div class="col-8">@FormatDate(Document.ValidUntil)</div>
+                        </div>
+
+                        @* References *@
+                        <h6 class="text-primary border-bottom pb-2 mb-3 mt-4">References</h6>
+                        <div class="row mb-2">
+                            <div class="col-4 fw-semibold">Associated to PUA/Agreement:</div>
+                            <div class="col-8">@(Document.AssociatedToPua ?? "-")</div>
+                        </div>
+                        <div class="row mb-2">
+                            <div class="col-4 fw-semibold">Associated to Appendix:</div>
+                            <div class="col-8">@(Document.AssociatedToAppendix ?? "-")</div>
+                        </div>
+                        <div class="row mb-2">
+                            <div class="col-4 fw-semibold">Reminder Group:</div>
+                            <div class="col-8">@(Document.ReminderGroup ?? "-")</div>
+                        </div>
+
+                        @* Additional Information *@
+                        <h6 class="text-primary border-bottom pb-2 mb-3 mt-4">Additional Information</h6>
+                        <div class="row mb-2">
+                            <div class="col-4 fw-semibold">Comment:</div>
+                            <div class="col-8">@(Document.Comment ?? "-")</div>
+                        </div>
+                        <div class="row mb-2">
+                            <div class="col-4 fw-semibold">Action Description:</div>
+                            <div class="col-8">@(Document.ActionDescription ?? "-")</div>
+                        </div>
+
+                        @* Audit Information *@
+                        <h6 class="text-primary border-bottom pb-2 mb-3 mt-4">Audit Information</h6>
+                        <div class="row mb-2">
+                            <div class="col-4 fw-semibold">Created On:</div>
+                            <div class="col-8">@Document.CreatedOn.ToString("yyyy-MM-dd HH:mm:ss")</div>
+                        </div>
+                        <div class="row mb-2">
+                            <div class="col-4 fw-semibold">Created By:</div>
+                            <div class="col-8">@Document.CreatedBy</div>
+                        </div>
+                        @if (Document.ModifiedOn.HasValue)
+                        {
+                            <div class="row mb-2">
+                                <div class="col-4 fw-semibold">Modified On:</div>
+                                <div class="col-8">@Document.ModifiedOn.Value.ToString("yyyy-MM-dd HH:mm:ss")</div>
+                            </div>
+                        }
+                        @if (!string.IsNullOrEmpty(Document.ModifiedBy))
+                        {
+                            <div class="row mb-2">
+                                <div class="col-4 fw-semibold">Modified By:</div>
+                                <div class="col-8">@Document.ModifiedBy</div>
+                            </div>
+                        }
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="Close">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public bool IsVisible { get; set; }
+    [Parameter] public DocumentDto? Document { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    private async Task Close()
+    {
+        IsVisible = false;
+        await OnClose.InvokeAsync();
+    }
+
+    private string FormatBoolean(bool? value)
+    {
+        return value.HasValue ? (value.Value ? "Yes" : "No") : "-";
+    }
+
+    private string FormatDate(DateTime? date)
+    {
+        return date?.ToString("yyyy-MM-dd") ?? "-";
+    }
+
+    private string FormatAmount(decimal? amount, string? currencyCode)
+    {
+        if (!amount.HasValue) return "-";
+        return string.IsNullOrEmpty(currencyCode)
+            ? amount.Value.ToString("N2")
+            : $"{currencyCode} {amount.Value:N2}";
+    }
+
+    private string FormatThirdParty(string? thirdParty)
+    {
+        if (string.IsNullOrWhiteSpace(thirdParty))
+            return "-";
+
+        var parties = thirdParty.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        return string.Join(", ", parties);
+    }
+}

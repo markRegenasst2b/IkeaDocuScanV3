@@ -895,4 +895,55 @@ public class DocumentService : IDocumentService
         // Fallback - should be configured in production
         return "https://docuscan.company.com";
     }
+
+    /// <summary>
+    /// Gets the document file (PDF) for download
+    /// </summary>
+    public async Task<DocumentFileDto?> GetDocumentFileAsync(int id)
+    {
+        _logger.LogInformation("Getting document file for document ID: {Id}", id);
+
+        var document = await _context.Documents
+            .Include(d => d.File)
+            .FirstOrDefaultAsync(d => d.Id == id);
+
+        if (document?.File == null)
+        {
+            _logger.LogWarning("Document file not found for document ID: {Id}", id);
+            return null;
+        }
+
+        _logger.LogInformation("Document file found: {FileName}, Size: {Size} bytes",
+            document.File.FileName, document.File.Bytes?.Length ?? 0);
+
+        return new DocumentFileDto
+        {
+            FileBytes = document.File.Bytes ?? Array.Empty<byte>(),
+            FileName = document.File.FileName,
+            ContentType = DetermineContentType(document.File.FileName)
+        };
+    }
+
+    /// <summary>
+    /// Determines content type based on file extension
+    /// </summary>
+    private string DetermineContentType(string? fileName)
+    {
+        if (string.IsNullOrEmpty(fileName))
+            return "application/octet-stream";
+
+        var extension = Path.GetExtension(fileName).ToLowerInvariant();
+        return extension switch
+        {
+            ".pdf" => "application/pdf",
+            ".doc" => "application/msword",
+            ".docx" => "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            ".xls" => "application/vnd.ms-excel",
+            ".xlsx" => "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            ".jpg" or ".jpeg" => "image/jpeg",
+            ".png" => "image/png",
+            ".tif" or ".tiff" => "image/tiff",
+            _ => "application/octet-stream"
+        };
+    }
 }

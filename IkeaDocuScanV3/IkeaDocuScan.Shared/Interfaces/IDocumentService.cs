@@ -11,4 +11,5 @@ public interface IDocumentService
     Task<DocumentDto> UpdateAsync(UpdateDocumentDto dto);
     Task DeleteAsync(int id);
     Task<DocumentSearchResultDto> SearchAsync(DocumentSearchRequestDto request);
+    Task<DocumentFileDto?> GetDocumentFileAsync(int id);
 }

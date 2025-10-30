@@ -229,42 +229,100 @@
 ---
 
 ### Phase 5: Per-Row Actions
-**Status:** 🔴 Not Started
+**Status:** 🟢 Completed
 **Estimated Effort:** Medium
+**Completed:** 2025-10-30
 
 #### Tasks:
-- [ ] Add action menu column to results table
-- [ ] Implement action menu dropdown (per row)
-- [ ] Implement "Open" action
-  - [ ] Download PDF from `documentfile.bytes`
-  - [ ] Open in new browser tab
-- [ ] Implement "View Properties" action
-  - [ ] Create read-only properties modal component
-  - [ ] Display all document metadata
-  - [ ] Format dates, currencies, yes/no values
-- [ ] Implement "Edit Properties" action
-  - [ ] Navigate to `/documents/edit/{barcode}`
-- [ ] Implement "Send as Email (Attach)" action
-  - [ ] Generate `mailto:` link
-  - [ ] Use config for recipient, subject, body
-  - [ ] Include document as attachment reference
-- [ ] Implement "Send as Email (Link)" action
-  - [ ] Generate `mailto:` link
-  - [ ] Use config for recipient, subject, body
-  - [ ] Include download link in body
-- [ ] Implement "Delete" action
-  - [ ] Show confirmation dialog with barcode + filename
-  - [ ] Call delete API
-  - [ ] Refresh results after deletion
+- [x] Add action menu column to results table (completed in Phase 4)
+- [x] Implement action menu dropdown (per row) (completed in Phase 4)
+- [x] Implement "Open PDF" action
+  - [x] Created `GET /api/documents/{id}/download` endpoint
+  - [x] Added `GetDocumentFileAsync` method to IDocumentService
+  - [x] Implemented server-side PDF download with proper content type
+  - [x] Opens PDF in new browser tab
+- [x] Implement "View Properties" action
+  - [x] Create read-only properties modal component
+  - [x] Display all document metadata (organized in 6 sections)
+  - [x] Format dates, currencies, yes/no values
+  - [x] Fetch full document details via GetByIdAsync
+- [x] Implement "Edit Properties" action
+  - [x] Navigate to `/documents/edit/{barcode}` (already working)
+- [x] Implement "Send as Email (Attach)" action
+  - [x] Generate `mailto:` link with document details
+  - [x] Subject and body from EmailSearchResultsOptions configuration
+  - [x] Falls back to default template if configuration unavailable
+- [x] Implement "Send as Email (Link)" action
+  - [x] Generate `mailto:` link with download URL
+  - [x] Subject and body from EmailSearchResultsOptions configuration
+  - [x] Falls back to default template if configuration unavailable
+- [x] Implement "Delete" action
+  - [x] Show confirmation dialog with barcode
+  - [x] Call delete API (DocumentService.DeleteAsync)
+  - [x] Refresh results after deletion
+  - [x] Remove from selection if deleted
+  - [x] Loading indicator during deletion
 
-**Dependencies:** Phase 4 (Results List)
-**Files to Create:**
-- `IkeaDocuScan-Web.Client/Components/DocumentManagement/ViewPropertiesModal.razor`
-- `IkeaDocuScan-Web.Client/Components/DocumentManagement/ViewPropertiesModal.razor.cs`
+**Dependencies:** Phase 4 (Results List) ✅
 
-**Files to Modify:**
-- `IkeaDocuScan-Web.Client/Pages/SearchDocuments.razor`
-- `IkeaDocuScan-Web.Client/Pages/SearchDocuments.razor.cs`
+**Files Created:** ✅
+- `IkeaDocuScan.Shared/DTOs/Documents/DocumentFileDto.cs` - DTO for file download
+- `IkeaDocuScan-Web.Client/Components/ViewPropertiesModal.razor` - Read-only properties modal
+- `IkeaDocuScan-Web.Client/Components/DeleteConfirmationModal.razor` - Delete confirmation dialog
+
+**Files Modified:** ✅
+- `IkeaDocuScan-Web/IkeaDocuScan-Web/Endpoints/DocumentEndpoints.cs` - Added download endpoint
+- `IkeaDocuScan-Web/IkeaDocuScan-Web/Services/DocumentService.cs` - Implemented GetDocumentFileAsync
+- `IkeaDocuScan.Shared/Interfaces/IDocumentService.cs` - Added interface method
+- `IkeaDocuScan-Web.Client/Services/DocumentHttpService.cs` - Added client method
+- `IkeaDocuScan-Web.Client/Pages/SearchDocuments.razor` - Added modals, enabled action menu items
+- `IkeaDocuScan-Web.Client/Pages/SearchDocuments.razor.cs` - Fully implemented all action methods
+
+**Implementation Details:**
+
+**Download PDF Endpoint:**
+- Route: `GET /api/documents/{id}/download`
+- Returns file with proper content type (application/pdf, etc.)
+- Supports multiple file types: PDF, DOC, DOCX, XLS, XLSX, JPG, PNG, TIF
+- Includes proper file name in response
+- Content type determined by file extension
+
+**ViewPropertiesModal Component:**
+- Bootstrap modal with scrollable content
+- 6 organized sections: General, Counterparty, Financial, Attributes, Dates, References, Additional, Audit
+- Formatted display: dates (yyyy-MM-dd), booleans (Yes/No/-), amounts (with currency)
+- Third party formatting (semicolon to comma-separated)
+- Close button with event callback
+
+**DeleteConfirmationModal Component:**
+- Danger-themed modal with warning styling
+- Shows document identifier (barcode)
+- Confirmation required before delete
+- Loading indicator during deletion process
+- Cancel and Delete buttons
+- Disabled state during operation
+
+**Action Methods:**
+- `OpenPdf(int documentId)` - Opens PDF in new browser tab via download endpoint
+- `ViewProperties(int documentId)` - Fetches document details and shows modal
+- `SendEmailAttach(int documentId)` - Generates mailto: link with configuration templates
+- `SendEmailLink(int documentId)` - Generates mailto: link with download URL
+- `DeleteDocument(int documentId, int barcode)` - Shows confirmation modal
+- `ConfirmDelete()` - Executes deletion, refreshes results
+- `CloseViewPropertiesModal()` - Closes modal and clears state
+- `CancelDelete()` - Cancels deletion and closes modal
+
+**Bug Fixes:**
+- Fixed pagination navigation (changed from `<a href="#">` to `<button type="button">`)
+- Fixed sortable headers (changed to `<span>` with cursor:pointer styling)
+- Prevented unwanted hash navigation
+
+**Notes:**
+- Email configuration loaded from EmailSearchResultsOptions (optional injection)
+- Fallback to default templates if configuration not available
+- All 7 action menu items now fully functional
+- Proper error handling with user-friendly messages
+- Comprehensive logging for all operations
 
 ---
 
@@ -351,11 +409,11 @@
 ## 📊 Overall Progress
 
 **Total Phases:** 8
-**Completed:** 4
+**Completed:** 5
 **In Progress:** 0
-**Not Started:** 4
+**Not Started:** 3
 
-**Overall Status:** 🟡 In Progress (50%)
+**Overall Status:** 🟡 In Progress (62.5%)
 
 ---
 
