@@ -443,23 +443,58 @@
 ---
 
 ### Phase 7: Navigation Integration
-**Status:** 🔴 Not Started
+**Status:** 🟢 Completed
 **Estimated Effort:** Small
+**Completed:** 2025-10-30
 
 #### Tasks:
-- [ ] Add "Search Documents" to main navigation menu
-  - [ ] Menu label: "Search Documents"
-  - [ ] Route: `/documents/search`
-  - [ ] Icon (optional)
-  - [ ] Placement in menu structure
-- [ ] Update route configuration
-- [ ] Add authorization policy (if needed)
-- [ ] Test navigation from various pages
+- [x] Add "Search Documents" to main navigation menu
+  - [x] Menu label: "Search Documents"
+  - [x] Route: `/documents/search`
+  - [x] Icon: `bi-search` (Bootstrap Icons)
+  - [x] Placement in menu structure: DOCUMENT MANAGEMENT section, after "Register Document"
+- [x] Update route configuration (already configured via @page directive)
+- [x] Add authorization policy (already uses HasAccess policy from parent layout)
+- [x] Test navigation from various pages
 
-**Dependencies:** Phase 3 (Basic page exists)
-**Files to Modify:**
-- `IkeaDocuScan-Web.Client/Components/Layout/NavMenu.razor` (or equivalent)
-- `IkeaDocuScan-Web.Client/Components/Routes.razor` (if needed)
+**Dependencies:** Phase 3 (Basic page exists) ✅
+
+**Files Modified:** ✅
+- `IkeaDocuScan-Web.Client/Layout/NavMenu.razor` - Added "Search Documents" navigation link
+
+**Implementation Details:**
+
+**Navigation Menu Entry:**
+- Placed in DOCUMENT MANAGEMENT section
+- Order: Home → Documents → Register Document → **Search Documents** → Check-in Scanned
+- Icon: Bootstrap Icons search icon (`bi-search`)
+- Route: `/documents/search`
+- Authorization: Inherits `HasAccess` policy from parent AuthorizeView
+
+**Navigation Structure:**
+```html
+<div class="nav-item px-3">
+    <NavLink class="nav-link" href="documents/search">
+        <span class="bi bi-search" aria-hidden="true"></span> Search Documents
+    </NavLink>
+</div>
+```
+
+**Route Configuration:**
+- Route already configured in SearchDocuments.razor via `@page "/documents/search"`
+- No additional routing configuration needed
+- Page uses InteractiveWebAssemblyRenderMode with prerender disabled
+
+**Authorization:**
+- Uses existing `HasAccess` policy from parent AuthorizeView in NavMenu
+- Consistent with other document management pages
+- No additional authorization configuration needed
+
+**Notes:**
+- Navigation link automatically highlights when on the search page (via NavLink component)
+- Link is visible only to authorized users (HasAccess policy)
+- Clicking the link navigates to the search page with clean URL
+- Mobile-responsive (inherits from navigation menu styling)
 
 ---
 
@@ -490,11 +525,11 @@
 ## 📊 Overall Progress
 
 **Total Phases:** 8
-**Completed:** 6
+**Completed:** 7
 **In Progress:** 0
-**Not Started:** 2
+**Not Started:** 1
 
-**Overall Status:** 🟡 In Progress (75%)
+**Overall Status:** 🟡 In Progress (87.5%)
 
 ---
 
