@@ -527,14 +527,14 @@
                                                 <i class="bi bi-three-dots"></i>
                                             </button>
                                             <ul class="dropdown-menu">
-                                                <li><a class="dropdown-item" href="#" @onclick="@(() => OpenPdf(doc.Id))" @onclick:preventDefault><i class="bi bi-file-pdf"></i> Open PDF</a></li>
-                                                <li><a class="dropdown-item" href="#" @onclick="@(() => ViewProperties(doc.Id))" @onclick:preventDefault><i class="bi bi-eye"></i> View Properties</a></li>
+                                                <li><button type="button" class="dropdown-item" @onclick="@(() => OpenPdf(doc.Id))"><i class="bi bi-file-pdf"></i> Open PDF</button></li>
+                                                <li><button type="button" class="dropdown-item" @onclick="@(() => ViewProperties(doc.Id))"><i class="bi bi-eye"></i> View Properties</button></li>
                                                 <li><a class="dropdown-item" href="/documents/edit/@doc.BarCode"><i class="bi bi-pencil"></i> Edit Properties</a></li>
                                                 <li><hr class="dropdown-divider"></li>
-                                                <li><a class="dropdown-item" href="#" @onclick="@(() => SendEmailAttach(doc.Id))" @onclick:preventDefault><i class="bi bi-envelope"></i> Email (Attach)</a></li>
-                                                <li><a class="dropdown-item" href="#" @onclick="@(() => SendEmailLink(doc.Id))" @onclick:preventDefault><i class="bi bi-link-45deg"></i> Email (Link)</a></li>
+                                                <li><button type="button" class="dropdown-item" @onclick="@(() => SendEmailAttach(doc.Id))"><i class="bi bi-envelope"></i> Email (Attach)</button></li>
+                                                <li><button type="button" class="dropdown-item" @onclick="@(() => SendEmailLink(doc.Id))"><i class="bi bi-link-45deg"></i> Email (Link)</button></li>
                                                 <li><hr class="dropdown-divider"></li>
-                                                <li><a class="dropdown-item text-danger" href="#" @onclick="@(() => DeleteDocument(doc.Id, doc.BarCode))" @onclick:preventDefault><i class="bi bi-trash"></i> Delete</a></li>
+                                                <li><button type="button" class="dropdown-item text-danger" @onclick="@(() => DeleteDocument(doc.Id, doc.BarCode))"><i class="bi bi-trash"></i> Delete</button></li>
                                             </ul>
                                         </div>
                                     </td>
@@ -592,10 +592,6 @@
 </div>
 
 @* Modals *@
-<ViewPropertiesModal IsVisible="@showViewPropertiesModal"
-                     Document="@selectedDocumentForModal"
-                     OnClose="@CloseViewPropertiesModal" />
-
 <DeleteConfirmationModal IsVisible="@showDeleteConfirmationModal"
                          DocumentIdentifier="@deleteDocumentIdentifier"
                          IsDeleting="@isDeleting"
@@ -697,5 +693,22 @@
     .sortable-header:hover {
         color: #0d6efd;
         text-decoration: underline;
+    }
+
+    /* Dropdown button items - ensure they look like anchor tags */
+    .dropdown-item[type="button"] {
+        width: 100%;
+        text-align: left;
+        border: none;
+        background: none;
+        padding: 0.25rem 1rem;
+    }
+
+    .dropdown-item[type="button"]:hover {
+        background-color: #f8f9fa;
+    }
+
+    .dropdown-item[type="button"]:active {
+        background-color: #e9ecef;
     }
 </style>

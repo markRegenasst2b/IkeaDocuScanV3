@@ -329,15 +329,27 @@ public class DocumentService : IDocumentService
     {
         _logger.LogInformation("Deleting document {DocumentId}", id);
 
-        var entity = await _context.Documents.FindAsync(id);
+        var entity = await _context.Documents
+            .Include(d => d.File)
+            .FirstOrDefaultAsync(d => d.Id == id);
+
         if (entity == null)
             throw new DocumentNotFoundException(id);
 
         var barCode = entity.BarCode.ToString();
         var documentName = entity.Name;
 
+        // Delete the associated DocumentFile if it exists
+        if (entity.File != null)
+        {
+            _logger.LogInformation("Deleting associated DocumentFile {FileId} for Document {DocumentId}", entity.FileId, id);
+            _context.DocumentFiles.Remove(entity.File);
+        }
+
         _context.Documents.Remove(entity);
         await _context.SaveChangesAsync();
+
+        _logger.LogInformation("Successfully deleted document {DocumentId} and associated file", id);
 
         // Log the delete action to audit trail
         await _auditTrailService.LogAsync(

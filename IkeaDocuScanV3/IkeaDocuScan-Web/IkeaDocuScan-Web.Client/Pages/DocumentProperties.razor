@@ -1,0 +1,349 @@
+@page "/documents/properties/{DocumentId:int}"
+@rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
+@using IkeaDocuScan.Shared.DTOs.Documents
+@using IkeaDocuScan.Shared.Interfaces
+@inject IDocumentService DocumentService
+@inject NavigationManager Navigation
+@inject ILogger<DocumentProperties> Logger
+
+<PageTitle>Document Properties - @(document?.BarCode.ToString() ?? "Loading...")</PageTitle>
+
+<div class="container-fluid">
+    <div class="row mb-3">
+        <div class="col">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item">
+                        <a href="/documents/search" style="cursor: pointer;">
+                            <i class="bi bi-search"></i> Search Documents
+                        </a>
+                    </li>
+                    <li class="breadcrumb-item active" aria-current="page">
+                        Document Properties @(document?.BarCode != null ? $"- Barcode {document.BarCode}" : "")
+                    </li>
+                </ol>
+            </nav>
+        </div>
+    </div>
+
+    @if (errorMessage != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="bi bi-exclamation-circle"></i> @errorMessage
+            <button type="button" class="btn-close" @onclick="() => errorMessage = null"></button>
+        </div>
+    }
+
+    @if (isLoading)
+    {
+        <div class="text-center p-5">
+            <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-3">Loading document properties...</p>
+        </div>
+    }
+    else if (document == null)
+    {
+        <div class="alert alert-warning">
+            <h4><i class="bi bi-exclamation-triangle"></i> Document Not Found</h4>
+            <p>The requested document could not be found.</p>
+            <button class="btn btn-primary" @onclick="GoBack">
+                <i class="bi bi-arrow-left"></i> Back to Search
+            </button>
+        </div>
+    }
+    else
+    {
+        <div class="row">
+            <!-- Main Content -->
+            <div class="col-lg-9">
+                <div class="card">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">
+                            <i class="bi bi-eye"></i> Document Properties - Barcode @document.BarCode
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="container-fluid">
+                            @* General Information *@
+                            <h6 class="text-primary border-bottom pb-2 mb-3">General Information</h6>
+                            <div class="row mb-2">
+                                <div class="col-4 fw-semibold">Bar Code:</div>
+                                <div class="col-8">@document.BarCode</div>
+                            </div>
+                            <div class="row mb-2">
+                                <div class="col-4 fw-semibold">Document Name:</div>
+                                <div class="col-8">@document.Name</div>
+                            </div>
+                            <div class="row mb-2">
+                                <div class="col-4 fw-semibold">Document Type:</div>
+                                <div class="col-8">@document.DocumentTypeName</div>
+                            </div>
+                            @if (!string.IsNullOrEmpty(document.DocumentNameText))
+                            {
+                                <div class="row mb-2">
+                                    <div class="col-4 fw-semibold">Document Name Text:</div>
+                                    <div class="col-8">@document.DocumentNameText</div>
+                                </div>
+                            }
+                            <div class="row mb-2">
+                                <div class="col-4 fw-semibold">Document No:</div>
+                                <div class="col-8">@(document.DocumentNo ?? "-")</div>
+                            </div>
+                            <div class="row mb-2">
+                                <div class="col-4 fw-semibold">Version No:</div>
+                                <div class="col-8">@(document.VersionNo ?? "-")</div>
+                            </div>
+
+                            @* Counterparty Information *@
+                            <h6 class="text-primary border-bottom pb-2 mb-3 mt-4">Counterparty Information</h6>
+                            <div class="row mb-2">
+                                <div class="col-4 fw-semibold">Counterparty:</div>
+                                <div class="col-8">@(document.CounterPartyName ?? "-")</div>
+                            </div>
+                            <div class="row mb-2">
+                                <div class="col-4 fw-semibold">Third Party:</div>
+                                <div class="col-8">@FormatThirdParty(document.ThirdParty)</div>
+                            </div>
+                            <div class="row mb-2">
+                                <div class="col-4 fw-semibold">Third Party ID:</div>
+                                <div class="col-8">@(document.ThirdPartyId ?? "-")</div>
+                            </div>
+
+                            @* Financial Information *@
+                            <h6 class="text-primary border-bottom pb-2 mb-3 mt-4">Financial Information</h6>
+                            <div class="row mb-2">
+                                <div class="col-4 fw-semibold">Amount:</div>
+                                <div class="col-8">@FormatAmount(document.Amount, document.CurrencyCode)</div>
+                            </div>
+                            <div class="row mb-2">
+                                <div class="col-4 fw-semibold">Currency:</div>
+                                <div class="col-8">@(document.CurrencyCode ?? "-")</div>
+                            </div>
+
+                            @* Document Attributes *@
+                            <h6 class="text-primary border-bottom pb-2 mb-3 mt-4">Document Attributes</h6>
+                            <div class="row mb-2">
+                                <div class="col-4 fw-semibold">Fax:</div>
+                                <div class="col-8">@FormatBoolean(document.Fax)</div>
+                            </div>
+                            <div class="row mb-2">
+                                <div class="col-4 fw-semibold">Original Received:</div>
+                                <div class="col-8">@FormatBoolean(document.OriginalReceived)</div>
+                            </div>
+                            <div class="row mb-2">
+                                <div class="col-4 fw-semibold">Confidential:</div>
+                                <div class="col-8">@FormatBoolean(document.Confidential)</div>
+                            </div>
+                            <div class="row mb-2">
+                                <div class="col-4 fw-semibold">Bank Confirmation:</div>
+                                <div class="col-8">@FormatBoolean(document.BankConfirmation)</div>
+                            </div>
+                            <div class="row mb-2">
+                                <div class="col-4 fw-semibold">Translated Version:</div>
+                                <div class="col-8">@FormatBoolean(document.TranslatedVersionReceived)</div>
+                            </div>
+                            <div class="row mb-2">
+                                <div class="col-4 fw-semibold">Authorisation To:</div>
+                                <div class="col-8">@(document.Authorisation ?? "-")</div>
+                            </div>
+
+                            @* Dates *@
+                            <h6 class="text-primary border-bottom pb-2 mb-3 mt-4">Dates</h6>
+                            <div class="row mb-2">
+                                <div class="col-4 fw-semibold">Date of Contract:</div>
+                                <div class="col-8">@FormatDate(document.DateOfContract)</div>
+                            </div>
+                            <div class="row mb-2">
+                                <div class="col-4 fw-semibold">Receiving Date:</div>
+                                <div class="col-8">@FormatDate(document.ReceivingDate)</div>
+                            </div>
+                            <div class="row mb-2">
+                                <div class="col-4 fw-semibold">Sending Out Date:</div>
+                                <div class="col-8">@FormatDate(document.SendingOutDate)</div>
+                            </div>
+                            <div class="row mb-2">
+                                <div class="col-4 fw-semibold">Forwarded to Signatories:</div>
+                                <div class="col-8">@FormatDate(document.ForwardedToSignatoriesDate)</div>
+                            </div>
+                            <div class="row mb-2">
+                                <div class="col-4 fw-semibold">Dispatch Date:</div>
+                                <div class="col-8">@FormatDate(document.DispatchDate)</div>
+                            </div>
+                            <div class="row mb-2">
+                                <div class="col-4 fw-semibold">Action Date:</div>
+                                <div class="col-8">@FormatDate(document.ActionDate)</div>
+                            </div>
+                            <div class="row mb-2">
+                                <div class="col-4 fw-semibold">Valid Until:</div>
+                                <div class="col-8">@FormatDate(document.ValidUntil)</div>
+                            </div>
+
+                            @* References *@
+                            <h6 class="text-primary border-bottom pb-2 mb-3 mt-4">References</h6>
+                            <div class="row mb-2">
+                                <div class="col-4 fw-semibold">Associated to PUA/Agreement:</div>
+                                <div class="col-8">@(document.AssociatedToPua ?? "-")</div>
+                            </div>
+                            <div class="row mb-2">
+                                <div class="col-4 fw-semibold">Associated to Appendix:</div>
+                                <div class="col-8">@(document.AssociatedToAppendix ?? "-")</div>
+                            </div>
+                            <div class="row mb-2">
+                                <div class="col-4 fw-semibold">Reminder Group:</div>
+                                <div class="col-8">@(document.ReminderGroup ?? "-")</div>
+                            </div>
+
+                            @* Additional Information *@
+                            <h6 class="text-primary border-bottom pb-2 mb-3 mt-4">Additional Information</h6>
+                            <div class="row mb-2">
+                                <div class="col-4 fw-semibold">Comment:</div>
+                                <div class="col-8">@(document.Comment ?? "-")</div>
+                            </div>
+                            <div class="row mb-2">
+                                <div class="col-4 fw-semibold">Action Description:</div>
+                                <div class="col-8">@(document.ActionDescription ?? "-")</div>
+                            </div>
+
+                            @* Audit Information *@
+                            <h6 class="text-primary border-bottom pb-2 mb-3 mt-4">Audit Information</h6>
+                            <div class="row mb-2">
+                                <div class="col-4 fw-semibold">Created On:</div>
+                                <div class="col-8">@document.CreatedOn.ToString("yyyy-MM-dd HH:mm:ss")</div>
+                            </div>
+                            <div class="row mb-2">
+                                <div class="col-4 fw-semibold">Created By:</div>
+                                <div class="col-8">@document.CreatedBy</div>
+                            </div>
+                            @if (document.ModifiedOn.HasValue)
+                            {
+                                <div class="row mb-2">
+                                    <div class="col-4 fw-semibold">Modified On:</div>
+                                    <div class="col-8">@document.ModifiedOn.Value.ToString("yyyy-MM-dd HH:mm:ss")</div>
+                                </div>
+                            }
+                            @if (!string.IsNullOrEmpty(document.ModifiedBy))
+                            {
+                                <div class="row mb-2">
+                                    <div class="col-4 fw-semibold">Modified By:</div>
+                                    <div class="col-8">@document.ModifiedBy</div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sidebar Actions -->
+            <div class="col-lg-3">
+                <div class="card mb-3">
+                    <div class="card-header bg-success text-white">
+                        <h6 class="mb-0"><i class="bi bi-gear"></i> Actions</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="d-grid gap-2">
+                            <button class="btn btn-primary" @onclick="OpenPreview">
+                                <i class="bi bi-eye"></i> Open PDF
+                            </button>
+
+                            <button class="btn btn-outline-primary" @onclick="EditDocument">
+                                <i class="bi bi-pencil"></i> Edit Properties
+                            </button>
+
+                            <button class="btn btn-outline-secondary" @onclick="GoBack">
+                                <i class="bi bi-arrow-left"></i> Back to Search
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public int DocumentId { get; set; }
+
+    private DocumentDto? document;
+    private bool isLoading = true;
+    private string? errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDocumentProperties();
+    }
+
+    private async Task LoadDocumentProperties()
+    {
+        try
+        {
+            isLoading = true;
+            errorMessage = null;
+
+            Logger.LogInformation("Loading document properties for ID: {DocumentId}", DocumentId);
+
+            document = await DocumentService.GetByIdAsync(DocumentId);
+
+            if (document == null)
+            {
+                Logger.LogWarning("Document not found: ID {DocumentId}", DocumentId);
+                errorMessage = "Document not found";
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading document properties: ID {DocumentId}", DocumentId);
+            errorMessage = $"Error loading document properties: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void OpenPreview()
+    {
+        if (document == null) return;
+        Navigation.NavigateTo($"/documents/preview/{DocumentId}", true);
+    }
+
+    private void EditDocument()
+    {
+        if (document == null) return;
+        Navigation.NavigateTo($"/documents/edit/{document.BarCode}");
+    }
+
+    private void GoBack()
+    {
+        Navigation.NavigateTo("/documents/search");
+    }
+
+    private string FormatBoolean(bool? value)
+    {
+        return value.HasValue ? (value.Value ? "Yes" : "No") : "-";
+    }
+
+    private string FormatDate(DateTime? date)
+    {
+        return date?.ToString("yyyy-MM-dd") ?? "-";
+    }
+
+    private string FormatAmount(decimal? amount, string? currencyCode)
+    {
+        if (!amount.HasValue) return "-";
+        return string.IsNullOrEmpty(currencyCode)
+            ? amount.Value.ToString("N2")
+            : $"{currencyCode} {amount.Value:N2}";
+    }
+
+    private string FormatThirdParty(string? thirdParty)
+    {
+        if (string.IsNullOrWhiteSpace(thirdParty))
+            return "-";
+
+        var parties = thirdParty.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        return string.Join(", ", parties);
+    }
+}

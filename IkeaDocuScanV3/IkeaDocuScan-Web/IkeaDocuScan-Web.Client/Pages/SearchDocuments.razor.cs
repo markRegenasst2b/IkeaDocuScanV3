@@ -48,9 +48,7 @@ public partial class SearchDocuments : ComponentBase
     private string? currentSortDirection;
 
     // Modal state
-    private bool showViewPropertiesModal = false;
     private bool showDeleteConfirmationModal = false;
-    private DocumentDto? selectedDocumentForModal;
     private string? deleteDocumentIdentifier;
     private int deleteDocumentId;
     private bool isDeleting = false;
@@ -536,43 +534,14 @@ public partial class SearchDocuments : ComponentBase
     }
 
     /// <summary>
-    /// Shows the View Properties modal
+    /// Navigates to the View Properties page
     /// </summary>
-    private async Task ViewProperties(int documentId)
+    private void ViewProperties(int documentId)
     {
-        Logger.LogInformation("Viewing properties for document ID: {DocumentId}", documentId);
+        Logger.LogInformation("Navigating to properties page for document ID: {DocumentId}", documentId);
 
-        try
-        {
-            // Fetch full document details
-            selectedDocumentForModal = await DocumentService.GetByIdAsync(documentId);
-
-            if (selectedDocumentForModal != null)
-            {
-                showViewPropertiesModal = true;
-                StateHasChanged();
-            }
-            else
-            {
-                Logger.LogWarning("Document {DocumentId} not found", documentId);
-                errorMessage = "Document not found.";
-            }
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Error loading document properties");
-            errorMessage = $"Failed to load document properties: {ex.Message}";
-        }
-    }
-
-    /// <summary>
-    /// Closes the View Properties modal
-    /// </summary>
-    private void CloseViewPropertiesModal()
-    {
-        showViewPropertiesModal = false;
-        selectedDocumentForModal = null;
-        StateHasChanged();
+        // Navigate to the dedicated properties page
+        NavigationManager.NavigateTo($"/documents/properties/{documentId}");
     }
 
     /// <summary>
