@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset='utf-8'>
+        <style>
+            body{font-family:Arial,sans-serif;line-height:1.6;color:#333;margin:0;padding:0;background-color:#f5f5f5}
+            .container{max-width:600px;margin:20px auto;background-color:#fff;border:1px solid #ddd}
+            .header{background-color:#0051ba;color:#fff;padding:20px;text-align:center}
+            .header h1{margin:0;font-size:24px}
+            .content{padding:30px}.greeting{margin-bottom:20px}
+            .document-list{background-color:#f9f9f9;border-left:4px solid #0051ba;padding:15px;margin:20px 0}
+            .document-list h3{margin-top:0;color:#0051ba;font-size:16px}
+            .document-item{padding:8px 0;border-bottom:1px solid #e0e0e0}
+            .document-item:last-child{border-bottom:none}
+            .barcode{font-weight:bold;color:#0051ba}
+            .signature{margin-top:30px;padding-top:20px;border-top:1px solid #ddd;color:#666}
+            .footer{background-color:#f5f5f5;padding:15px;text-align:center;font-size:12px;color:#666}
+        </style>
+    </head>
+    <body>
+        <div class='container'>
+            <div class='header'>
+                <h1>IKEA DocuScan System</h1>
+            </div>
+            <div class='content'>
+                <div class='greeting'>
+                    <p>Dear Recipient,</p>
+                </div>
+                <p>
+                    Please find attached <strong>{DocumentCount}</strong> document(s) from the IKEA DocuScan System. The documents are identified by the following barcodes:
+                </p>
+                <div class='document-list'>
+                    <h3>Document Overview</h3>
+                    {Barcodes}
+                </div>
+                <p>The attached files contain official IKEA documents that have been processed through our document management system. Please review them at your earliest convenience.</p>
+                <p>If you have any questions regarding these documents or require additional information, please do not hesitate to contact the IKEA Legal Department.</p>
+                <div class='signature'>
+                    <p>
+                        Best regards,<br>
+                        <strong>IKEA DocuScan System</strong><br>
+                        Document Management & Archive
+                    </p>
+                </div>
+            </div>
+            <div class='footer'>
+                <p>This is an automated message from the IKEA DocuScan System. Please do not reply directly to this email.</p>
+            </div>
+        </div>
+    </body>
+</html>
