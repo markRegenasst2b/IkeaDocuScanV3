@@ -1,0 +1,8 @@
+# Allow all PDF files in this test data directory
+# This overrides the root .gitignore which may exclude PDFs
+
+# Don't ignore PDF files
+!*.pdf
+
+# Keep this directory in git even if empty
+!.gitignore

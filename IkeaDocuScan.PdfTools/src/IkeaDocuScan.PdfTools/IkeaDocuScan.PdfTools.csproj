@@ -1,0 +1,41 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <LangVersion>latest</LangVersion>
+
+    <!-- Enable source generator file emission for debugging -->
+    <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
+    <CompilerGeneratedFilesOutputPath>$(BaseIntermediateOutputPath)Generated</CompilerGeneratedFilesOutputPath>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <Title>IkeaDocuScan PDF Tools</Title>
+    <Description>PDF text extraction and comparison library using embedded Python and PyPDF2</Description>
+    <Authors>IkeaDocuScan Team</Authors>
+    <Version>1.0.0</Version>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- CSnakes Runtime for embedding Python (includes source generator) -->
+    <PackageReference Include="CSnakes.Runtime" Version="1.2.1" />
+
+    <!-- Microsoft.Extensions.Hosting for host builder pattern (required by CSnakes >= 9.0.7) -->
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.7" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Python files must be marked as AdditionalFiles for CSnakes code generation -->
+    <AdditionalFiles Include="Python\*.py" />
+
+    <!-- Include Python requirements file -->
+    <None Include="Python\requirements.txt" CopyToOutputDirectory="PreserveNewest" />
+
+    <!-- Include Python files in output -->
+    <None Include="Python\*.py" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>
