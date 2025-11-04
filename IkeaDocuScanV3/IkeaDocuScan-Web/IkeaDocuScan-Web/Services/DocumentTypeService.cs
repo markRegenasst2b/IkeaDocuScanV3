@@ -128,8 +128,7 @@ public class DocumentTypeService : IDocumentTypeService
             CounterPartyAlpha = dto.CounterPartyAlpha,
             SendingOutDate = dto.SendingOutDate,
             ForwardedToSignatoriesDate = dto.ForwardedToSignatoriesDate,
-            IsAppendix = dto.IsAppendix,
-            TemplatePath = dto.TemplatePath
+            IsAppendix = dto.IsAppendix
         };
 
         context.DocumentTypes.Add(entity);
@@ -192,7 +191,6 @@ public class DocumentTypeService : IDocumentTypeService
         entity.SendingOutDate = dto.SendingOutDate;
         entity.ForwardedToSignatoriesDate = dto.ForwardedToSignatoriesDate;
         entity.IsAppendix = dto.IsAppendix;
-        entity.TemplatePath = dto.TemplatePath;
 
         await context.SaveChangesAsync();
 
@@ -327,8 +325,7 @@ public class DocumentTypeService : IDocumentTypeService
             CounterPartyAlpha = entity.CounterPartyAlpha,
             SendingOutDate = entity.SendingOutDate,
             ForwardedToSignatoriesDate = entity.ForwardedToSignatoriesDate,
-            IsAppendix = entity.IsAppendix,
-            TemplatePath = entity.TemplatePath
+            IsAppendix = entity.IsAppendix
         };
     }
 }

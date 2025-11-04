@@ -115,7 +115,4 @@ public class UpdateDocumentTypeDto
     public string ForwardedToSignatoriesDate { get; set; } = "N";
 
     public bool IsAppendix { get; set; }
-
-    [StringLength(500)]
-    public string? TemplatePath { get; set; }
 }

@@ -371,11 +371,6 @@ public class DocumentPropertiesViewModel
     public bool IsDispatchDateEnabled => PropertySetNumber == 2;
 
     /// <summary>
-    /// Indicates if Compare with Standard Contract button should be visible
-    /// </summary>
-    public bool CanCompareWithStandard => Mode != DocumentPropertyMode.Register && DocumentTypeId.HasValue;
-
-    /// <summary>
     /// Converts selected third party IDs to semicolon-separated string for database
     /// </summary>
     public string GetThirdPartyIdString() => string.Join(";", SelectedThirdPartyIds);

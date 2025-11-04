@@ -955,12 +955,6 @@ public partial class DocumentPropertiesPage : ComponentBase, IDisposable
         }
     }
 
-    private async Task CompareWithStandard()
-    {
-        // TODO: Implement compare with standard contract functionality
-        await Task.CompletedTask;
-    }
-
     private void OnBarcodeChanged()
     {
         // Clear warning message when barcode is changed

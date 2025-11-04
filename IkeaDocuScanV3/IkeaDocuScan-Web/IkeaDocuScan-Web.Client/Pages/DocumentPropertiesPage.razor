@@ -167,15 +167,6 @@
                                 <span class="text-muted ms-2">(No changes)</span>
                             }
                         </button>
-                        @if (Model.CanCompareWithStandard)
-                        {
-                            <button class="btn btn-secondary"
-                                    @onclick="CompareWithStandard"
-                                    disabled="@(!Model.DocumentTypeId.HasValue)">
-                                <i class="fa fa-file me-2"></i>
-                                Compare with Standard Contract
-                            </button>
-                        }
                         <button class="btn btn-light" @onclick="Cancel">
                             <i class="fa fa-times me-2"></i>
                             Cancel

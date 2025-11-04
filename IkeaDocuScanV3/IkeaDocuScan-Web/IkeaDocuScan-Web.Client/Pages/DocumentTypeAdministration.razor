@@ -413,10 +413,6 @@
                                         </label>
                                     </div>
                                 </div>
-                                <div class="mb-3">
-                                    <label class="form-label">Template Path</label>
-                                    <input type="text" class="form-control form-control-sm" @bind="editDto.TemplatePath" maxlength="500" placeholder="Optional template file path" />
-                                </div>
                             </div>
                         </div>
                     }
@@ -658,10 +654,6 @@
                                             Is Appendix
                                         </label>
                                     </div>
-                                </div>
-                                <div class="mb-3">
-                                    <label class="form-label">Template Path</label>
-                                    <input type="text" class="form-control form-control-sm" @bind="createDto.TemplatePath" maxlength="500" placeholder="Optional template file path" />
                                 </div>
                             </div>
                         </div>
@@ -933,8 +925,7 @@
             CounterPartyAlpha = documentType.CounterPartyAlpha,
             SendingOutDate = documentType.SendingOutDate,
             ForwardedToSignatoriesDate = documentType.ForwardedToSignatoriesDate,
-            IsAppendix = documentType.IsAppendix,
-            TemplatePath = documentType.TemplatePath
+            IsAppendix = documentType.IsAppendix
         };
         showEditModal = true;
         showFieldConfig = false;

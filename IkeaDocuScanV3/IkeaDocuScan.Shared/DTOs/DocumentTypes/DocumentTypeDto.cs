@@ -36,5 +36,4 @@ public class DocumentTypeDto
     public string SendingOutDate { get; set; } = "N";
     public string ForwardedToSignatoriesDate { get; set; } = "N";
     public bool IsAppendix { get; set; }
-    public string? TemplatePath { get; set; }
 }

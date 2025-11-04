@@ -103,10 +103,6 @@ public partial class DocumentType
     [Unicode(false)]
     public string ReminderGroup { get; set; } = null!;
 
-    [StringLength(500)]
-    [Unicode(false)]
-    public string? TemplatePath { get; set; }
-
     [StringLength(1)]
     [Unicode(false)]
     public string Confidential { get; set; } = null!;
