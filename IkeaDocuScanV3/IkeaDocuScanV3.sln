@@ -22,6 +22,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		BLAZORISE_SETUP_INSTRUCTIONS.md = BLAZORISE_SETUP_INSTRUCTIONS.md
 		DEPLOYMENT_GUIDE.md = DEPLOYMENT_GUIDE.md
 		EMAIL_SERVICE_GUIDE.md = EMAIL_SERVICE_GUIDE.md
+		ExcelReportingSpecification.md = ExcelReportingSpecification.md
 		README_CHECKIN_SCANNED.md = README_CHECKIN_SCANNED.md
 		SearchDocumentImplementation.md = SearchDocumentImplementation.md
 		SearchPageSepcification.md = SearchPageSepcification.md
