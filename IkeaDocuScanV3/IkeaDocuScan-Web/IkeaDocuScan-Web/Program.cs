@@ -127,6 +127,7 @@ builder.Services.AddScoped<IDocumentTypeService, DocumentTypeService>();
 builder.Services.AddScoped<IUserPermissionService, UserPermissionService>();
 builder.Services.AddScoped<IDocumentNameService, DocumentNameService>();
 builder.Services.AddScoped<ICurrencyService, CurrencyService>();
+builder.Services.AddScoped<IActionReminderService, ActionReminderService>();
 
 // Excel Reporting Services
 builder.Services.AddExcelReporting(builder.Configuration);
@@ -175,6 +176,7 @@ app.MapHub<DataUpdateHub>("/hubs/data-updates");
 
 // Map API endpoints
 app.MapDocumentEndpoints();
+app.MapActionReminderEndpoints();
 app.MapCounterPartyEndpoints();
 app.MapCountryEndpoints();
 app.MapDocumentTypeEndpoints();
