@@ -15,6 +15,7 @@ public class ExcelExportService : IExcelExportService
     public ExcelExportService(PropertyMetadataExtractor metadataExtractor)
     {
         _metadataExtractor = metadataExtractor;
+        Syncfusion.Licensing.SyncfusionLicenseProvider.RegisterLicense("Ngo9BigBOggjHTQxAR8/V1JEaF5cXmRCf1FpRmJGdld5fUVHYVZUTXxaS00DNHVRdkdmWXhed3RSRWJeUEV3W0pWYEk=");
     }
 
     /// <summary>
