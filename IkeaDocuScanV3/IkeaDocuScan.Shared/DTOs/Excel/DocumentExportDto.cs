@@ -8,7 +8,7 @@ namespace IkeaDocuScan.Shared.DTOs.Excel;
 /// </summary>
 public class DocumentExportDto : ExportableBase
 {
-    [ExcelExport("Document ID", ExcelDataType.Number, "#,##0", Order = 1)]
+    [ExcelExport("Document ID", ExcelDataType.Number, "#,##0", Order = 1, IsExportable = false)]
     public int Id { get; set; }
 
     [ExcelExport("Document Name", ExcelDataType.String, Order = 2)]

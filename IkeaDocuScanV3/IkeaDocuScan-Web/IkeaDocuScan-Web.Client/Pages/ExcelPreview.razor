@@ -6,14 +6,23 @@
 
 <div class="excel-preview-container">
     <div class="excel-preview-header">
-        <h3>Document Export Preview</h3>
-        <p class="text-muted">Preview your data before exporting to Excel</p>
+        <h3>@(isSelectionMode ? "Selected Documents Export Preview" : "Document Export Preview")</h3>
+        <p class="text-muted">@(isSelectionMode ? "Preview your selected documents before exporting to Excel" : "Preview your filtered data before exporting to Excel")</p>
     </div>
 
     @if (filterContext != null && filterContext.Any())
     {
         <div class="filter-context-box">
-            <h5><i class="bi bi-funnel"></i> Applied Filters</h5>
+            <h5>
+                @if (isSelectionMode)
+                {
+                    <i class="bi bi-check2-square"></i> <text>Export Details</text>
+                }
+                else
+                {
+                    <i class="bi bi-funnel"></i> <text>Applied Filters</text>
+                }
+            </h5>
             <div class="filter-badges">
                 @foreach (var filter in filterContext)
                 {

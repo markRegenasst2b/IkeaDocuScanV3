@@ -891,6 +891,46 @@ public partial class SearchDocuments : ComponentBase
     }
 
     /// <summary>
+    /// Exports selected documents to Excel preview
+    /// </summary>
+    private void ExportSelectedToExcel()
+    {
+        Logger.LogInformation("Export selected to Excel requested for {Count} documents", selectedDocumentIds.Count);
+
+        if (!selectedDocumentIds.Any())
+        {
+            Logger.LogWarning("Cannot export: No documents selected");
+            return;
+        }
+
+        if (searchResults == null)
+        {
+            Logger.LogWarning("Cannot export: No search results available");
+            return;
+        }
+
+        // Get barcodes for selected documents
+        var selectedBarcodes = searchResults.Items
+            .Where(d => selectedDocumentIds.Contains(d.Id))
+            .Select(d => d.BarCode)
+            .ToList();
+
+        if (!selectedBarcodes.Any())
+        {
+            Logger.LogWarning("Cannot export: No matching documents found");
+            errorMessage = "Unable to find barcodes for selected documents.";
+            StateHasChanged();
+            return;
+        }
+
+        Logger.LogInformation("Navigating to Excel preview with {Count} selected barcodes", selectedBarcodes.Count);
+
+        // Build query string with selected barcodes
+        var selectedIds = string.Join(",", selectedBarcodes);
+        NavigationManager.NavigateTo($"/excel-preview?selectedIds={Uri.EscapeDataString(selectedIds)}");
+    }
+
+    /// <summary>
     /// Generates and prints a summary report (placeholder)
     /// </summary>
     private void PrintSummary()

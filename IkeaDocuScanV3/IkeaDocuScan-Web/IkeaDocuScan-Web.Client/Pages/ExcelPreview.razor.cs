@@ -46,8 +46,12 @@ public partial class ExcelPreview : ComponentBase
     [SupplyParameterFromQuery(Name = "versionNo")]
     public string? VersionNo { get; set; }
 
+    [SupplyParameterFromQuery(Name = "selectedIds")]
+    public string? SelectedIdsParam { get; set; }
+
     // State
     private DocumentSearchResultDto? searchResults;
+    private bool isSelectionMode => !string.IsNullOrEmpty(SelectedIdsParam);
     private List<ExcelColumnMetadataDto> columnMetadata = new();
     private Dictionary<string, string>? filterContext;
     private ExcelExportValidationResult? validationResult;
@@ -74,31 +78,16 @@ public partial class ExcelPreview : ComponentBase
             // Get column metadata
             columnMetadata = await ExcelService.GetMetadataAsync();
 
-            // Build search criteria from query parameters
-            var searchCriteria = new DocumentSearchRequestDto
+            if (isSelectionMode)
             {
-                SearchString = SearchString,
-                PageNumber = 1,
-                PageSize = PageSizeParam ?? 1000, // Get up to 1000 for preview
-                DocumentTypeIds = ParseDocumentTypeIds(DocumentTypeIdsParam),
-                Fax = ParseNullableBool(FaxParam),
-                OriginalReceived = ParseNullableBool(OriginalReceivedParam),
-                Confidential = ParseNullableBool(ConfidentialParam),
-                BankConfirmation = ParseNullableBool(BankConfirmationParam),
-                CounterpartyName = CounterpartyName,
-                DocumentNumber = DocumentNumber,
-                AssociatedToPua = AssociatedToPua,
-                VersionNo = VersionNo
-            };
-
-            // Search for documents
-            searchResults = await DocumentService.SearchAsync(searchCriteria);
-
-            // Build filter context for display
-            BuildFilterContext(searchCriteria);
-
-            // Validate export size
-            validationResult = await ExcelService.ValidateExportAsync(searchCriteria);
+                // Selection mode: Load specific selected documents by IDs
+                await LoadSelectedDocuments();
+            }
+            else
+            {
+                // Filter mode: Search with criteria
+                await LoadFilteredDocuments();
+            }
 
             // Set initial page size from parameter
             if (PageSizeParam.HasValue)
@@ -119,6 +108,63 @@ public partial class ExcelPreview : ComponentBase
         {
             isLoading = false;
         }
+    }
+
+    private async Task LoadFilteredDocuments()
+    {
+        // Build search criteria from query parameters
+        var searchCriteria = new DocumentSearchRequestDto
+        {
+            SearchString = SearchString,
+            PageNumber = 1,
+            PageSize = PageSizeParam ?? 1000, // Get up to 1000 for preview
+            DocumentTypeIds = ParseDocumentTypeIds(DocumentTypeIdsParam),
+            Fax = ParseNullableBool(FaxParam),
+            OriginalReceived = ParseNullableBool(OriginalReceivedParam),
+            Confidential = ParseNullableBool(ConfidentialParam),
+            BankConfirmation = ParseNullableBool(BankConfirmationParam),
+            CounterpartyName = CounterpartyName,
+            DocumentNumber = DocumentNumber,
+            AssociatedToPua = AssociatedToPua,
+            VersionNo = VersionNo
+        };
+
+        // Search for documents
+        searchResults = await DocumentService.SearchAsync(searchCriteria);
+
+        // Build filter context for display
+        BuildFilterContext(searchCriteria);
+
+        // Validate export size
+        validationResult = await ExcelService.ValidateExportAsync(searchCriteria);
+    }
+
+    private async Task LoadSelectedDocuments()
+    {
+        var selectedIds = ParseSelectedIds(SelectedIdsParam);
+
+        if (!selectedIds.Any())
+        {
+            errorMessage = "No documents selected for export.";
+            return;
+        }
+
+        // Build search criteria with selected barcodes
+        var searchCriteria = new DocumentSearchRequestDto
+        {
+            Barcodes = string.Join(",", selectedIds),
+            PageNumber = 1,
+            PageSize = selectedIds.Count
+        };
+
+        // Search for the selected documents
+        searchResults = await DocumentService.SearchAsync(searchCriteria);
+
+        // Build selection context for display
+        BuildSelectionContext(selectedIds.Count);
+
+        // Validate export size (though selection is already limited)
+        validationResult = await ExcelService.ValidateExportAsync(searchCriteria);
     }
 
     private void BuildFilterContext(DocumentSearchRequestDto criteria)
@@ -186,6 +232,28 @@ public partial class ExcelPreview : ComponentBase
         }
 
         filterContext["Export Date"] = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+    }
+
+    private void BuildSelectionContext(int selectedCount)
+    {
+        filterContext = new Dictionary<string, string>
+        {
+            ["Export Type"] = "Selected Documents",
+            ["Documents Selected"] = selectedCount.ToString(),
+            ["Export Date"] = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")
+        };
+    }
+
+    private List<int> ParseSelectedIds(string? selectedIdsParam)
+    {
+        if (string.IsNullOrEmpty(selectedIdsParam))
+            return new List<int>();
+
+        return selectedIdsParam
+            .Split(',', StringSplitOptions.RemoveEmptyEntries)
+            .Select(id => int.TryParse(id.Trim(), out var result) ? result : 0)
+            .Where(id => id > 0)
+            .ToList();
     }
 
     private List<int> ParseDocumentTypeIds(string? documentTypeIdsParam)
@@ -314,22 +382,38 @@ public partial class ExcelPreview : ComponentBase
             isExporting = true;
             errorMessage = null;
 
-            // Build search criteria
-            var searchCriteria = new DocumentSearchRequestDto
+            DocumentSearchRequestDto searchCriteria;
+
+            if (isSelectionMode)
             {
-                SearchString = SearchString,
-                PageNumber = 1,
-                PageSize = searchResults?.TotalCount ?? 1000,
-                DocumentTypeIds = ParseDocumentTypeIds(DocumentTypeIdsParam),
-                Fax = ParseNullableBool(FaxParam),
-                OriginalReceived = ParseNullableBool(OriginalReceivedParam),
-                Confidential = ParseNullableBool(ConfidentialParam),
-                BankConfirmation = ParseNullableBool(BankConfirmationParam),
-                CounterpartyName = CounterpartyName,
-                DocumentNumber = DocumentNumber,
-                AssociatedToPua = AssociatedToPua,
-                VersionNo = VersionNo
-            };
+                // Export selected documents by IDs
+                var selectedIds = ParseSelectedIds(SelectedIdsParam);
+                searchCriteria = new DocumentSearchRequestDto
+                {
+                    Barcodes = string.Join(",", selectedIds),
+                    PageNumber = 1,
+                    PageSize = selectedIds.Count
+                };
+            }
+            else
+            {
+                // Export filtered documents
+                searchCriteria = new DocumentSearchRequestDto
+                {
+                    SearchString = SearchString,
+                    PageNumber = 1,
+                    PageSize = searchResults?.TotalCount ?? 1000,
+                    DocumentTypeIds = ParseDocumentTypeIds(DocumentTypeIdsParam),
+                    Fax = ParseNullableBool(FaxParam),
+                    OriginalReceived = ParseNullableBool(OriginalReceivedParam),
+                    Confidential = ParseNullableBool(ConfidentialParam),
+                    BankConfirmation = ParseNullableBool(BankConfirmationParam),
+                    CounterpartyName = CounterpartyName,
+                    DocumentNumber = DocumentNumber,
+                    AssociatedToPua = AssociatedToPua,
+                    VersionNo = VersionNo
+                };
+            }
 
             // Get Excel file bytes
             var fileBytes = await ExcelService.ExportToExcelAsync(searchCriteria, filterContext);
