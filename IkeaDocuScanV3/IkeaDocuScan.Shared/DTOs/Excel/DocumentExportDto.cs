@@ -62,17 +62,32 @@ public class DocumentExportDto : ExportableBase
     [ExcelExport("Third Party", ExcelDataType.String, Order = 18)]
     public string? ThirdParty { get; set; }
 
-    [ExcelExport("Created On", ExcelDataType.Date, "yyyy-MM-dd HH:mm", Order = 19)]
-    public DateTime CreatedOn { get; set; }
+    [ExcelExport("Sending Out Date", ExcelDataType.Date, "yyyy-MM-dd", Order = 19)]
+    public DateTime? SendingOutDate { get; set; }
 
-    [ExcelExport("Created By", ExcelDataType.String, Order = 20)]
-    public string CreatedBy { get; set; } = string.Empty;
+    [ExcelExport("Fw. To Signatories Date", ExcelDataType.Date, "yyyy-MM-dd", Order = 20)]
+    public DateTime? ForwardedToSignatoriesDate { get; set; }
 
-    [ExcelExport("Modified On", ExcelDataType.Date, "yyyy-MM-dd HH:mm", Order = 21)]
-    public DateTime? ModifiedOn { get; set; }
+    [ExcelExport("Dispatch Date", ExcelDataType.Date, "yyyy-MM-dd", Order = 21)]
+    public DateTime? DispatchDate { get; set; }
 
-    [ExcelExport("Modified By", ExcelDataType.String, Order = 22)]
-    public string? ModifiedBy { get; set; }
+    [ExcelExport("Fax", ExcelDataType.Boolean, Order = 22)]
+    public bool? Fax { get; set; }
+
+    [ExcelExport("Translation Received", ExcelDataType.Boolean, Order = 23)]
+    public bool? TranslationReceived { get; set; }
+
+    [ExcelExport("Assoc to PUA/Agr No", ExcelDataType.String, Order = 24)]
+    public string? AssociatedToPua { get; set; }
+
+    [ExcelExport("Assoc to Appendix No", ExcelDataType.String, Order = 25)]
+    public string? AssociatedToAppendix { get; set; }
+
+    [ExcelExport("Authorization To", ExcelDataType.String, Order = 26)]
+    public string? Authorisation { get; set; }
+
+    [ExcelExport("Bank Confirmation", ExcelDataType.Boolean, Order = 27)]
+    public bool? BankConfirmation { get; set; }
 
     // Non-exported properties (for internal use)
     [ExcelExport("Internal ID", IsExportable = false)]
@@ -103,10 +118,15 @@ public class DocumentExportDto : ExportableBase
             ActionDescription = dto.ActionDescription,
             VersionNo = dto.VersionNo,
             ThirdParty = dto.ThirdParty,
-            CreatedOn = dto.CreatedOn,
-            CreatedBy = dto.CreatedBy,
-            ModifiedOn = dto.ModifiedOn,
-            ModifiedBy = dto.ModifiedBy,
+            SendingOutDate = dto.SendingOutDate,
+            ForwardedToSignatoriesDate = dto.ForwardedToSignatoriesDate,
+            DispatchDate = dto.DispatchDate,
+            Fax = dto.Fax,
+            TranslationReceived = null, // Not available in DocumentDto
+            AssociatedToPua = dto.AssociatedToPua,
+            AssociatedToAppendix = dto.AssociatedToAppendix,
+            Authorisation = dto.Authorisation,
+            BankConfirmation = dto.BankConfirmation,
             FileId = dto.FileId
         };
     }
@@ -136,10 +156,15 @@ public class DocumentExportDto : ExportableBase
             ActionDescription = item.ActionDescription,
             VersionNo = item.VersionNo,
             ThirdParty = item.ThirdParty,
-            CreatedOn = DateTime.Now, // Search results don't include audit fields
-            CreatedBy = string.Empty,
-            ModifiedOn = null,
-            ModifiedBy = null,
+            SendingOutDate = item.SendingOutDate,
+            ForwardedToSignatoriesDate = item.ForwardedToSignatoriesDate,
+            DispatchDate = item.DispatchDate,
+            Fax = item.Fax,
+            TranslationReceived = item.TranslationReceived,
+            AssociatedToPua = item.AssociatedToPua,
+            AssociatedToAppendix = item.AssociatedToAppendix,
+            Authorisation = item.Authorisation,
+            BankConfirmation = item.BankConfirmation,
             FileId = item.FileId
         };
     }

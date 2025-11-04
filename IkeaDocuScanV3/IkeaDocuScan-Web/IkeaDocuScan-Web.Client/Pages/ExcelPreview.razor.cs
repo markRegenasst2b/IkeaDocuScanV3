@@ -22,6 +22,30 @@ public partial class ExcelPreview : ComponentBase
     [SupplyParameterFromQuery(Name = "pageSize")]
     public int? PageSizeParam { get; set; }
 
+    [SupplyParameterFromQuery(Name = "fax")]
+    public string? FaxParam { get; set; }
+
+    [SupplyParameterFromQuery(Name = "originalReceived")]
+    public string? OriginalReceivedParam { get; set; }
+
+    [SupplyParameterFromQuery(Name = "confidential")]
+    public string? ConfidentialParam { get; set; }
+
+    [SupplyParameterFromQuery(Name = "bankConfirmation")]
+    public string? BankConfirmationParam { get; set; }
+
+    [SupplyParameterFromQuery(Name = "counterpartyName")]
+    public string? CounterpartyName { get; set; }
+
+    [SupplyParameterFromQuery(Name = "documentNumber")]
+    public string? DocumentNumber { get; set; }
+
+    [SupplyParameterFromQuery(Name = "associatedToPua")]
+    public string? AssociatedToPua { get; set; }
+
+    [SupplyParameterFromQuery(Name = "versionNo")]
+    public string? VersionNo { get; set; }
+
     // State
     private DocumentSearchResultDto? searchResults;
     private List<ExcelColumnMetadataDto> columnMetadata = new();
@@ -56,7 +80,15 @@ public partial class ExcelPreview : ComponentBase
                 SearchString = SearchString,
                 PageNumber = 1,
                 PageSize = PageSizeParam ?? 1000, // Get up to 1000 for preview
-                DocumentTypeIds = ParseDocumentTypeIds(DocumentTypeIdsParam)
+                DocumentTypeIds = ParseDocumentTypeIds(DocumentTypeIdsParam),
+                Fax = ParseNullableBool(FaxParam),
+                OriginalReceived = ParseNullableBool(OriginalReceivedParam),
+                Confidential = ParseNullableBool(ConfidentialParam),
+                BankConfirmation = ParseNullableBool(BankConfirmationParam),
+                CounterpartyName = CounterpartyName,
+                DocumentNumber = DocumentNumber,
+                AssociatedToPua = AssociatedToPua,
+                VersionNo = VersionNo
             };
 
             // Search for documents
@@ -103,6 +135,46 @@ public partial class ExcelPreview : ComponentBase
             filterContext["Document Type IDs"] = string.Join(", ", criteria.DocumentTypeIds);
         }
 
+        if (criteria.Fax.HasValue)
+        {
+            filterContext["Fax"] = criteria.Fax.Value ? "Yes" : "No";
+        }
+
+        if (criteria.OriginalReceived.HasValue)
+        {
+            filterContext["Original Received"] = criteria.OriginalReceived.Value ? "Yes" : "No";
+        }
+
+        if (criteria.Confidential.HasValue)
+        {
+            filterContext["Confidential"] = criteria.Confidential.Value ? "Yes" : "No";
+        }
+
+        if (criteria.BankConfirmation.HasValue)
+        {
+            filterContext["Bank Confirmation"] = criteria.BankConfirmation.Value ? "Yes" : "No";
+        }
+
+        if (!string.IsNullOrEmpty(criteria.CounterpartyName))
+        {
+            filterContext["Counterparty Name"] = criteria.CounterpartyName;
+        }
+
+        if (!string.IsNullOrEmpty(criteria.DocumentNumber))
+        {
+            filterContext["Document No"] = criteria.DocumentNumber;
+        }
+
+        if (!string.IsNullOrEmpty(criteria.AssociatedToPua))
+        {
+            filterContext["Assoc to PUA/Agr No"] = criteria.AssociatedToPua;
+        }
+
+        if (!string.IsNullOrEmpty(criteria.VersionNo))
+        {
+            filterContext["Version No"] = criteria.VersionNo;
+        }
+
         if (criteria.DateOfContractFrom.HasValue)
         {
             filterContext["Contract Date From"] = criteria.DateOfContractFrom.Value.ToString("yyyy-MM-dd");
@@ -126,6 +198,17 @@ public partial class ExcelPreview : ComponentBase
             .Select(id => int.TryParse(id.Trim(), out var result) ? result : 0)
             .Where(id => id > 0)
             .ToList();
+    }
+
+    private bool? ParseNullableBool(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return null;
+
+        if (bool.TryParse(value, out var result))
+            return result;
+
+        return null;
     }
 
     private IEnumerable<DocumentSearchItemDto> GetPagedData()
@@ -237,7 +320,15 @@ public partial class ExcelPreview : ComponentBase
                 SearchString = SearchString,
                 PageNumber = 1,
                 PageSize = searchResults?.TotalCount ?? 1000,
-                DocumentTypeIds = ParseDocumentTypeIds(DocumentTypeIdsParam)
+                DocumentTypeIds = ParseDocumentTypeIds(DocumentTypeIdsParam),
+                Fax = ParseNullableBool(FaxParam),
+                OriginalReceived = ParseNullableBool(OriginalReceivedParam),
+                Confidential = ParseNullableBool(ConfidentialParam),
+                BankConfirmation = ParseNullableBool(BankConfirmationParam),
+                CounterpartyName = CounterpartyName,
+                DocumentNumber = DocumentNumber,
+                AssociatedToPua = AssociatedToPua,
+                VersionNo = VersionNo
             };
 
             // Get Excel file bytes

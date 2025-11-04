@@ -186,6 +186,48 @@ public partial class SearchDocuments : ComponentBase
             queryParams.Add($"documentTypeIds={Uri.EscapeDataString(documentTypeIds)}");
         }
 
+        // Boolean filters
+        if (searchRequest.Fax.HasValue)
+        {
+            queryParams.Add($"fax={searchRequest.Fax.Value}");
+        }
+
+        if (searchRequest.OriginalReceived.HasValue)
+        {
+            queryParams.Add($"originalReceived={searchRequest.OriginalReceived.Value}");
+        }
+
+        if (searchRequest.Confidential.HasValue)
+        {
+            queryParams.Add($"confidential={searchRequest.Confidential.Value}");
+        }
+
+        if (searchRequest.BankConfirmation.HasValue)
+        {
+            queryParams.Add($"bankConfirmation={searchRequest.BankConfirmation.Value}");
+        }
+
+        // Text filters
+        if (!string.IsNullOrEmpty(searchRequest.CounterpartyName))
+        {
+            queryParams.Add($"counterpartyName={Uri.EscapeDataString(searchRequest.CounterpartyName)}");
+        }
+
+        if (!string.IsNullOrEmpty(searchRequest.DocumentNumber))
+        {
+            queryParams.Add($"documentNumber={Uri.EscapeDataString(searchRequest.DocumentNumber)}");
+        }
+
+        if (!string.IsNullOrEmpty(searchRequest.AssociatedToPua))
+        {
+            queryParams.Add($"associatedToPua={Uri.EscapeDataString(searchRequest.AssociatedToPua)}");
+        }
+
+        if (!string.IsNullOrEmpty(searchRequest.VersionNo))
+        {
+            queryParams.Add($"versionNo={Uri.EscapeDataString(searchRequest.VersionNo)}");
+        }
+
         // Add page size to show in preview
         var totalCount = searchResults.TotalCount;
         queryParams.Add($"pageSize={Math.Min(totalCount, 1000)}");
