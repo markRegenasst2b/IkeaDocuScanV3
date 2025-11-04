@@ -22,6 +22,7 @@
     <ProjectReference Include="..\IkeaDocuScan-Web.Client\IkeaDocuScan-Web.Client.csproj" />
     <ProjectReference Include="..\..\IkeaDocuScan.Infrastructure\IkeaDocuScan.Infrastructure.csproj" />
     <ProjectReference Include="..\..\IkeaDocuScan.Shared\IkeaDocuScan.Shared.csproj" />
+    <ProjectReference Include="..\..\ExcelReporting\ExcelReporting.csproj" />
     <PackageReference Include="MailKit" Version="4.14.1" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.Negotiate" Version="9.0.10" />
     <PackageReference Include="Microsoft.AspNetCore.Components.Authorization" Version="9.0.10" />

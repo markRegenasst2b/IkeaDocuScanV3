@@ -43,5 +43,10 @@ public enum AuditAction
     /// <summary>
     /// User sent multiple attachments
     /// </summary>
-    SendAttachments
+    SendAttachments,
+
+    /// <summary>
+    /// User exported data to Excel
+    /// </summary>
+    ExportExcel
 }

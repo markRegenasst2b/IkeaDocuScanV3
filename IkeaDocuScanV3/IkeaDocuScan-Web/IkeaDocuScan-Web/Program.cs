@@ -8,6 +8,7 @@ using IkeaDocuScan_Web.Authorization;
 using IkeaDocuScan.Infrastructure.Data;
 using IkeaDocuScan.Shared.Interfaces;
 using IkeaDocuScan.Shared.Configuration;
+using ExcelReporting.Extensions;
 using Microsoft.AspNetCore.Authentication.Negotiate;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Components.Authorization;
@@ -127,6 +128,9 @@ builder.Services.AddScoped<IUserPermissionService, UserPermissionService>();
 builder.Services.AddScoped<IDocumentNameService, DocumentNameService>();
 builder.Services.AddScoped<ICurrencyService, CurrencyService>();
 
+// Excel Reporting Services
+builder.Services.AddExcelReporting(builder.Configuration);
+
 // SignalR for real-time updates
 builder.Services.AddSignalR();
 
@@ -180,5 +184,6 @@ app.MapAuditTrailEndpoints();
 app.MapDocumentNameEndpoints();
 app.MapCurrencyEndpoints();
 app.MapEmailEndpoints();
+app.MapExcelExportEndpoints();
 
 app.Run();

@@ -1,7 +1,9 @@
 {
   "permissions": {
     "allow": [
-      "WebFetch(domain:tonybaloney.github.io)"
+      "WebFetch(domain:tonybaloney.github.io)",
+      "Bash(dotnet new:*)",
+      "Bash(mkdir:*)"
     ],
     "deny": [],
     "ask": []
