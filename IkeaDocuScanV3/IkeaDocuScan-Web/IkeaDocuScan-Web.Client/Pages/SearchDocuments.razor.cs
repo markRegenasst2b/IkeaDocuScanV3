@@ -159,6 +159,95 @@ public partial class SearchDocuments : ComponentBase
     }
 
     /// <summary>
+    /// Navigates to the Excel Preview page with current search criteria
+    /// </summary>
+    private void NavigateToExcelPreview()
+    {
+        if (searchResults == null || !searchResults.Items.Any())
+        {
+            Logger.LogWarning("Cannot navigate to Excel preview: No search results available");
+            return;
+        }
+
+        Logger.LogInformation("Navigating to Excel preview with current search criteria");
+
+        // Build query string from current search request
+        var queryParams = new List<string>();
+
+        if (!string.IsNullOrEmpty(searchRequest.SearchString))
+        {
+            queryParams.Add($"searchString={Uri.EscapeDataString(searchRequest.SearchString)}");
+        }
+
+        if (searchRequest.DocumentTypeIds.Any())
+        {
+            // Pass all selected document type IDs as comma-separated values
+            var documentTypeIds = string.Join(",", searchRequest.DocumentTypeIds);
+            queryParams.Add($"documentTypeIds={Uri.EscapeDataString(documentTypeIds)}");
+        }
+
+        // Add page size to show in preview
+        var totalCount = searchResults.TotalCount;
+        queryParams.Add($"pageSize={Math.Min(totalCount, 1000)}");
+
+        var queryString = queryParams.Any() ? "?" + string.Join("&", queryParams) : "";
+
+        NavigationManager.NavigateTo($"/excel-preview{queryString}");
+    }
+
+    // ========== Boolean Filter Change Handlers ==========
+
+    /// <summary>
+    /// Handles Fax filter change
+    /// </summary>
+    private void OnFaxChanged(string? value)
+    {
+        searchRequest.Fax = ParseNullableBool(value);
+        Logger.LogDebug("Fax filter changed to: {Value}", searchRequest.Fax);
+    }
+
+    /// <summary>
+    /// Handles Original Received filter change
+    /// </summary>
+    private void OnOriginalReceivedChanged(string? value)
+    {
+        searchRequest.OriginalReceived = ParseNullableBool(value);
+        Logger.LogDebug("Original Received filter changed to: {Value}", searchRequest.OriginalReceived);
+    }
+
+    /// <summary>
+    /// Handles Confidential filter change
+    /// </summary>
+    private void OnConfidentialChanged(string? value)
+    {
+        searchRequest.Confidential = ParseNullableBool(value);
+        Logger.LogDebug("Confidential filter changed to: {Value}", searchRequest.Confidential);
+    }
+
+    /// <summary>
+    /// Handles Bank Confirmation filter change
+    /// </summary>
+    private void OnBankConfirmationChanged(string? value)
+    {
+        searchRequest.BankConfirmation = ParseNullableBool(value);
+        Logger.LogDebug("Bank Confirmation filter changed to: {Value}", searchRequest.BankConfirmation);
+    }
+
+    /// <summary>
+    /// Parses a string to nullable boolean
+    /// </summary>
+    private bool? ParseNullableBool(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return null;
+
+        if (bool.TryParse(value, out var result))
+            return result;
+
+        return null;
+    }
+
+    /// <summary>
     /// Handles Document Types multi-select change
     /// </summary>
     private void OnDocumentTypesChanged(ChangeEventArgs e)

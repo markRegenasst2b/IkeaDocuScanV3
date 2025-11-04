@@ -164,40 +164,48 @@
                         <div class="col-md-3">
                             <div class="d-flex align-items-center gap-2">
                                 <label class="form-label-inline-short">Fax:</label>
-                                <select class="form-select form-select-sm flex-grow-1" @bind="searchRequest.Fax">
+                                <select class="form-select form-select-sm flex-grow-1"
+                                        value="@(searchRequest.Fax?.ToString() ?? "")"
+                                        @onchange="@(e => OnFaxChanged(e.Value?.ToString()))">
                                     <option value="">Any</option>
-                                    <option value="true">Yes</option>
-                                    <option value="false">No</option>
+                                    <option value="True">Yes</option>
+                                    <option value="False">No</option>
                                 </select>
                             </div>
                         </div>
                         <div class="col-md-3">
                             <div class="d-flex align-items-center gap-2">
                                 <label class="form-label-inline-short">Original:</label>
-                                <select class="form-select form-select-sm flex-grow-1" @bind="searchRequest.OriginalReceived">
+                                <select class="form-select form-select-sm flex-grow-1"
+                                        value="@(searchRequest.OriginalReceived?.ToString() ?? "")"
+                                        @onchange="@(e => OnOriginalReceivedChanged(e.Value?.ToString()))">
                                     <option value="">Any</option>
-                                    <option value="true">Yes</option>
-                                    <option value="false">No</option>
+                                    <option value="True">Yes</option>
+                                    <option value="False">No</option>
                                 </select>
                             </div>
                         </div>
                         <div class="col-md-3">
                             <div class="d-flex align-items-center gap-2">
                                 <label class="form-label-inline-short">Confidential:</label>
-                                <select class="form-select form-select-sm flex-grow-1" @bind="searchRequest.Confidential">
+                                <select class="form-select form-select-sm flex-grow-1"
+                                        value="@(searchRequest.Confidential?.ToString() ?? "")"
+                                        @onchange="@(e => OnConfidentialChanged(e.Value?.ToString()))">
                                     <option value="">Any</option>
-                                    <option value="true">Yes</option>
-                                    <option value="false">No</option>
+                                    <option value="True">Yes</option>
+                                    <option value="False">No</option>
                                 </select>
                             </div>
                         </div>
                         <div class="col-md-3">
                             <div class="d-flex align-items-center gap-2">
                                 <label class="form-label-inline-short">Bank Conf:</label>
-                                <select class="form-select form-select-sm flex-grow-1" @bind="searchRequest.BankConfirmation">
+                                <select class="form-select form-select-sm flex-grow-1"
+                                        value="@(searchRequest.BankConfirmation?.ToString() ?? "")"
+                                        @onchange="@(e => OnBankConfirmationChanged(e.Value?.ToString()))">
                                     <option value="">Any</option>
-                                    <option value="true">Yes</option>
-                                    <option value="false">No</option>
+                                    <option value="True">Yes</option>
+                                    <option value="False">No</option>
                                 </select>
                             </div>
                         </div>
@@ -337,6 +345,9 @@
                 <div class="d-flex justify-content-end gap-2">
                     <button class="btn btn-secondary" @onclick="ClearFilters">
                         <i class="bi bi-x-circle"></i> Clear Filters
+                    </button>
+                    <button class="btn btn-success" @onclick="NavigateToExcelPreview" disabled="@(!searchResults?.Items.Any() ?? true)">
+                        <i class="bi bi-file-earmark-spreadsheet"></i> Export to Excel
                     </button>
                     <button class="btn btn-primary" @onclick="ExecuteSearch" disabled="@isSearching">
                         @if (isSearching)

@@ -1,0 +1,249 @@
+/* Excel Preview Component Styles */
+
+.excel-preview-container {
+    padding: 1.5rem;
+    max-width: 100%;
+}
+
+.excel-preview-header {
+    margin-bottom: 1.5rem;
+    border-bottom: 2px solid #0051ba;
+    padding-bottom: 1rem;
+}
+
+.excel-preview-header h3 {
+    color: #0051ba;
+    margin-bottom: 0.5rem;
+}
+
+.excel-preview-header .text-muted {
+    font-size: 0.95rem;
+}
+
+/* Filter Context Box */
+.filter-context-box {
+    background-color: #e7f3ff;
+    border-left: 4px solid #0051ba;
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+    border-radius: 4px;
+}
+
+.filter-context-box h5 {
+    color: #0051ba;
+    font-size: 1rem;
+    margin-bottom: 0.75rem;
+}
+
+.filter-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.filter-badges .badge {
+    font-size: 0.9rem;
+    padding: 0.5rem 0.75rem;
+}
+
+/* Loading Spinner */
+.loading-spinner {
+    text-align: center;
+    padding: 3rem;
+}
+
+.loading-spinner p {
+    margin-top: 1rem;
+    color: #666;
+}
+
+/* Data Summary */
+.data-summary {
+    display: flex;
+    gap: 2rem;
+    padding: 1rem;
+    background-color: #f8f9fa;
+    border-radius: 4px;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+}
+
+.summary-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.summary-item .badge {
+    font-size: 0.95rem;
+}
+
+/* Paging Controls */
+.paging-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem;
+    background-color: #f8f9fa;
+    border-radius: 4px;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.rows-per-page {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.rows-per-page label {
+    margin-bottom: 0;
+    font-weight: 500;
+}
+
+.rows-per-page .form-select {
+    width: auto;
+    min-width: 80px;
+}
+
+.page-info {
+    font-size: 0.95rem;
+    color: #666;
+}
+
+.page-navigation {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.page-indicator {
+    padding: 0 0.75rem;
+    font-weight: 500;
+}
+
+/* Table Styles */
+.table-responsive {
+    margin-bottom: 1rem;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    overflow-x: auto;
+}
+
+.excel-preview-table {
+    margin-bottom: 0;
+}
+
+.excel-preview-table thead {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.excel-preview-table thead th {
+    background-color: #0051ba;
+    color: white;
+    font-weight: 600;
+    padding: 0.75rem;
+    border-color: #003d8f;
+    white-space: nowrap;
+    vertical-align: middle;
+}
+
+.excel-preview-table tbody td {
+    padding: 0.75rem;
+    vertical-align: middle;
+}
+
+.excel-preview-table tbody tr:hover {
+    background-color: #f0f8ff;
+}
+
+.excel-preview-table .text-end {
+    text-align: right;
+}
+
+.excel-preview-table .text-nowrap {
+    white-space: nowrap;
+}
+
+/* Export Actions */
+.export-actions {
+    margin-top: 2rem;
+    padding: 1.5rem;
+    background-color: #f8f9fa;
+    border-radius: 4px;
+    text-align: center;
+}
+
+.export-actions .alert {
+    margin-bottom: 1rem;
+}
+
+.export-actions .btn-lg {
+    padding: 0.75rem 2rem;
+    font-size: 1.1rem;
+}
+
+.exporting-spinner {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    font-size: 1.1rem;
+    color: #0051ba;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+    .paging-controls {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .page-navigation {
+        justify-content: center;
+    }
+
+    .data-summary {
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    .export-actions .btn-lg {
+        width: 100%;
+        margin-bottom: 0.5rem;
+    }
+
+    .excel-preview-table {
+        font-size: 0.85rem;
+    }
+
+    .excel-preview-table thead th,
+    .excel-preview-table tbody td {
+        padding: 0.5rem;
+    }
+}
+
+/* Print Styles */
+@media print {
+    .paging-controls,
+    .export-actions,
+    .filter-context-box {
+        display: none;
+    }
+
+    .excel-preview-table {
+        page-break-inside: auto;
+    }
+
+    .excel-preview-table tr {
+        page-break-inside: avoid;
+        page-break-after: auto;
+    }
+
+    .excel-preview-table thead {
+        display: table-header-group;
+    }
+}

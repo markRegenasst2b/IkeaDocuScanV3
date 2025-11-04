@@ -28,6 +28,12 @@ builder.Services.AddScoped<IDocumentNameService, DocumentNameHttpService>();
 builder.Services.AddScoped<ICurrencyService, CurrencyHttpService>();
 builder.Services.AddScoped<EmailHttpService>();
 
+// Excel Export Service
+builder.Services.AddScoped<ExcelExportHttpService>();
+
+// Register DocumentHttpService (using HttpClient factory pattern)
+builder.Services.AddScoped<DocumentHttpService>();
+
 await builder.Build().RunAsync();
 
 
