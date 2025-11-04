@@ -54,7 +54,7 @@ public static class ExcelExportEndpoints
                 // Log export to audit trail
                 await auditService.LogAsync(
                     AuditAction.ExportExcel,
-                    "BULK_EXPORT",
+                    "BULKEXPORT",
                     $"Exported {exportData.Count} documents to Excel");
 
                 // Return file
@@ -113,10 +113,22 @@ public static class ExcelExportEndpoints
             [FromServices] IExcelExportService excelService) =>
         {
             var metadata = excelService.GetMetadata<DocumentExportDto>();
-            return Results.Ok(metadata);
+
+            // Convert to serializable DTO
+            var dto = metadata.Select(m => new ExcelColumnMetadataDto
+            {
+                PropertyName = m.Property.Name,
+                DisplayName = m.DisplayName,
+                DataType = m.DataType.ToString(),
+                Format = m.Format,
+                Order = m.Order,
+                IsExportable = m.IsExportable
+            }).ToList();
+
+            return Results.Ok(dto);
         })
         .WithName("GetDocumentExportMetadata")
-        .Produces<List<ExcelExportMetadata>>(200);
+        .Produces<List<ExcelColumnMetadataDto>>(200);
     }
 }
 
