@@ -1,5 +1,6 @@
 using IkeaDocuScan.Infrastructure.Data;
 using IkeaDocuScan.Shared.DTOs.ActionReminders;
+using IkeaDocuScan.Shared.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using System.Text;
@@ -8,6 +9,7 @@ namespace IkeaDocuScan.ActionReminderService.Services;
 
 /// <summary>
 /// Service implementation for fetching action reminders and sending email notifications
+/// Enhanced with database-driven configuration and templating
 /// </summary>
 public class ActionReminderEmailService : IActionReminderEmailService
 {
@@ -15,17 +17,23 @@ public class ActionReminderEmailService : IActionReminderEmailService
     private readonly IEmailSender _emailSender;
     private readonly ActionReminderServiceOptions _options;
     private readonly ILogger<ActionReminderEmailService> _logger;
+    private readonly ISystemConfigurationManager _configManager;
+    private readonly IEmailTemplateService _templateService;
 
     public ActionReminderEmailService(
         IDbContextFactory<AppDbContext> contextFactory,
         IEmailSender emailSender,
         IOptions<ActionReminderServiceOptions> options,
-        ILogger<ActionReminderEmailService> logger)
+        ILogger<ActionReminderEmailService> logger,
+        ISystemConfigurationManager configManager,
+        IEmailTemplateService templateService)
     {
         _contextFactory = contextFactory;
         _emailSender = emailSender;
         _options = options.Value;
         _logger = logger;
+        _configManager = configManager;
+        _templateService = templateService;
     }
 
     public async Task SendDailyActionRemindersAsync(int daysAhead = 0, CancellationToken cancellationToken = default)
@@ -122,25 +130,87 @@ public class ActionReminderEmailService : IActionReminderEmailService
     /// </summary>
     private async Task SendActionReminderEmailAsync(List<ActionReminderDto> dueActions, CancellationToken cancellationToken)
     {
-        if (_options.RecipientEmails == null || _options.RecipientEmails.Length == 0)
+        try
         {
-            _logger.LogWarning("No recipient emails configured. Skipping email send.");
-            return;
+            // Get recipients from database (with fallback to config)
+            var recipientEmails = await _configManager.GetEmailRecipientsAsync("ActionReminderRecipients");
+
+            if (recipientEmails.Length == 0)
+            {
+                // Fallback to configuration file
+                _logger.LogInformation("Using recipient emails from configuration file");
+                if (_options.RecipientEmails == null || _options.RecipientEmails.Length == 0)
+                {
+                    _logger.LogWarning("No recipient emails configured. Skipping email send.");
+                    return;
+                }
+                recipientEmails = _options.RecipientEmails;
+            }
+
+            // Try to get email template from database
+            var template = await _configManager.GetEmailTemplateAsync("ActionReminderDaily");
+            string htmlBody, plainTextBody, subject;
+
+            if (template != null)
+            {
+                // Use database template with loop support
+                _logger.LogInformation("Using ActionReminderDaily template from database");
+
+                var data = new Dictionary<string, object>
+                {
+                    { "Count", dueActions.Count },
+                    { "Date", DateTime.Now }
+                };
+
+                var loops = new Dictionary<string, List<Dictionary<string, object>>>
+                {
+                    { "ActionRows", dueActions.Select(action => new Dictionary<string, object>
+                        {
+                            { "BarCode", action.BarCode },
+                            { "DocumentType", action.DocumentType },
+                            { "DocumentName", action.DocumentName },
+                            { "DocumentNo", action.DocumentNo ?? string.Empty },
+                            { "CounterParty", action.CounterParty },
+                            { "CounterPartyNo", action.CounterPartyNo?.ToString() ?? string.Empty },
+                            { "ActionDate", action.ActionDate },
+                            { "ReceivingDate", action.ReceivingDate },
+                            { "ActionDescription", action.ActionDescription ?? string.Empty },
+                            { "Comment", action.Comment ?? string.Empty },
+                            { "IsOverdue", action.ActionDate.HasValue && action.ActionDate.Value < DateTime.Today }
+                        }).ToList()
+                    }
+                };
+
+                htmlBody = _templateService.RenderTemplateWithLoops(template.HtmlBody, data, loops);
+                plainTextBody = !string.IsNullOrEmpty(template.PlainTextBody)
+                    ? _templateService.RenderTemplateWithLoops(template.PlainTextBody, data, loops)
+                    : BuildPlainTextActionReminder(dueActions);
+                subject = _templateService.RenderTemplate(template.Subject, data);
+            }
+            else
+            {
+                // Fallback to hard-coded template
+                _logger.LogInformation("Using hard-coded ActionReminderDaily template");
+                (htmlBody, plainTextBody) = BuildActionReminderEmail(dueActions);
+                subject = _options.EmailSubject.Replace("{Count}", dueActions.Count.ToString());
+            }
+
+            _logger.LogInformation("Sending action reminder email to {Count} recipient(s)", recipientEmails.Length);
+
+            await _emailSender.SendEmailAsync(
+                recipientEmails,
+                subject,
+                htmlBody,
+                plainTextBody,
+                cancellationToken);
+
+            _logger.LogInformation("Action reminder email sent successfully");
         }
-
-        var subject = _options.EmailSubject.Replace("{Count}", dueActions.Count.ToString());
-        var (htmlBody, plainTextBody) = BuildActionReminderEmail(dueActions);
-
-        _logger.LogInformation("Sending action reminder email to {Count} recipient(s)", _options.RecipientEmails.Length);
-
-        await _emailSender.SendEmailAsync(
-            _options.RecipientEmails,
-            subject,
-            htmlBody,
-            plainTextBody,
-            cancellationToken);
-
-        _logger.LogInformation("Action reminder email sent successfully");
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to send action reminder email");
+            throw;
+        }
     }
 
     /// <summary>
@@ -148,13 +218,47 @@ public class ActionReminderEmailService : IActionReminderEmailService
     /// </summary>
     private async Task SendEmptyNotificationAsync(CancellationToken cancellationToken)
     {
-        if (_options.RecipientEmails == null || _options.RecipientEmails.Length == 0)
+        try
         {
-            return;
-        }
+            // Get recipients from database (with fallback to config)
+            var recipientEmails = await _configManager.GetEmailRecipientsAsync("ActionReminderRecipients");
 
-        var subject = "Action Reminders - No Items Due Today";
-        var htmlBody = @"
+            if (recipientEmails.Length == 0)
+            {
+                // Fallback to configuration file
+                if (_options.RecipientEmails == null || _options.RecipientEmails.Length == 0)
+                {
+                    return;
+                }
+                recipientEmails = _options.RecipientEmails;
+            }
+
+            // Try to get email template from database
+            var template = await _configManager.GetEmailTemplateAsync("ActionReminderEmpty");
+            string htmlBody, plainTextBody, subject;
+
+            if (template != null)
+            {
+                // Use database template
+                _logger.LogInformation("Using ActionReminderEmpty template from database");
+
+                var data = new Dictionary<string, object>
+                {
+                    { "Date", DateTime.Now }
+                };
+
+                htmlBody = _templateService.RenderTemplate(template.HtmlBody, data);
+                plainTextBody = !string.IsNullOrEmpty(template.PlainTextBody)
+                    ? _templateService.RenderTemplate(template.PlainTextBody, data)
+                    : "IKEA DocuScan - Action Reminders\n\nGood news! There are no action reminders due today.";
+                subject = _templateService.RenderTemplate(template.Subject, data);
+            }
+            else
+            {
+                // Fallback to hard-coded template
+                _logger.LogInformation("Using hard-coded ActionReminderEmpty template");
+                subject = "Action Reminders - No Items Due Today";
+                htmlBody = @"
 <html>
 <body style='font-family: Arial, sans-serif;'>
     <h2 style='color: #0051BA;'>IKEA DocuScan - Action Reminders</h2>
@@ -165,17 +269,23 @@ public class ActionReminderEmailService : IActionReminderEmailService
     </p>
 </body>
 </html>";
+                plainTextBody = "IKEA DocuScan - Action Reminders\n\nGood news! There are no action reminders due today.";
+            }
 
-        var plainTextBody = "IKEA DocuScan - Action Reminders\n\nGood news! There are no action reminders due today.";
+            await _emailSender.SendEmailAsync(
+                recipientEmails,
+                subject,
+                htmlBody,
+                plainTextBody,
+                cancellationToken);
 
-        await _emailSender.SendEmailAsync(
-            _options.RecipientEmails,
-            subject,
-            htmlBody,
-            plainTextBody,
-            cancellationToken);
-
-        _logger.LogInformation("Empty notification sent");
+            _logger.LogInformation("Empty notification sent");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to send empty notification");
+            // Don't throw - email failures shouldn't break the service
+        }
     }
 
     /// <summary>
@@ -274,5 +384,41 @@ public class ActionReminderEmailService : IActionReminderEmailService
         textBuilder.AppendLine("Please log in to the DocuScan system to view and manage these actions.");
 
         return (htmlBuilder.ToString(), textBuilder.ToString());
+    }
+
+    /// <summary>
+    /// Build plain text email body for action reminders (fallback for templates)
+    /// </summary>
+    private string BuildPlainTextActionReminder(List<ActionReminderDto> dueActions)
+    {
+        var textBuilder = new StringBuilder();
+
+        textBuilder.AppendLine("IKEA DocuScan - Action Reminders Due Today");
+        textBuilder.AppendLine("==========================================");
+        textBuilder.AppendLine();
+        textBuilder.AppendLine("The following documents have actions that are due today:");
+        textBuilder.AppendLine();
+
+        foreach (var action in dueActions)
+        {
+            textBuilder.AppendLine($"Barcode: {action.BarCode}");
+            textBuilder.AppendLine($"  Document Type: {action.DocumentType}");
+            textBuilder.AppendLine($"  Document Name: {action.DocumentName}");
+            if (!string.IsNullOrEmpty(action.DocumentNo))
+                textBuilder.AppendLine($"  Document No: {action.DocumentNo}");
+            textBuilder.AppendLine($"  Counterparty: {action.CounterParty}");
+            textBuilder.AppendLine($"  Action Date: {action.ActionDate?.ToString("dd/MM/yyyy") ?? ""}");
+            if (action.ReceivingDate.HasValue)
+                textBuilder.AppendLine($"  Receiving Date: {action.ReceivingDate.Value:dd/MM/yyyy}");
+            if (!string.IsNullOrEmpty(action.ActionDescription))
+                textBuilder.AppendLine($"  Action Description: {action.ActionDescription}");
+            textBuilder.AppendLine();
+        }
+
+        textBuilder.AppendLine("==========================================");
+        textBuilder.AppendLine("This is an automated message from the IKEA DocuScan Action Reminder Service.");
+        textBuilder.AppendLine("Please log in to the DocuScan system to view and manage these actions.");
+
+        return textBuilder.ToString();
     }
 }

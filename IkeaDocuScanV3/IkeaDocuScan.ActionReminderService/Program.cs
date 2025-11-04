@@ -50,6 +50,10 @@ builder.Services.AddDbContextFactory<AppDbContext>(options =>
 builder.Services.AddScoped<IActionReminderEmailService, ActionReminderEmailService>();
 builder.Services.AddScoped<IEmailSender, EmailSenderService>();
 
+// Configuration management services
+builder.Services.AddScoped<IkeaDocuScan.Shared.Interfaces.ISystemConfigurationManager, IkeaDocuScan.Infrastructure.Services.ConfigurationManagerService>();
+builder.Services.AddScoped<IkeaDocuScan.Shared.Interfaces.IEmailTemplateService, IkeaDocuScan.Infrastructure.Services.EmailTemplateService>();
+
 // Register the background worker
 builder.Services.AddHostedService<ActionReminderWorker>();
 

@@ -10,18 +10,25 @@ namespace IkeaDocuScan_Web.Services;
 
 /// <summary>
 /// Email service implementation using MailKit
+/// Enhanced with database-driven configuration and templating
 /// </summary>
 public class EmailService : IEmailService
 {
     private readonly EmailOptions _options;
     private readonly ILogger<EmailService> _logger;
+    private readonly ISystemConfigurationManager _configManager;
+    private readonly IEmailTemplateService _templateService;
 
     public EmailService(
         IOptions<EmailOptions> options,
-        ILogger<EmailService> logger)
+        ILogger<EmailService> logger,
+        ISystemConfigurationManager configManager,
+        IEmailTemplateService templateService)
     {
         _options = options.Value;
         _logger = logger;
+        _configManager = configManager;
+        _templateService = templateService;
     }
 
     /// <inheritdoc />
@@ -34,32 +41,70 @@ public class EmailService : IEmailService
 
         try
         {
-            var (htmlBody, plainText) = EmailTemplates.BuildAccessRequestNotification(
-                username,
-                reason,
-                _options.ApplicationUrl);
+            // Get admin email recipients from database (with fallback to config)
+            var adminEmails = await _configManager.GetEmailRecipientsAsync("AdminEmails");
 
-            // Send to primary admin
-            await SendEmailAsync(
-                _options.AdminEmail,
-                _options.AccessRequestSubject,
+            if (adminEmails.Length == 0)
+            {
+                // Fallback to configuration file
+                _logger.LogInformation("Using admin emails from configuration file");
+                var emailList = new List<string>();
+                if (!string.IsNullOrEmpty(_options.AdminEmail))
+                    emailList.Add(_options.AdminEmail);
+                if (_options.AdditionalAdminEmails?.Length > 0)
+                    emailList.AddRange(_options.AdditionalAdminEmails);
+                adminEmails = emailList.ToArray();
+            }
+
+            if (adminEmails.Length == 0)
+            {
+                _logger.LogWarning("No admin email addresses configured. Cannot send access request notification.");
+                return;
+            }
+
+            // Try to get email template from database
+            var template = await _configManager.GetEmailTemplateAsync("AccessRequestNotification");
+            string htmlBody, plainText, subject;
+
+            if (template != null)
+            {
+                // Use database template
+                _logger.LogInformation("Using AccessRequestNotification template from database");
+
+                var data = new Dictionary<string, object>
+                {
+                    { "Username", username },
+                    { "Reason", reason ?? "No reason provided" },
+                    { "ApplicationUrl", _options.ApplicationUrl },
+                    { "Date", DateTime.Now }
+                };
+
+                htmlBody = _templateService.RenderTemplate(template.HtmlBody, data);
+                plainText = !string.IsNullOrEmpty(template.PlainTextBody)
+                    ? _templateService.RenderTemplate(template.PlainTextBody, data)
+                    : $"Access Request from {username}\nReason: {reason ?? "No reason provided"}\nDate: {DateTime.Now:dd/MM/yyyy HH:mm}";
+                subject = _templateService.RenderTemplate(template.Subject, data);
+            }
+            else
+            {
+                // Fallback to hard-coded template
+                _logger.LogInformation("Using hard-coded AccessRequestNotification template");
+                (htmlBody, plainText) = EmailTemplates.BuildAccessRequestNotification(
+                    username,
+                    reason,
+                    _options.ApplicationUrl);
+                subject = _options.AccessRequestSubject;
+            }
+
+            // Send to all admin emails
+            await SendEmailToMultipleRecipientsAsync(
+                adminEmails,
+                subject,
                 htmlBody,
                 plainText);
 
-            // Send to additional admins if configured
-            if (_options.AdditionalAdminEmails?.Length > 0)
-            {
-                foreach (var adminEmail in _options.AdditionalAdminEmails.Where(e => !string.IsNullOrWhiteSpace(e)))
-                {
-                    await SendEmailAsync(
-                        adminEmail,
-                        _options.AccessRequestSubject,
-                        htmlBody,
-                        plainText);
-                }
-            }
-
-            _logger.LogInformation("Access request notification sent for user {Username}", username);
+            _logger.LogInformation("Access request notification sent to {Count} admin(s) for user {Username}",
+                adminEmails.Length, username);
         }
         catch (Exception ex)
         {
@@ -78,13 +123,42 @@ public class EmailService : IEmailService
 
         try
         {
-            var (htmlBody, plainText) = EmailTemplates.BuildAccessRequestConfirmation(
-                username,
-                _options.AdminEmail);
+            // Try to get email template from database
+            var template = await _configManager.GetEmailTemplateAsync("AccessRequestConfirmation");
+            string htmlBody, plainText, subject;
+
+            if (template != null)
+            {
+                // Use database template
+                _logger.LogInformation("Using AccessRequestConfirmation template from database");
+
+                var data = new Dictionary<string, object>
+                {
+                    { "Username", username },
+                    { "AdminEmail", _options.AdminEmail },
+                    { "ApplicationUrl", _options.ApplicationUrl },
+                    { "Date", DateTime.Now }
+                };
+
+                htmlBody = _templateService.RenderTemplate(template.HtmlBody, data);
+                plainText = !string.IsNullOrEmpty(template.PlainTextBody)
+                    ? _templateService.RenderTemplate(template.PlainTextBody, data)
+                    : $"Your access request has been received.\nUsername: {username}\nDate: {DateTime.Now:dd/MM/yyyy HH:mm}";
+                subject = _templateService.RenderTemplate(template.Subject, data);
+            }
+            else
+            {
+                // Fallback to hard-coded template
+                _logger.LogInformation("Using hard-coded AccessRequestConfirmation template");
+                (htmlBody, plainText) = EmailTemplates.BuildAccessRequestConfirmation(
+                    username,
+                    _options.AdminEmail);
+                subject = _options.AccessRequestConfirmationSubject;
+            }
 
             await SendEmailAsync(
                 userEmail,
-                _options.AccessRequestConfirmationSubject,
+                subject,
                 htmlBody,
                 plainText);
 
@@ -110,14 +184,43 @@ public class EmailService : IEmailService
 
         try
         {
-            var (htmlBody, plainText) = EmailTemplates.BuildDocumentLink(
-                documentBarCode,
-                documentLink,
-                message);
+            // Try to get email template from database
+            var template = await _configManager.GetEmailTemplateAsync("DocumentLink");
+            string htmlBody, plainText, subject;
+
+            if (template != null)
+            {
+                // Use database template
+                _logger.LogInformation("Using DocumentLink template from database");
+
+                var data = new Dictionary<string, object>
+                {
+                    { "BarCode", documentBarCode },
+                    { "DocumentLink", documentLink },
+                    { "Message", message ?? string.Empty },
+                    { "Date", DateTime.Now }
+                };
+
+                htmlBody = _templateService.RenderTemplate(template.HtmlBody, data);
+                plainText = !string.IsNullOrEmpty(template.PlainTextBody)
+                    ? _templateService.RenderTemplate(template.PlainTextBody, data)
+                    : $"Document Shared: {documentBarCode}\nLink: {documentLink}\nMessage: {message ?? "N/A"}";
+                subject = _templateService.RenderTemplate(template.Subject, data);
+            }
+            else
+            {
+                // Fallback to hard-coded template
+                _logger.LogInformation("Using hard-coded DocumentLink template");
+                (htmlBody, plainText) = EmailTemplates.BuildDocumentLink(
+                    documentBarCode,
+                    documentLink,
+                    message);
+                subject = $"Document Shared: {documentBarCode}";
+            }
 
             await SendEmailAsync(
                 recipientEmail,
-                $"Document Shared: {documentBarCode}",
+                subject,
                 htmlBody,
                 plainText);
 
@@ -146,10 +249,39 @@ public class EmailService : IEmailService
 
         try
         {
-            var (htmlBody, plainText) = EmailTemplates.BuildDocumentAttachment(
-                documentBarCode,
-                fileName,
-                message);
+            // Try to get email template from database
+            var template = await _configManager.GetEmailTemplateAsync("DocumentAttachment");
+            string htmlBody, plainText, subject;
+
+            if (template != null)
+            {
+                // Use database template
+                _logger.LogInformation("Using DocumentAttachment template from database");
+
+                var data = new Dictionary<string, object>
+                {
+                    { "BarCode", documentBarCode },
+                    { "FileName", fileName },
+                    { "Message", message ?? string.Empty },
+                    { "Date", DateTime.Now }
+                };
+
+                htmlBody = _templateService.RenderTemplate(template.HtmlBody, data);
+                plainText = !string.IsNullOrEmpty(template.PlainTextBody)
+                    ? _templateService.RenderTemplate(template.PlainTextBody, data)
+                    : $"Document: {documentBarCode}\nFile: {fileName}\nMessage: {message ?? "N/A"}";
+                subject = _templateService.RenderTemplate(template.Subject, data);
+            }
+            else
+            {
+                // Fallback to hard-coded template
+                _logger.LogInformation("Using hard-coded DocumentAttachment template");
+                (htmlBody, plainText) = EmailTemplates.BuildDocumentAttachment(
+                    documentBarCode,
+                    fileName,
+                    message);
+                subject = $"Document: {documentBarCode}";
+            }
 
             var attachment = new EmailAttachment
             {
@@ -160,7 +292,7 @@ public class EmailService : IEmailService
 
             await SendEmailAsync(
                 recipientEmail,
-                $"Document: {documentBarCode}",
+                subject,
                 htmlBody,
                 plainText,
                 new[] { attachment });
@@ -189,11 +321,50 @@ public class EmailService : IEmailService
         try
         {
             var documentList = documents.ToList();
-            var (htmlBody, plainText) = EmailTemplates.BuildDocumentLinks(documentList, message);
+
+            // Try to get email template from database
+            var template = await _configManager.GetEmailTemplateAsync("DocumentLinks");
+            string htmlBody, plainText, subject;
+
+            if (template != null)
+            {
+                // Use database template with loop support
+                _logger.LogInformation("Using DocumentLinks template from database");
+
+                var data = new Dictionary<string, object>
+                {
+                    { "Count", documentList.Count },
+                    { "Message", message ?? string.Empty },
+                    { "Date", DateTime.Now }
+                };
+
+                var loops = new Dictionary<string, List<Dictionary<string, object>>>
+                {
+                    { "DocumentRows", documentList.Select(d => new Dictionary<string, object>
+                        {
+                            { "BarCode", d.BarCode },
+                            { "Link", d.Link }
+                        }).ToList()
+                    }
+                };
+
+                htmlBody = _templateService.RenderTemplateWithLoops(template.HtmlBody, data, loops);
+                plainText = !string.IsNullOrEmpty(template.PlainTextBody)
+                    ? _templateService.RenderTemplateWithLoops(template.PlainTextBody, data, loops)
+                    : $"{documentList.Count} Documents Shared\n" + string.Join("\n", documentList.Select(d => $"- {d.BarCode}: {d.Link}"));
+                subject = _templateService.RenderTemplate(template.Subject, data);
+            }
+            else
+            {
+                // Fallback to hard-coded template
+                _logger.LogInformation("Using hard-coded DocumentLinks template");
+                (htmlBody, plainText) = EmailTemplates.BuildDocumentLinks(documentList, message);
+                subject = $"{documentList.Count} Documents Shared";
+            }
 
             await SendEmailAsync(
                 recipientEmail,
-                $"{documentList.Count} Documents Shared",
+                subject,
                 htmlBody,
                 plainText);
 
@@ -227,12 +398,50 @@ public class EmailService : IEmailService
                 ContentType = GetContentType(d.FileName)
             }).ToList();
 
-            var documentInfo = documentList.Select(d => (d.BarCode, d.FileName));
-            var (htmlBody, plainText) = EmailTemplates.BuildDocumentAttachments(documentInfo, message);
+            // Try to get email template from database
+            var template = await _configManager.GetEmailTemplateAsync("DocumentAttachments");
+            string htmlBody, plainText, subject;
+
+            if (template != null)
+            {
+                // Use database template with loop support
+                _logger.LogInformation("Using DocumentAttachments template from database");
+
+                var data = new Dictionary<string, object>
+                {
+                    { "Count", documentList.Count },
+                    { "Message", message ?? string.Empty },
+                    { "Date", DateTime.Now }
+                };
+
+                var loops = new Dictionary<string, List<Dictionary<string, object>>>
+                {
+                    { "DocumentRows", documentList.Select(d => new Dictionary<string, object>
+                        {
+                            { "BarCode", d.BarCode },
+                            { "FileName", d.FileName }
+                        }).ToList()
+                    }
+                };
+
+                htmlBody = _templateService.RenderTemplateWithLoops(template.HtmlBody, data, loops);
+                plainText = !string.IsNullOrEmpty(template.PlainTextBody)
+                    ? _templateService.RenderTemplateWithLoops(template.PlainTextBody, data, loops)
+                    : $"{documentList.Count} Documents Attached\n" + string.Join("\n", documentList.Select(d => $"- {d.BarCode}: {d.FileName}"));
+                subject = _templateService.RenderTemplate(template.Subject, data);
+            }
+            else
+            {
+                // Fallback to hard-coded template
+                _logger.LogInformation("Using hard-coded DocumentAttachments template");
+                var documentInfo = documentList.Select(d => (d.BarCode, d.FileName));
+                (htmlBody, plainText) = EmailTemplates.BuildDocumentAttachments(documentInfo, message);
+                subject = $"{documentList.Count} Documents Attached";
+            }
 
             await SendEmailAsync(
                 recipientEmail,
-                $"{documentList.Count} Documents Attached",
+                subject,
                 htmlBody,
                 plainText,
                 attachments);

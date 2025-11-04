@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using IkeaDocuScan.Infrastructure.Entities;
+using IkeaDocuScan.Infrastructure.Entities.Configuration;
 using Microsoft.EntityFrameworkCore;
 
 namespace IkeaDocuScan.Infrastructure.Data;
@@ -35,6 +36,13 @@ public partial class AppDbContext : DbContext
     public virtual DbSet<DocumentType> DocumentTypes { get; set; }
 
     public virtual DbSet<UserPermission> UserPermissions { get; set; }
+
+    // Configuration Management DbSets
+    public virtual DbSet<SystemConfiguration> SystemConfigurations { get; set; }
+    public virtual DbSet<SystemConfigurationAudit> SystemConfigurationAudits { get; set; }
+    public virtual DbSet<EmailTemplate> EmailTemplates { get; set; }
+    public virtual DbSet<EmailRecipientGroup> EmailRecipientGroups { get; set; }
+    public virtual DbSet<EmailRecipient> EmailRecipients { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -205,6 +213,108 @@ public partial class AppDbContext : DbContext
             entity.HasOne(d => d.DocumentType).WithMany(p => p.UserPermissions).HasConstraintName("FK__UserPermi__Docum__6A30C649");
 
             entity.HasOne(d => d.User).WithMany(p => p.UserPermissions).HasConstraintName("FK_UserPermissions_DocuScanUser");
+        });
+
+        // Configure SystemConfiguration
+        modelBuilder.Entity<SystemConfiguration>(entity =>
+        {
+            entity.ToTable("SystemConfiguration");
+            entity.HasKey(e => e.ConfigurationId);
+
+            entity.Property(e => e.ConfigKey).HasMaxLength(200).IsRequired();
+            entity.Property(e => e.ConfigSection).HasMaxLength(100).IsRequired();
+            entity.Property(e => e.ConfigValue).IsRequired();
+            entity.Property(e => e.ValueType).HasMaxLength(50).IsRequired();
+            entity.Property(e => e.Description).HasMaxLength(500);
+            entity.Property(e => e.CreatedBy).HasMaxLength(100).IsRequired();
+            entity.Property(e => e.CreatedDate).HasDefaultValueSql("GETUTCDATE()");
+            entity.Property(e => e.ModifiedBy).HasMaxLength(100);
+
+            entity.HasIndex(e => e.ConfigKey).IsUnique().HasDatabaseName("IX_SystemConfiguration_ConfigKey");
+            entity.HasIndex(e => new { e.ConfigSection, e.IsActive }).HasDatabaseName("IX_SystemConfiguration_Section_Active");
+
+            entity.HasCheckConstraint("CK_SystemConfiguration_Section",
+                "ConfigSection IN ('Email', 'ActionReminderService', 'General', 'System')");
+        });
+
+        // Configure SystemConfigurationAudit
+        modelBuilder.Entity<SystemConfigurationAudit>(entity =>
+        {
+            entity.ToTable("SystemConfigurationAudit");
+            entity.HasKey(e => e.AuditId);
+
+            entity.Property(e => e.ConfigKey).HasMaxLength(200).IsRequired();
+            entity.Property(e => e.ChangedBy).HasMaxLength(100).IsRequired();
+            entity.Property(e => e.ChangedDate).HasDefaultValueSql("GETUTCDATE()");
+            entity.Property(e => e.ChangeReason).HasMaxLength(500);
+
+            entity.HasOne(e => e.Configuration)
+                .WithMany(e => e.AuditTrail)
+                .HasForeignKey(e => e.ConfigurationId)
+                .OnDelete(DeleteBehavior.Restrict)
+                .HasConstraintName("FK_ConfigAudit_Config");
+
+            entity.HasIndex(e => e.ConfigurationId).HasDatabaseName("IX_SystemConfigurationAudit_ConfigId");
+            entity.HasIndex(e => e.ChangedDate).HasDatabaseName("IX_SystemConfigurationAudit_ChangedDate");
+        });
+
+        // Configure EmailTemplate
+        modelBuilder.Entity<EmailTemplate>(entity =>
+        {
+            entity.ToTable("EmailTemplate");
+            entity.HasKey(e => e.TemplateId);
+
+            entity.Property(e => e.TemplateName).HasMaxLength(100).IsRequired();
+            entity.Property(e => e.TemplateKey).HasMaxLength(100).IsRequired();
+            entity.Property(e => e.Subject).HasMaxLength(500).IsRequired();
+            entity.Property(e => e.HtmlBody).IsRequired();
+            entity.Property(e => e.Category).HasMaxLength(50);
+            entity.Property(e => e.CreatedBy).HasMaxLength(100).IsRequired();
+            entity.Property(e => e.CreatedDate).HasDefaultValueSql("GETUTCDATE()");
+            entity.Property(e => e.ModifiedBy).HasMaxLength(100);
+
+            entity.HasIndex(e => e.TemplateName).IsUnique().HasDatabaseName("IX_EmailTemplate_Name");
+            entity.HasIndex(e => e.TemplateKey).IsUnique().HasDatabaseName("IX_EmailTemplate_Key");
+            entity.HasIndex(e => new { e.TemplateKey, e.IsActive }).HasDatabaseName("IX_EmailTemplate_Key_Active");
+        });
+
+        // Configure EmailRecipientGroup
+        modelBuilder.Entity<EmailRecipientGroup>(entity =>
+        {
+            entity.ToTable("EmailRecipientGroup");
+            entity.HasKey(e => e.GroupId);
+
+            entity.Property(e => e.GroupName).HasMaxLength(100).IsRequired();
+            entity.Property(e => e.GroupKey).HasMaxLength(100).IsRequired();
+            entity.Property(e => e.Description).HasMaxLength(500);
+            entity.Property(e => e.CreatedBy).HasMaxLength(100).IsRequired();
+            entity.Property(e => e.CreatedDate).HasDefaultValueSql("GETUTCDATE()");
+
+            entity.HasIndex(e => e.GroupName).IsUnique().HasDatabaseName("IX_EmailRecipientGroup_Name");
+            entity.HasIndex(e => e.GroupKey).IsUnique().HasDatabaseName("IX_EmailRecipientGroup_Key");
+        });
+
+        // Configure EmailRecipient
+        modelBuilder.Entity<EmailRecipient>(entity =>
+        {
+            entity.ToTable("EmailRecipient");
+            entity.HasKey(e => e.RecipientId);
+
+            entity.Property(e => e.EmailAddress).HasMaxLength(255).IsRequired();
+            entity.Property(e => e.DisplayName).HasMaxLength(200);
+            entity.Property(e => e.CreatedBy).HasMaxLength(100).IsRequired();
+            entity.Property(e => e.CreatedDate).HasDefaultValueSql("GETUTCDATE()");
+
+            entity.HasOne(e => e.Group)
+                .WithMany(e => e.Recipients)
+                .HasForeignKey(e => e.GroupId)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("FK_EmailRecipient_Group");
+
+            entity.HasIndex(e => new { e.GroupId, e.EmailAddress })
+                .IsUnique()
+                .HasDatabaseName("IX_EmailRecipient_Group_Email");
+            entity.HasIndex(e => new { e.GroupId, e.IsActive }).HasDatabaseName("IX_EmailRecipient_Group_Active");
         });
 
         OnModelCreatingPartial(modelBuilder);

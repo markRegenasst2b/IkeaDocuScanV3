@@ -129,6 +129,10 @@ builder.Services.AddScoped<IDocumentNameService, DocumentNameService>();
 builder.Services.AddScoped<ICurrencyService, CurrencyService>();
 builder.Services.AddScoped<IActionReminderService, ActionReminderService>();
 
+// Configuration management services
+builder.Services.AddScoped<ISystemConfigurationManager, IkeaDocuScan.Infrastructure.Services.ConfigurationManagerService>();
+builder.Services.AddScoped<IEmailTemplateService, IkeaDocuScan.Infrastructure.Services.EmailTemplateService>();
+
 // Excel Reporting Services
 builder.Services.AddExcelReporting(builder.Configuration);
 
@@ -187,5 +191,6 @@ app.MapDocumentNameEndpoints();
 app.MapCurrencyEndpoints();
 app.MapEmailEndpoints();
 app.MapExcelExportEndpoints();
+app.MapConfigurationEndpoints();
 
 app.Run();
