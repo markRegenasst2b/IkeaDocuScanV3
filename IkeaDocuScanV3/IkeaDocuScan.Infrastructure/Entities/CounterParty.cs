@@ -47,12 +47,6 @@ public partial class CounterParty
     [Unicode(false)]
     public string? CounterPartyNoAlpha { get; set; }
 
-    [InverseProperty("ChildCounterParty")]
-    public virtual ICollection<CounterPartyRelation> CounterPartyRelationChildCounterParties { get; set; } = new List<CounterPartyRelation>();
-
-    [InverseProperty("ParentCounterParty")]
-    public virtual ICollection<CounterPartyRelation> CounterPartyRelationParentCounterParties { get; set; } = new List<CounterPartyRelation>();
-
     [ForeignKey("Country")]
     [InverseProperty("CounterParties")]
     public virtual Country CountryNavigation { get; set; } = null!;

@@ -20,10 +20,6 @@ public partial class AppDbContext : DbContext
 
     public virtual DbSet<CounterParty> CounterParties { get; set; }
 
-    public virtual DbSet<CounterPartyRelation> CounterPartyRelations { get; set; }
-
-    public virtual DbSet<CounterPartyRelationType> CounterPartyRelationTypes { get; set; }
-
     public virtual DbSet<Country> Countries { get; set; }
 
     public virtual DbSet<Currency> Currencies { get; set; }
@@ -58,22 +54,6 @@ public partial class AppDbContext : DbContext
             entity.HasOne(d => d.CountryNavigation).WithMany(p => p.CounterParties)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK__CounterPa__Count__3D5E1FD2");
-        });
-
-        modelBuilder.Entity<CounterPartyRelation>(entity =>
-        {
-            entity.HasKey(e => e.Id).HasName("PK__CounterP__3214EC274F1EBB10");
-
-            entity.HasOne(d => d.ChildCounterParty).WithMany(p => p.CounterPartyRelationChildCounterParties).HasConstraintName("FK_CounterPartyRelation_Child_CounterParty");
-
-            entity.HasOne(d => d.ParentCounterParty).WithMany(p => p.CounterPartyRelationParentCounterParties).HasConstraintName("FK_CounterPartyRelation_Parent_CounterParty");
-
-            entity.HasOne(d => d.RelationTypeNavigation).WithMany(p => p.CounterPartyRelations).HasConstraintName("FK__CounterPa__Relat__5FB337D6");
-        });
-
-        modelBuilder.Entity<CounterPartyRelationType>(entity =>
-        {
-            entity.HasKey(e => e.Id).HasName("PK__CounterP__3214EC27E77D97BE");
         });
 
         modelBuilder.Entity<Country>(entity =>
