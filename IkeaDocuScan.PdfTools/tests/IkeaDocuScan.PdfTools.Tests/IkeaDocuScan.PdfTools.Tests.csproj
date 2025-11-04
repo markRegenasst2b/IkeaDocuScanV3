@@ -35,11 +35,9 @@
   <ItemGroup>
     <!-- Test data folder - PDF samples will be placed here -->
     <None Include="Data\**\*" CopyToOutputDirectory="PreserveNewest" />
-  </ItemGroup>
 
-  <ItemGroup>
-    <!-- Ensure Data folder exists -->
-    <Folder Include="Data\" />
+    <!-- xUnit configuration to disable parallel test execution -->
+    <None Include="xunit.runner.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>

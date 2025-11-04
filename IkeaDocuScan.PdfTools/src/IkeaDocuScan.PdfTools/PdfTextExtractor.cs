@@ -16,7 +16,9 @@ namespace IkeaDocuScan.PdfTools;
 /// </remarks>
 public class PdfTextExtractor
 {
-    private static readonly Lazy<IPythonEnvironment> _pythonEnv = new(() =>
+    // Keep the host alive for the lifetime of the application
+    // This ensures the Python environment is not disposed prematurely
+    private static readonly Lazy<IHost> _host = new(() =>
     {
         var builder = Host.CreateApplicationBuilder();
         builder.Services
@@ -24,13 +26,15 @@ public class PdfTextExtractor
             .WithHome(Path.Join(AppContext.BaseDirectory, "Python"))
             .FromRedistributable(CSnakes.Runtime.Locators.RedistributablePythonVersion.Python3_12)
             .WithVirtualEnvironment(".venv")
-            .WithPipInstaller("./requirements.txt"); 
+            .WithPipInstaller("./requirements.txt");
 
-        var app = builder.Build();
-        return app.Services.GetRequiredService<IPythonEnvironment>();
+        return builder.Build();
     });
 
-    private static IPythonEnvironment PythonEnv => _pythonEnv.Value;
+    private static IPythonEnvironment PythonEnv => _host.Value.Services.GetRequiredService<IPythonEnvironment>();
+
+    // Lock object to ensure thread-safe access to Python environment
+    private static readonly object _pythonLock = new object();
 
     /// <summary>
     /// Extracts all text content from a PDF file.
@@ -54,21 +58,25 @@ public class PdfTextExtractor
             throw new FileNotFoundException($"PDF file not found: {filePath}", filePath);
         }
 
-        try
+        lock (_pythonLock)
         {
-            // Call the CSnakes-generated Python wrapper
-            // Access the Python module through the IPythonEnvironment
-            using var module = PythonEnv.PdfExtractor();
-            var result = module.ExtractTextFromPath(filePath);
-            return result ?? string.Empty;
-        }
-        catch (FileNotFoundException)
-        {
-            throw;
-        }
-        catch (Exception ex)
-        {
-            return HandlePythonException(ex);
+            try
+            {
+                // Call the CSnakes-generated Python wrapper
+                // Access the Python module through the IPythonEnvironment
+                // Note: Don't dispose the module - let the environment manage its lifecycle
+                var module = PythonEnv.PdfExtractor();
+                var result = module.ExtractTextFromPath(filePath);
+                return result ?? string.Empty;
+            }
+            catch (FileNotFoundException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                return HandlePythonException(ex);
+            }
         }
     }
 
@@ -110,16 +118,20 @@ public class PdfTextExtractor
             throw new ArgumentException("PDF bytes cannot be empty.", nameof(pdfBytes));
         }
 
-        try
+        lock (_pythonLock)
         {
-            // Call the CSnakes-generated Python wrapper
-            using var module = PythonEnv.PdfExtractor();
-            var result = module.ExtractTextFromBytes(pdfBytes);
-            return result ?? string.Empty;
-        }
-        catch (Exception ex)
-        {
-            return HandlePythonException(ex);
+            try
+            {
+                // Call the CSnakes-generated Python wrapper
+                // Note: Don't dispose the module - let the environment manage its lifecycle
+                var module = PythonEnv.PdfExtractor();
+                var result = module.ExtractTextFromBytes(pdfBytes);
+                return result ?? string.Empty;
+            }
+            catch (Exception ex)
+            {
+                return HandlePythonException(ex);
+            }
         }
     }
 
@@ -155,9 +167,17 @@ public class PdfTextExtractor
             throw new ArgumentNullException(nameof(pdfStream), "PDF stream cannot be null.");
         }
 
+        // Ensure stream is at the beginning
+        if (pdfStream.CanSeek)
+        {
+            pdfStream.Position = 0;
+        }
+
         using var memoryStream = new MemoryStream();
         pdfStream.CopyTo(memoryStream);
-        return ExtractText(memoryStream.ToArray());
+        byte[] pdfBytes = memoryStream.ToArray();
+
+        return ExtractText(pdfBytes);
     }
 
     /// <summary>
@@ -202,31 +222,40 @@ public class PdfTextExtractor
             throw new FileNotFoundException($"PDF file not found: {filePath}", filePath);
         }
 
-        try
+        lock (_pythonLock)
         {
-            // Call the CSnakes-generated Python wrapper
-            using var module = PythonEnv.PdfExtractor();
-            using var pythonDict = module.GetPdfInfo(filePath);
-
-            // Convert Python dict to C# PdfMetadata object
-            return new PdfMetadata
+            try
             {
-                NumberOfPages = GetDictInt(pythonDict, "num_pages"),
-                IsEncrypted = GetDictBool(pythonDict, "is_encrypted"),
-                Title = GetDictString(pythonDict, "title"),
-                Author = GetDictString(pythonDict, "author"),
-                Subject = GetDictString(pythonDict, "subject"),
-                Creator = GetDictString(pythonDict, "creator"),
-                Producer = GetDictString(pythonDict, "producer")
-            };
-        }
-        catch (FileNotFoundException)
-        {
-            throw;
-        }
-        catch (Exception ex)
-        {
-            throw new PdfToolsException($"Error reading PDF metadata: {ex.Message}", ex);
+                // Call the CSnakes-generated Python wrapper
+                // Note: Don't dispose the module - let the environment manage its lifecycle
+                var module = PythonEnv.PdfExtractor();
+                var pythonDict = module.GetPdfInfo(filePath);
+
+                // Convert Python dict to C# PdfMetadata object
+                var metadata = new PdfMetadata
+                {
+                    NumberOfPages = GetDictInt(pythonDict, "num_pages"),
+                    IsEncrypted = GetDictBool(pythonDict, "is_encrypted"),
+                    Title = GetDictString(pythonDict, "title"),
+                    Author = GetDictString(pythonDict, "author"),
+                    Subject = GetDictString(pythonDict, "subject"),
+                    Creator = GetDictString(pythonDict, "creator"),
+                    Producer = GetDictString(pythonDict, "producer")
+                };
+
+                // Dispose the PyObject after extracting values
+                pythonDict?.Dispose();
+
+                return metadata;
+            }
+            catch (FileNotFoundException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                throw new PdfToolsException($"Error reading PDF metadata: {ex.Message}", ex);
+            }
         }
     }
 
@@ -275,31 +304,40 @@ public class PdfTextExtractor
             throw new FileNotFoundException($"Second PDF file not found: {filePath2}", filePath2);
         }
 
-        try
+        lock (_pythonLock)
         {
-            // Call the CSnakes-generated Python wrapper
-            using var module = PythonEnv.PdfExtractor();
-            using var pythonDict = module.ComparePdfText(filePath1, filePath2);
-
-            // Convert Python dict to C# PdfComparisonResult object
-            return new PdfComparisonResult
+            try
             {
-                Text1Length = GetDictInt(pythonDict, "text1_length"),
-                Text2Length = GetDictInt(pythonDict, "text2_length"),
-                Text1Lines = GetDictInt(pythonDict, "text1_lines"),
-                Text2Lines = GetDictInt(pythonDict, "text2_lines"),
-                IsIdentical = GetDictBool(pythonDict, "is_identical"),
-                LengthDifference = GetDictInt(pythonDict, "length_difference"),
-                SimilarityRatio = GetDictDouble(pythonDict, "similarity_ratio")
-            };
-        }
-        catch (FileNotFoundException)
-        {
-            throw;
-        }
-        catch (Exception ex)
-        {
-            throw new PdfToolsException($"Error comparing PDFs: {ex.Message}", ex);
+                // Call the CSnakes-generated Python wrapper
+                // Note: Don't dispose the module - let the environment manage its lifecycle
+                var module = PythonEnv.PdfExtractor();
+                var pythonDict = module.ComparePdfText(filePath1, filePath2);
+
+                // Convert Python dict to C# PdfComparisonResult object
+                var result = new PdfComparisonResult
+                {
+                    Text1Length = GetDictInt(pythonDict, "text1_length"),
+                    Text2Length = GetDictInt(pythonDict, "text2_length"),
+                    Text1Lines = GetDictInt(pythonDict, "text1_lines"),
+                    Text2Lines = GetDictInt(pythonDict, "text2_lines"),
+                    IsIdentical = GetDictBool(pythonDict, "is_identical"),
+                    LengthDifference = GetDictInt(pythonDict, "length_difference"),
+                    SimilarityRatio = GetDictDouble(pythonDict, "similarity_ratio")
+                };
+
+                // Dispose the PyObject after extracting values
+                pythonDict?.Dispose();
+
+                return result;
+            }
+            catch (FileNotFoundException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                throw new PdfToolsException($"Error comparing PDFs: {ex.Message}", ex);
+            }
         }
     }
 
