@@ -79,4 +79,9 @@ public class ExcelExportOptions
     /// Maximum allowed row count
     /// </summary>
     public int MaximumRowCount { get; set; } = 50000;
+
+    /// <summary>
+    /// Base URL for generating hyperlinks (e.g., https://docuscan.company.com)
+    /// </summary>
+    public string ApplicationUrl { get; set; } = string.Empty;
 }

@@ -11,7 +11,7 @@ public class DocumentExportDto : ExportableBase
     [ExcelExport("Document ID", ExcelDataType.Number, "#,##0", Order = 1, IsExportable = false)]
     public int Id { get; set; }
 
-    [ExcelExport("Document Name", ExcelDataType.String, Order = 2)]
+    [ExcelExport("Document Name", ExcelDataType.Hyperlink, "/documents/preview/{Id}", Order = 2)]
     public string Name { get; set; } = string.Empty;
 
     [ExcelExport("Bar Code", ExcelDataType.Number, "#,##0", Order = 3)]

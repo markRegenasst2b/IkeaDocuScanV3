@@ -67,7 +67,7 @@ public class ExcelExportService : IExcelExportService
         }
 
         // Write data rows
-        WriteDataRows(worksheet, metadata, dataList, currentRow);
+        WriteDataRows(worksheet, metadata, dataList, currentRow, options);
 
         // Apply formatting
         ApplyFormatting(worksheet, metadata, options, dataList.Count);
@@ -112,7 +112,8 @@ public class ExcelExportService : IExcelExportService
         IWorksheet worksheet,
         List<ExcelExportMetadata> metadata,
         List<T> data,
-        int startRow) where T : ExportableBase
+        int startRow,
+        ExcelExportOptions options) where T : ExportableBase
     {
         for (int rowIndex = 0; rowIndex < data.Count; rowIndex++)
         {
@@ -127,7 +128,7 @@ public class ExcelExportService : IExcelExportService
 
                 if (value != null)
                 {
-                    SetCellValue(worksheet, cell, value, meta);
+                    SetCellValue(worksheet, cell, value, meta, item, options);
                 }
             }
         }
@@ -136,7 +137,7 @@ public class ExcelExportService : IExcelExportService
     /// <summary>
     /// Sets cell value with appropriate type and formatting
     /// </summary>
-    private void SetCellValue(IWorksheet worksheet, IRange cell, object value, ExcelExportMetadata metadata)
+    private void SetCellValue(IWorksheet worksheet, IRange cell, object value, ExcelExportMetadata metadata, object dataItem, ExcelExportOptions options)
     {
         switch (metadata.DataType)
         {
@@ -200,16 +201,34 @@ public class ExcelExportService : IExcelExportService
                 break;
 
             case ExportDataType.Hyperlink:
-                var url = value.ToString() ?? string.Empty;
-                if (!string.IsNullOrEmpty(url))
+                // For hyperlinks, the value is the display text (e.g., document name)
+                // The Format contains the URL pattern (e.g., "/documents/preview/{Id}")
+                var displayText = value.ToString() ?? string.Empty;
+                var urlPattern = metadata.Format;
+
+                if (!string.IsNullOrEmpty(urlPattern) && !string.IsNullOrEmpty(displayText))
                 {
-                    var hyperlink = worksheet.HyperLinks.Add(cell);
-                    hyperlink.Type = ExcelHyperLinkType.Url;
-                    hyperlink.Address = url;
-                    hyperlink.ScreenTip = url;
-                    cell.Text = url;
-                    cell.CellStyle.Font.Underline = ExcelUnderline.Single;
-                    cell.CellStyle.Font.Color = ExcelKnownColors.Blue;
+                    // Replace placeholders in URL pattern with actual values from data item
+                    var url = ResolveUrlPattern(urlPattern, dataItem, options);
+
+                    if (!string.IsNullOrEmpty(url))
+                    {
+                        var hyperlink = worksheet.HyperLinks.Add(cell);
+                        hyperlink.Type = ExcelHyperLinkType.Url;
+                        hyperlink.Address = url;
+                        hyperlink.ScreenTip = $"Open: {displayText}";
+                        cell.Text = displayText; // Show the document name as link text
+                        cell.CellStyle.Font.Underline = ExcelUnderline.Single;
+                        cell.CellStyle.Font.Color = ExcelKnownColors.Blue;
+                    }
+                    else
+                    {
+                        cell.Text = displayText;
+                    }
+                }
+                else
+                {
+                    cell.Text = displayText;
                 }
                 break;
 
@@ -217,6 +236,34 @@ public class ExcelExportService : IExcelExportService
                 cell.Text = value.ToString();
                 break;
         }
+    }
+
+    /// <summary>
+    /// Resolves URL pattern by replacing placeholders with actual values
+    /// </summary>
+    private string ResolveUrlPattern(string urlPattern, object dataItem, ExcelExportOptions options)
+    {
+        var url = urlPattern;
+
+        // Replace {PropertyName} placeholders with actual values from the data item
+        var properties = dataItem.GetType().GetProperties();
+        foreach (var prop in properties)
+        {
+            var placeholder = $"{{{prop.Name}}}";
+            if (url.Contains(placeholder))
+            {
+                var propValue = prop.GetValue(dataItem);
+                url = url.Replace(placeholder, propValue?.ToString() ?? string.Empty);
+            }
+        }
+
+        // Prepend ApplicationUrl if it's set and URL is relative
+        if (!string.IsNullOrEmpty(options.ApplicationUrl) && url.StartsWith("/"))
+        {
+            url = options.ApplicationUrl.TrimEnd('/') + url;
+        }
+
+        return url;
     }
 
     /// <summary>
