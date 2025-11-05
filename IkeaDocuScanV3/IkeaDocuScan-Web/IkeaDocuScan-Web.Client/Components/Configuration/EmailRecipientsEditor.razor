@@ -1,0 +1,241 @@
+@using IkeaDocuScan.Shared.DTOs.Configuration
+@using IkeaDocuScan_Web.Client.Services
+@inject ConfigurationHttpService ConfigService
+@inject ILogger<EmailRecipientsEditor> Logger
+
+<div class="card">
+    <div class="card-header">
+        <h4><i class="fa fa-envelope me-2"></i>Email Recipient Groups</h4>
+    </div>
+    <div class="card-body">
+        @if (isLoading)
+        {
+            <div class="text-center py-4">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <p class="mt-2">Loading recipient groups...</p>
+            </div>
+        }
+        else if (recipientGroups != null && recipientGroups.Any())
+        {
+            <div class="accordion" id="recipientGroupsAccordion">
+                @foreach (var group in recipientGroups)
+                {
+                    var groupId = $"group-{group.GroupKey}";
+                    var isExpanded = selectedGroupKey == group.GroupKey;
+
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button @(isExpanded ? "" : "collapsed")"
+                                    type="button"
+                                    @onclick="() => ToggleGroup(group.GroupKey)">
+                                <strong>@group.GroupName</strong>
+                                <span class="badge bg-primary ms-2">@group.Recipients.Count recipient(s)</span>
+                            </button>
+                        </h2>
+                        <div class="accordion-collapse collapse @(isExpanded ? "show" : "")">
+                            <div class="accordion-body">
+                                @if (!string.IsNullOrEmpty(group.Description))
+                                {
+                                    <p class="text-muted"><small>@group.Description</small></p>
+                                }
+
+                                <div class="mb-3">
+                                    <strong>Current Recipients:</strong>
+                                    @if (group.Recipients.Any())
+                                    {
+                                        <ul class="list-group mt-2">
+                                            @foreach (var recipient in group.Recipients.OrderBy(r => r.SortOrder))
+                                            {
+                                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                                    <span>
+                                                        <i class="fa fa-envelope me-2"></i>
+                                                        @recipient.EmailAddress
+                                                        @if (!string.IsNullOrEmpty(recipient.DisplayName))
+                                                        {
+                                                            <small class="text-muted">(@recipient.DisplayName)</small>
+                                                        }
+                                                    </span>
+                                                    @if (!recipient.IsActive)
+                                                    {
+                                                        <span class="badge bg-warning">Inactive</span>
+                                                    }
+                                                </li>
+                                            }
+                                        </ul>
+                                    }
+                                    else
+                                    {
+                                        <p class="text-muted mt-2">No recipients configured</p>
+                                    }
+                                </div>
+
+                                <hr />
+
+                                <h6>Update Recipients:</h6>
+                                <div class="mb-3">
+                                    <label class="form-label">Email Addresses (one per line)</label>
+                                    <textarea class="form-control"
+                                              rows="5"
+                                              placeholder="admin@company.com&#10;user@company.com"
+                                              @bind="editingEmails[group.GroupKey]"></textarea>
+                                    <div class="form-text">Enter email addresses, one per line</div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">Reason for Change (Optional)</label>
+                                    <input type="text" class="form-control"
+                                           placeholder="e.g., Added new team member"
+                                           @bind="editingReasons[group.GroupKey]" />
+                                </div>
+
+                                <div class="d-flex gap-2">
+                                    <button class="btn btn-primary"
+                                            @onclick="() => SaveRecipients(group.GroupKey)"
+                                            disabled="@isSaving">
+                                        @if (isSaving)
+                                        {
+                                            <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                                        }
+                                        <i class="fa fa-save me-2"></i>Save Changes
+                                    </button>
+                                    <button class="btn btn-secondary"
+                                            @onclick="() => CancelEdit(group.GroupKey)">
+                                        <i class="fa fa-times me-2"></i>Cancel
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+        else
+        {
+            <p class="text-muted">No recipient groups found.</p>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter] public EventCallback<string> OnSaved { get; set; }
+    [Parameter] public EventCallback<string> OnError { get; set; }
+
+    private List<EmailRecipientGroupDto>? recipientGroups;
+    private Dictionary<string, string> editingEmails = new();
+    private Dictionary<string, string> editingReasons = new();
+    private string? selectedGroupKey;
+    private bool isLoading = true;
+    private bool isSaving;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadRecipientGroups();
+    }
+
+    private async Task LoadRecipientGroups()
+    {
+        try
+        {
+            isLoading = true;
+            recipientGroups = await ConfigService.GetAllEmailRecipientGroupsAsync();
+
+            // Initialize editing dictionaries
+            if (recipientGroups != null)
+            {
+                foreach (var group in recipientGroups)
+                {
+                    var emails = string.Join("\n", group.Recipients
+                        .Where(r => r.IsActive)
+                        .OrderBy(r => r.SortOrder)
+                        .Select(r => r.EmailAddress));
+
+                    editingEmails[group.GroupKey] = emails;
+                    editingReasons[group.GroupKey] = string.Empty;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to load recipient groups");
+            await OnError.InvokeAsync($"Failed to load recipient groups: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void ToggleGroup(string groupKey)
+    {
+        selectedGroupKey = selectedGroupKey == groupKey ? null : groupKey;
+    }
+
+    private async Task SaveRecipients(string groupKey)
+    {
+        try
+        {
+            isSaving = true;
+
+            if (!editingEmails.ContainsKey(groupKey))
+                return;
+
+            var emailText = editingEmails[groupKey];
+            var emails = emailText
+                .Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Where(e => !string.IsNullOrWhiteSpace(e))
+                .ToArray();
+
+            if (emails.Length == 0)
+            {
+                await OnError.InvokeAsync("Please enter at least one email address");
+                return;
+            }
+
+            // Basic email validation
+            foreach (var email in emails)
+            {
+                if (!email.Contains('@'))
+                {
+                    await OnError.InvokeAsync($"Invalid email address: {email}");
+                    return;
+                }
+            }
+
+            var reason = editingReasons.ContainsKey(groupKey) ? editingReasons[groupKey] : null;
+
+            await ConfigService.SetEmailRecipientsAsync(groupKey, emails, reason);
+
+            await OnSaved.InvokeAsync($"Recipients for '{groupKey}' updated successfully");
+
+            // Reload to show updated data
+            await LoadRecipientGroups();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to save recipients for {GroupKey}", groupKey);
+            await OnError.InvokeAsync($"Failed to save recipients: {ex.Message}");
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+    private void CancelEdit(string groupKey)
+    {
+        // Reset to original values
+        var group = recipientGroups?.FirstOrDefault(g => g.GroupKey == groupKey);
+        if (group != null)
+        {
+            var emails = string.Join("\n", group.Recipients
+                .Where(r => r.IsActive)
+                .OrderBy(r => r.SortOrder)
+                .Select(r => r.EmailAddress));
+
+            editingEmails[groupKey] = emails;
+            editingReasons[groupKey] = string.Empty;
+        }
+    }
+}

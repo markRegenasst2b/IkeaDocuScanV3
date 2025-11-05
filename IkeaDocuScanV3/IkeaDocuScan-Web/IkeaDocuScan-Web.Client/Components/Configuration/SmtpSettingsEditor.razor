@@ -1,0 +1,205 @@
+@using IkeaDocuScan_Web.Client.Services
+@inject ConfigurationHttpService ConfigService
+@inject ILogger<SmtpSettingsEditor> Logger
+
+<div class="card">
+    <div class="card-header">
+        <h4><i class="fa fa-server me-2"></i>SMTP Server Configuration</h4>
+    </div>
+    <div class="card-body">
+        <div class="alert alert-info" role="alert">
+            <i class="fa fa-info-circle me-2"></i>
+            Configure SMTP settings for sending emails. Changes are automatically tested before saving.
+        </div>
+
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label class="form-label">SMTP Host <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" placeholder="smtp.office365.com" @bind="smtpHost" />
+                <div class="form-text">SMTP server hostname or IP address</div>
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label">SMTP Port <span class="text-danger">*</span></label>
+                <input type="number" class="form-control" min="1" max="65535" @bind="smtpPort" />
+                <div class="form-text">Default: 587 for TLS, 25 for non-TLS</div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Username</label>
+                <input type="text" class="form-control" placeholder="email@company.com" @bind="smtpUsername" />
+                <div class="form-text">SMTP authentication username (optional)</div>
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Password</label>
+                <input type="password" class="form-control" placeholder="••••••••" @bind="smtpPassword" />
+                <div class="form-text">SMTP authentication password (optional)</div>
+            </div>
+        </div>
+
+        <div class="mb-3">
+            <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="useSslCheck" @bind="useSsl" />
+                <label class="form-check-label" for="useSslCheck">
+                    Use SSL/TLS
+                </label>
+            </div>
+            <div class="form-text">Enable secure connection (recommended for production)</div>
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">From Address <span class="text-danger">*</span></label>
+            <input type="email" class="form-control" placeholder="noreply@company.com" @bind="fromAddress" />
+            <div class="form-text">Email address that appears in the "From" field</div>
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">From Display Name</label>
+            <input type="text" class="form-control" placeholder="DocuScan System" @bind="fromDisplayName" />
+            <div class="form-text">Display name that appears with the from address</div>
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Reason for Change (Optional)</label>
+            <input type="text" class="form-control" placeholder="e.g., Migrated to new mail server" @bind="changeReason" />
+        </div>
+
+        <hr />
+
+        <div class="d-flex gap-2">
+            <button class="btn btn-success" @onclick="TestSmtpConnection" disabled="@isTesting">
+                @if (isTesting)
+                {
+                    <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                }
+                <i class="fa fa-check-circle me-2"></i>Test Connection
+            </button>
+            <button class="btn btn-primary" @onclick="SaveSettings" disabled="@isSaving">
+                @if (isSaving)
+                {
+                    <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                }
+                <i class="fa fa-save me-2"></i>Save Settings
+            </button>
+        </div>
+
+        @if (testResult != null)
+        {
+            <div class="alert @(testResult.Value ? "alert-success" : "alert-danger") mt-3" role="alert">
+                <i class="fa @(testResult.Value ? "fa-check-circle" : "fa-times-circle") me-2"></i>
+                @(testResult.Value ? "SMTP connection successful!" : "SMTP connection failed. Please check your settings.")
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter] public EventCallback<string> OnSaved { get; set; }
+    [Parameter] public EventCallback<string> OnError { get; set; }
+
+    private string smtpHost = string.Empty;
+    private int smtpPort = 587;
+    private string smtpUsername = string.Empty;
+    private string smtpPassword = string.Empty;
+    private bool useSsl = true;
+    private string fromAddress = string.Empty;
+    private string fromDisplayName = string.Empty;
+    private string changeReason = string.Empty;
+
+    private bool? testResult;
+    private bool isTesting;
+    private bool isSaving;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadSettings();
+    }
+
+    private async Task LoadSettings()
+    {
+        try
+        {
+            smtpHost = await ConfigService.GetConfigurationAsync("Email", "SmtpHost") ?? string.Empty;
+
+            var portStr = await ConfigService.GetConfigurationAsync("Email", "SmtpPort");
+            if (int.TryParse(portStr, out var port))
+                smtpPort = port;
+
+            smtpUsername = await ConfigService.GetConfigurationAsync("Email", "SmtpUsername") ?? string.Empty;
+            smtpPassword = await ConfigService.GetConfigurationAsync("Email", "SmtpPassword") ?? string.Empty;
+
+            var sslStr = await ConfigService.GetConfigurationAsync("Email", "UseSsl");
+            if (bool.TryParse(sslStr, out var ssl))
+                useSsl = ssl;
+
+            fromAddress = await ConfigService.GetConfigurationAsync("Email", "FromAddress") ?? string.Empty;
+            fromDisplayName = await ConfigService.GetConfigurationAsync("Email", "FromDisplayName") ?? string.Empty;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to load SMTP settings");
+            await OnError.InvokeAsync($"Failed to load SMTP settings: {ex.Message}");
+        }
+    }
+
+    private async Task TestSmtpConnection()
+    {
+        try
+        {
+            isTesting = true;
+            testResult = null;
+
+            // Save settings first (they will be rolled back if test fails)
+            await SaveSettingsInternal(testOnly: true);
+
+            testResult = await ConfigService.TestSmtpConnectionAsync();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "SMTP test failed");
+            testResult = false;
+            await OnError.InvokeAsync($"SMTP test failed: {ex.Message}");
+        }
+        finally
+        {
+            isTesting = false;
+        }
+    }
+
+    private async Task SaveSettings()
+    {
+        try
+        {
+            isSaving = true;
+            await SaveSettingsInternal(testOnly: false);
+            await OnSaved.InvokeAsync("SMTP settings saved successfully");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to save SMTP settings");
+            await OnError.InvokeAsync($"Failed to save SMTP settings: {ex.Message}");
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+    private async Task SaveSettingsInternal(bool testOnly)
+    {
+        // Save all SMTP settings
+        await ConfigService.SetConfigurationAsync("Email", "SmtpHost", smtpHost, testOnly ? "Testing connection" : changeReason);
+        await ConfigService.SetConfigurationAsync("Email", "SmtpPort", smtpPort.ToString(), testOnly ? "Testing connection" : changeReason);
+        await ConfigService.SetConfigurationAsync("Email", "SmtpUsername", smtpUsername, testOnly ? "Testing connection" : changeReason);
+        await ConfigService.SetConfigurationAsync("Email", "SmtpPassword", smtpPassword, testOnly ? "Testing connection" : changeReason);
+        await ConfigService.SetConfigurationAsync("Email", "UseSsl", useSsl.ToString(), testOnly ? "Testing connection" : changeReason);
+        await ConfigService.SetConfigurationAsync("Email", "FromAddress", fromAddress, testOnly ? "Testing connection" : changeReason);
+        await ConfigService.SetConfigurationAsync("Email", "FromDisplayName", fromDisplayName, testOnly ? "Testing connection" : changeReason);
+
+        if (!testOnly)
+        {
+            changeReason = string.Empty; // Clear reason after save
+        }
+    }
+}

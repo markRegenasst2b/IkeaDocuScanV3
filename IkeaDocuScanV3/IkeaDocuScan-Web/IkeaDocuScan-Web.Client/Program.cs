@@ -29,6 +29,9 @@ builder.Services.AddScoped<ICurrencyService, CurrencyHttpService>();
 builder.Services.AddScoped<IActionReminderService, ActionReminderHttpService>();
 builder.Services.AddScoped<EmailHttpService>();
 
+// Configuration Management Service
+builder.Services.AddScoped<ConfigurationHttpService>();
+
 // Excel Export Service
 builder.Services.AddScoped<ExcelExportHttpService>();
 

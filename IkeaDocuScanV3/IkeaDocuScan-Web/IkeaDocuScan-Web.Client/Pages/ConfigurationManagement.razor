@@ -1,0 +1,187 @@
+@page "/configuration-management"
+@rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
+@attribute [Authorize(Policy = "SuperUser")]
+@using IkeaDocuScan.Shared.DTOs.Configuration
+@using IkeaDocuScan_Web.Client.Services
+@using IkeaDocuScan_Web.Client.Components.Configuration
+@inject ConfigurationHttpService ConfigService
+@inject ILogger<ConfigurationManagement> Logger
+
+<PageTitle>Configuration Management</PageTitle>
+
+<div class="container-fluid mt-4">
+    <div class="bg-light p-3">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <div>
+                <h1 class="mb-0">
+                    <i class="fa fa-cog me-2"></i>Configuration Management
+                </h1>
+                <p class="text-muted mb-0">Manage system configuration, email templates, and recipients</p>
+            </div>
+            <button class="btn btn-secondary" @onclick="ReloadCache" disabled="@isReloading">
+                @if (isReloading)
+                {
+                    <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                }
+                <i class="fa fa-sync me-2"></i>Reload Cache
+            </button>
+        </div>
+
+        @if (!string.IsNullOrEmpty(successMessage))
+        {
+            <div class="alert alert-success alert-dismissible fade show" role="alert">
+                <i class="fa fa-check-circle me-2"></i>@successMessage
+                <button type="button" class="btn-close" @onclick="() => successMessage = null"></button>
+            </div>
+        }
+
+        @if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                <i class="fa fa-exclamation-triangle me-2"></i>@errorMessage
+                <button type="button" class="btn-close" @onclick="() => errorMessage = null"></button>
+            </div>
+        }
+
+        <!-- Tab Navigation -->
+        <ul class="nav nav-tabs mt-4" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link @(selectedTab == "email-recipients" ? "active" : "")"
+                        @onclick='() => SelectTab("email-recipients")'
+                        type="button">
+                    <i class="fa fa-users me-2"></i>Email Recipients
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link @(selectedTab == "email-templates" ? "active" : "")"
+                        @onclick='() => SelectTab("email-templates")'
+                        type="button">
+                    <i class="fa fa-file-text me-2"></i>Email Templates
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link @(selectedTab == "smtp-settings" ? "active" : "")"
+                        @onclick='() => SelectTab("smtp-settings")'
+                        type="button">
+                    <i class="fa fa-server me-2"></i>SMTP Settings
+                </button>
+            </li>
+        </ul>
+
+        <!-- Tab Content -->
+        <div class="tab-content mt-3">
+            @if (selectedTab == "email-recipients")
+            {
+                <div class="tab-pane fade show active">
+                    <EmailRecipientsEditor OnSaved="OnRecipientsSaved" OnError="OnError" />
+                </div>
+            }
+            else if (selectedTab == "email-templates")
+            {
+                <div class="tab-pane fade show active">
+                    <EmailTemplateList OnEdit="OnTemplateEdit" OnDelete="OnTemplateDelete" OnError="OnError" />
+                </div>
+            }
+            else if (selectedTab == "smtp-settings")
+            {
+                <div class="tab-pane fade show active">
+                    <SmtpSettingsEditor OnSaved="OnSmtpSaved" OnError="OnError" />
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    private string selectedTab = "email-recipients";
+    private string? errorMessage;
+    private string? successMessage;
+    private bool isReloading;
+
+    private void SelectTab(string tabName)
+    {
+        selectedTab = tabName;
+        ClearMessages();
+    }
+
+    private async Task ReloadCache()
+    {
+        try
+        {
+            isReloading = true;
+            errorMessage = null;
+            successMessage = null;
+
+            await ConfigService.ReloadCacheAsync();
+
+            successMessage = "Configuration cache reloaded successfully";
+            await InvokeAsync(StateHasChanged);
+
+            // Clear success message after 3 seconds
+            await Task.Delay(3000);
+            successMessage = null;
+            await InvokeAsync(StateHasChanged);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to reload cache");
+            errorMessage = $"Failed to reload cache: {ex.Message}";
+        }
+        finally
+        {
+            isReloading = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private void OnRecipientsSaved(string message)
+    {
+        successMessage = message;
+        errorMessage = null;
+        StateHasChanged();
+    }
+
+    private void OnSmtpSaved(string message)
+    {
+        successMessage = message;
+        errorMessage = null;
+        StateHasChanged();
+    }
+
+    private void OnTemplateEdit(EmailTemplateDto template)
+    {
+        // Navigate to template editor or open modal
+        successMessage = $"Editing template: {template.TemplateName}";
+        StateHasChanged();
+    }
+
+    private async Task OnTemplateDelete(int templateId)
+    {
+        try
+        {
+            await ConfigService.DeleteEmailTemplateAsync(templateId);
+            successMessage = "Template deleted successfully";
+            errorMessage = null;
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to delete template {TemplateId}", templateId);
+            errorMessage = $"Failed to delete template: {ex.Message}";
+            StateHasChanged();
+        }
+    }
+
+    private void OnError(string message)
+    {
+        errorMessage = message;
+        successMessage = null;
+        StateHasChanged();
+    }
+
+    private void ClearMessages()
+    {
+        errorMessage = null;
+        successMessage = null;
+    }
+}

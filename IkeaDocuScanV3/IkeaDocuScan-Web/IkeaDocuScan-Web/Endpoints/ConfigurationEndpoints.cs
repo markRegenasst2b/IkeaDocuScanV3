@@ -1,5 +1,6 @@
 using IkeaDocuScan.Shared.DTOs.Configuration;
 using IkeaDocuScan.Shared.Interfaces;
+using IkeaDocuScan_Web.Services;
 using Microsoft.AspNetCore.Mvc;
 
 namespace IkeaDocuScan_Web.Endpoints;
@@ -293,6 +294,45 @@ public static class ConfigurationEndpoints
         .Produces(200)
         .WithDescription("Reload configuration cache (clears 5-minute TTL cache)");
 
+        group.MapPost("/migrate", async (
+            [FromBody] MigrateConfigurationRequest? request,
+            ConfigurationMigrationService migrationService,
+            HttpContext httpContext) =>
+        {
+            var username = httpContext.User.Identity?.Name ?? "Unknown";
+            var overwriteExisting = request?.OverwriteExisting ?? false;
+
+            try
+            {
+                var result = await migrationService.MigrateAllAsync(username, overwriteExisting);
+
+                if (result.Success)
+                {
+                    return Results.Ok(new
+                    {
+                        success = true,
+                        message = result.Message,
+                        details = new
+                        {
+                            smtpSettingsMigrated = result.SmtpSettingsMigrated,
+                            recipientGroupsMigrated = result.RecipientGroupsMigrated,
+                            emailTemplatesCreated = result.EmailTemplatesCreated
+                        }
+                    });
+                }
+
+                return Results.BadRequest(new { success = false, error = result.Message });
+            }
+            catch (Exception ex)
+            {
+                return Results.BadRequest(new { success = false, error = ex.Message });
+            }
+        })
+        .WithName("MigrateConfiguration")
+        .Produces(200)
+        .Produces(400)
+        .WithDescription("Migrate configuration from appsettings.json to database (with optional overwrite)");
+
         // ===== Template Preview Endpoint =====
 
         group.MapPost("/email-templates/preview", async (
@@ -369,3 +409,5 @@ public record PreviewTemplateRequest(
     string Template,
     Dictionary<string, object> Data,
     Dictionary<string, List<Dictionary<string, object>>>? Loops = null);
+
+public record MigrateConfigurationRequest(bool OverwriteExisting = false);

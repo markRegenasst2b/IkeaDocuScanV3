@@ -132,6 +132,7 @@ builder.Services.AddScoped<IActionReminderService, ActionReminderService>();
 // Configuration management services
 builder.Services.AddScoped<ISystemConfigurationManager, IkeaDocuScan.Infrastructure.Services.ConfigurationManagerService>();
 builder.Services.AddScoped<IEmailTemplateService, IkeaDocuScan.Infrastructure.Services.EmailTemplateService>();
+builder.Services.AddScoped<ConfigurationMigrationService>();
 
 // Excel Reporting Services
 builder.Services.AddExcelReporting(builder.Configuration);

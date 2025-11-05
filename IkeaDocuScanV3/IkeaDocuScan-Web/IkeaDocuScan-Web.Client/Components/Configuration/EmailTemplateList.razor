@@ -1,0 +1,336 @@
+@using IkeaDocuScan.Shared.DTOs.Configuration
+@using IkeaDocuScan_Web.Client.Services
+@inject ConfigurationHttpService ConfigService
+@inject ILogger<EmailTemplateList> Logger
+
+<div class="card">
+    <div class="card-header">
+        <div class="d-flex justify-content-between align-items-center">
+            <h4><i class="fa fa-file-text me-2"></i>Email Templates</h4>
+            <button class="btn btn-primary" @onclick="ShowCreateModal">
+                <i class="fa fa-plus me-2"></i>Create New Template
+            </button>
+        </div>
+    </div>
+    <div class="card-body">
+        @if (isLoading)
+        {
+            <div class="text-center py-4">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <p class="mt-2">Loading templates...</p>
+            </div>
+        }
+        else if (templates != null && templates.Any())
+        {
+            <div class="table-responsive">
+                <table class="table table-striped table-bordered table-hover">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Template Name</th>
+                            <th>Key</th>
+                            <th>Category</th>
+                            <th>Subject</th>
+                            <th style="width: 250px;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var template in templates.Take(10))
+                        {
+                            <tr>
+                                <td>
+                                    <strong>@template.TemplateName</strong>
+                                    @if (template.IsDefault)
+                                    {
+                                        <span class="badge bg-info ms-2">Default</span>
+                                    }
+                                    @if (!template.IsActive)
+                                    {
+                                        <span class="badge bg-warning ms-2">Inactive</span>
+                                    }
+                                </td>
+                                <td>@template.TemplateKey</td>
+                                <td>@template.Category</td>
+                                <td><small class="text-muted">@template.Subject</small></td>
+                                <td>
+                                    <div class="btn-group btn-group-sm">
+                                        <button class="btn btn-primary" @onclick="() => EditTemplate(template)">
+                                            <i class="fa fa-edit me-1"></i>Edit
+                                        </button>
+                                        <button class="btn btn-info" @onclick="() => PreviewTemplate(template)">
+                                            <i class="fa fa-eye me-1"></i>Preview
+                                        </button>
+                                        <button class="btn btn-danger" @onclick="() => ConfirmDelete(template)">
+                                            <i class="fa fa-trash me-1"></i>Delete
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+                @if (templates.Count > 10)
+                {
+                    <p class="text-muted text-center mt-3">Showing first 10 of @templates.Count templates</p>
+                }
+            </div>
+        }
+        else
+        {
+            <p class="text-muted">No templates found.</p>
+        }
+    </div>
+</div>
+
+<!-- Create/Edit Modal -->
+@if (showTemplateModal && editingTemplate != null)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">@(editingTemplate.TemplateId.HasValue ? "Edit" : "Create") Email Template</h5>
+                    <button type="button" class="btn-close" @onclick="HideTemplateModal"></button>
+                </div>
+                <div class="modal-body">
+                    <EmailTemplateEditor
+                        Template="@editingTemplate"
+                        OnSave="@SaveTemplate"
+                        OnCancel="@HideTemplateModal" />
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Preview Modal -->
+@if (showPreviewModal && previewTemplate != null)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Template Preview: @previewTemplate.TemplateName</h5>
+                    <button type="button" class="btn-close" @onclick="HidePreviewModal"></button>
+                </div>
+                <div class="modal-body">
+                    @if (!string.IsNullOrEmpty(previewHtml))
+                    {
+                        <iframe srcdoc="@previewHtml" style="width: 100%; height: 500px; border: 1px solid #dee2e6;"></iframe>
+                    }
+                    else
+                    {
+                        <p class="text-muted">Loading preview...</p>
+                    }
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="HidePreviewModal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Delete Confirmation Modal -->
+@if (showDeleteModal && templateToDelete != null)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Confirm Delete</h5>
+                    <button type="button" class="btn-close" @onclick="HideDeleteModal"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Are you sure you want to delete the template <strong>@templateToDelete.TemplateName</strong>?</p>
+                    <p class="text-muted"><small>Note: This will deactivate the template, not permanently delete it.</small></p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="HideDeleteModal">Cancel</button>
+                    <button type="button" class="btn btn-danger" @onclick="DeleteTemplate" disabled="@isDeleting">
+                        @if (isDeleting)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                        }
+                        <i class="fa fa-trash me-2"></i>Delete
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public EventCallback<EmailTemplateDto> OnEdit { get; set; }
+    [Parameter] public EventCallback<int> OnDelete { get; set; }
+    [Parameter] public EventCallback<string> OnError { get; set; }
+
+    private List<EmailTemplateDto>? templates;
+    private EmailTemplateDto? editingTemplate;
+    private EmailTemplateDto? previewTemplate;
+    private EmailTemplateDto? templateToDelete;
+    private string? previewHtml;
+    private bool isLoading = true;
+    private bool isDeleting;
+    private bool showTemplateModal;
+    private bool showPreviewModal;
+    private bool showDeleteModal;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadTemplates();
+    }
+
+    private async Task LoadTemplates()
+    {
+        try
+        {
+            isLoading = true;
+            templates = await ConfigService.GetAllEmailTemplatesAsync();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to load email templates");
+            await OnError.InvokeAsync($"Failed to load email templates: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void ShowCreateModal()
+    {
+        editingTemplate = new EmailTemplateDto
+        {
+            TemplateName = string.Empty,
+            TemplateKey = string.Empty,
+            Subject = string.Empty,
+            HtmlBody = string.Empty,
+            IsActive = true,
+            IsDefault = false,
+            Category = "Notifications"
+        };
+
+        showTemplateModal = true;
+    }
+
+    private void EditTemplate(EmailTemplateDto template)
+    {
+        editingTemplate = template;
+        showTemplateModal = true;
+    }
+
+    private async Task SaveTemplate(EmailTemplateDto template)
+    {
+        try
+        {
+            if (template.TemplateId.HasValue)
+            {
+                await ConfigService.UpdateEmailTemplateAsync(template.TemplateId.Value, template);
+            }
+            else
+            {
+                await ConfigService.CreateEmailTemplateAsync(template);
+            }
+
+            await HideTemplateModal();
+            await LoadTemplates();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to save template");
+            await OnError.InvokeAsync($"Failed to save template: {ex.Message}");
+        }
+    }
+
+    private Task HideTemplateModal()
+    {
+        editingTemplate = null;
+        showTemplateModal = false;
+        return Task.CompletedTask;
+    }
+
+    private async Task PreviewTemplate(EmailTemplateDto template)
+    {
+        try
+        {
+            previewTemplate = template;
+
+            // Create sample data for preview
+            var sampleData = new Dictionary<string, object>
+            {
+                { "Username", "John Doe" },
+                { "Reason", "Sample reason" },
+                { "ApplicationUrl", "https://docuscan.company.com" },
+                { "Date", DateTime.Now },
+                { "Count", 3 },
+                { "BarCode", "12345" },
+                { "DocumentLink", "https://example.com/document/12345" },
+                { "FileName", "invoice.pdf" },
+                { "Message", "Sample message" },
+                { "AdminEmail", "admin@company.com" }
+            };
+
+            previewHtml = template.HtmlBody;
+
+            // Replace placeholders for preview
+            foreach (var kvp in sampleData)
+            {
+                previewHtml = previewHtml.Replace($"{{{{{kvp.Key}}}}}", kvp.Value.ToString());
+            }
+
+            showPreviewModal = true;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to preview template");
+            await OnError.InvokeAsync($"Failed to preview template: {ex.Message}");
+        }
+    }
+
+    private Task HidePreviewModal()
+    {
+        previewTemplate = null;
+        previewHtml = null;
+        showPreviewModal = false;
+        return Task.CompletedTask;
+    }
+
+    private void ConfirmDelete(EmailTemplateDto template)
+    {
+        templateToDelete = template;
+        showDeleteModal = true;
+    }
+
+    private async Task DeleteTemplate()
+    {
+        if (templateToDelete?.TemplateId.HasValue != true)
+            return;
+
+        try
+        {
+            isDeleting = true;
+            await OnDelete.InvokeAsync(templateToDelete.TemplateId.Value);
+            await HideDeleteModal();
+            await LoadTemplates();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to delete template");
+            await OnError.InvokeAsync($"Failed to delete template: {ex.Message}");
+        }
+        finally
+        {
+            isDeleting = false;
+        }
+    }
+
+    private Task HideDeleteModal()
+    {
+        templateToDelete = null;
+        showDeleteModal = false;
+        return Task.CompletedTask;
+    }
+}
