@@ -154,4 +154,38 @@ public class UserPermissionHttpService : IUserPermissionService
             throw;
         }
     }
+
+    public async Task<DocuScanUserDto> CreateUserAsync(CreateDocuScanUserDto dto)
+    {
+        try
+        {
+            _logger.LogInformation("Creating new DocuScan user via API");
+            var response = await _http.PostAsJsonAsync("/api/userpermissions/user", dto);
+            response.EnsureSuccessStatusCode();
+            var result = await response.Content.ReadFromJsonAsync<DocuScanUserDto>();
+            return result!;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error creating DocuScan user");
+            throw;
+        }
+    }
+
+    public async Task<DocuScanUserDto> UpdateUserAsync(UpdateDocuScanUserDto dto)
+    {
+        try
+        {
+            _logger.LogInformation("Updating DocuScan user {UserId} via API", dto.UserId);
+            var response = await _http.PutAsJsonAsync($"/api/userpermissions/user/{dto.UserId}", dto);
+            response.EnsureSuccessStatusCode();
+            var result = await response.Content.ReadFromJsonAsync<DocuScanUserDto>();
+            return result!;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error updating DocuScan user {UserId}", dto.UserId);
+            throw;
+        }
+    }
 }

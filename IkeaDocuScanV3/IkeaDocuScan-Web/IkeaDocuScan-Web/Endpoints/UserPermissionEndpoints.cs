@@ -86,5 +86,27 @@ public static class UserPermissionEndpoints
         .WithName("DeleteDocuScanUser")
         .Produces(204)
         .Produces(404);
+
+        group.MapPost("/user", async (CreateDocuScanUserDto dto, IUserPermissionService service) =>
+        {
+            var created = await service.CreateUserAsync(dto);
+            return Results.Created($"/api/userpermissions/users", created);
+        })
+        .WithName("CreateDocuScanUser")
+        .Produces<DocuScanUserDto>(201)
+        .Produces(400);
+
+        group.MapPut("/user/{userId}", async (int userId, UpdateDocuScanUserDto dto, IUserPermissionService service) =>
+        {
+            if (userId != dto.UserId)
+                return Results.BadRequest(new { error = "ID mismatch between URL and body" });
+
+            var updated = await service.UpdateUserAsync(dto);
+            return Results.Ok(updated);
+        })
+        .WithName("UpdateDocuScanUser")
+        .Produces<DocuScanUserDto>(200)
+        .Produces(400)
+        .Produces(404);
     }
 }

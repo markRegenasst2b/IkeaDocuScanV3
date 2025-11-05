@@ -47,6 +47,12 @@
             </div>
         </div>
 
+        <div class="mt-3 mb-3">
+            <button class="btn btn-primary" @onclick="ShowAddUserForm">
+                <i class="fa fa-user-plus"></i> Add New User
+            </button>
+        </div>
+
         <div class="card mt-4">
             <div class="card-header">
                 <h5 class="mb-0">DocuScan Users (@(users?.Count ?? 0))</h5>
@@ -425,6 +431,82 @@
             </div>
         </div>
     }
+
+    @* Add/Edit User Modal *@
+    @if (showUserFormModal)
+    {
+        <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header bg-primary text-white">
+                        <h5 class="modal-title">
+                            <i class="fa @(editingUser == null ? "fa-user-plus" : "fa-user-edit")"></i> @(editingUser == null ? "Add New User" : $"Edit User: {editingUser.AccountName}")
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" @onclick="CancelUserForm"></button>
+                    </div>
+                    <div class="modal-body">
+                        @if (userFormErrorMessage != null)
+                        {
+                            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                                @userFormErrorMessage
+                                <button type="button" class="btn-close" @onclick="() => userFormErrorMessage = null"></button>
+                            </div>
+                        }
+
+                        <div class="mb-3">
+                            <label for="accountName" class="form-label">
+                                Account Name <span class="text-danger">*</span>
+                            </label>
+                            <input type="text" class="form-control" id="accountName"
+                                   placeholder="e.g., DOMAIN\username or username@domain.com"
+                                   @bind="newUserAccountName" />
+                            <div class="form-text">
+                                The Windows account name or email address for the user
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="userIdentifier" class="form-label">
+                                User Identifier <span class="text-danger">*</span>
+                            </label>
+                            <input type="text" class="form-control" id="userIdentifier"
+                                   placeholder="e.g., SID or unique identifier"
+                                   @bind="newUserIdentifier" />
+                            <div class="form-text">
+                                Unique identifier for the user (typically Windows SID or GUID)
+                            </div>
+                        </div>
+
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="checkbox" id="isSuperUser" @bind="newUserIsSuperUser">
+                            <label class="form-check-label" for="isSuperUser">
+                                <strong>Super User</strong>
+                            </label>
+                            <div class="form-text">
+                                Super users have full access to all features including configuration management
+                            </div>
+                        </div>
+
+                        <div class="alert alert-info">
+                            <i class="fa fa-info-circle"></i> <strong>Note:</strong> After creating the user, you can add specific permissions for Document Types, Counter Parties, and Countries.
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" @onclick="CancelUserForm" disabled="@isSavingUser">
+                            <i class="fa fa-times"></i> Cancel
+                        </button>
+                        <button type="button" class="btn btn-success" @onclick="SaveUser" disabled="@isSavingUser">
+                            @if (isSavingUser)
+                            {
+                                <span class="spinner-border spinner-border-sm me-2"></span>
+                            }
+                            <i class="fa fa-save"></i> @(editingUser == null ? "Create User" : "Save Changes")
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
 </div>
 
 @code {
@@ -471,6 +553,15 @@
     private int? selectedDocumentTypeId;
     private CounterPartyDto? selectedCounterParty;
     private string? selectedCountryCode;
+
+    // User form
+    private bool showUserFormModal = false;
+    private bool isSavingUser = false;
+    private DocuScanUserDto? editingUser = null;
+    private string newUserAccountName = string.Empty;
+    private string newUserIdentifier = string.Empty;
+    private bool newUserIsSuperUser = false;
+    private string? userFormErrorMessage = null;
 
     protected override async Task OnInitializedAsync()
     {
@@ -807,6 +898,117 @@
     private void OnCountrySelected(string? countryCode)
     {
         selectedCountryCode = countryCode;
+    }
+
+    private void ShowAddUserForm()
+    {
+        editingUser = null;
+        newUserAccountName = string.Empty;
+        newUserIdentifier = string.Empty;
+        newUserIsSuperUser = false;
+        userFormErrorMessage = null;
+        showUserFormModal = true;
+    }
+
+    private void CancelUserForm()
+    {
+        showUserFormModal = false;
+        editingUser = null;
+        newUserAccountName = string.Empty;
+        newUserIdentifier = string.Empty;
+        newUserIsSuperUser = false;
+        userFormErrorMessage = null;
+    }
+
+    private async Task SaveUser()
+    {
+        if (string.IsNullOrWhiteSpace(newUserAccountName))
+        {
+            userFormErrorMessage = "Account Name is required";
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(newUserIdentifier))
+        {
+            userFormErrorMessage = "User Identifier is required";
+            return;
+        }
+
+        isSavingUser = true;
+        userFormErrorMessage = null;
+
+        try
+        {
+            if (editingUser == null)
+            {
+                // Create new user
+                Logger.LogInformation("Creating new user: {AccountName}", newUserAccountName);
+
+                var createDto = new CreateDocuScanUserDto
+                {
+                    AccountName = newUserAccountName.Trim(),
+                    UserIdentifier = newUserIdentifier.Trim(),
+                    IsSuperUser = newUserIsSuperUser
+                };
+
+                var created = await UserPermissionService.CreateUserAsync(createDto);
+                Logger.LogInformation("User created with ID: {UserId}", created.UserId);
+
+                // Reload users list
+                await LoadUsers();
+
+                // Show success message
+                saveSuccessMessage = $"User '{created.AccountName}' created successfully!";
+
+                // Close modal
+                showUserFormModal = false;
+                ClearUserForm();
+            }
+            else
+            {
+                // Update existing user
+                Logger.LogInformation("Updating user ID: {UserId}", editingUser.UserId);
+
+                var updateDto = new UpdateDocuScanUserDto
+                {
+                    UserId = editingUser.UserId,
+                    AccountName = newUserAccountName.Trim(),
+                    UserIdentifier = newUserIdentifier.Trim(),
+                    IsSuperUser = newUserIsSuperUser
+                };
+
+                var updated = await UserPermissionService.UpdateUserAsync(updateDto);
+                Logger.LogInformation("User ID {UserId} updated successfully", updated.UserId);
+
+                // Reload users list
+                await LoadUsers();
+
+                // Show success message
+                saveSuccessMessage = $"User '{updated.AccountName}' updated successfully!";
+
+                // Close modal
+                showUserFormModal = false;
+                ClearUserForm();
+            }
+        }
+        catch (Exception ex)
+        {
+            userFormErrorMessage = $"Error saving user: {ex.Message}";
+            Logger.LogError(ex, "Error saving user");
+        }
+        finally
+        {
+            isSavingUser = false;
+        }
+    }
+
+    private void ClearUserForm()
+    {
+        editingUser = null;
+        newUserAccountName = string.Empty;
+        newUserIdentifier = string.Empty;
+        newUserIsSuperUser = false;
+        userFormErrorMessage = null;
     }
 
     public void Dispose()

@@ -47,4 +47,14 @@ public interface IUserPermissionService
     /// </summary>
     /// <param name="userId">The ID of the user to delete</param>
     Task DeleteUserAsync(int userId);
+
+    /// <summary>
+    /// Create a new DocuScan user
+    /// </summary>
+    Task<DocuScanUserDto> CreateUserAsync(CreateDocuScanUserDto dto);
+
+    /// <summary>
+    /// Update an existing DocuScan user
+    /// </summary>
+    Task<DocuScanUserDto> UpdateUserAsync(UpdateDocuScanUserDto dto);
 }

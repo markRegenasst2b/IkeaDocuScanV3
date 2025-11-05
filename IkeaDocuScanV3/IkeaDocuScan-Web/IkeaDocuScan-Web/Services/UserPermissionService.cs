@@ -224,6 +224,113 @@ public class UserPermissionService : IUserPermissionService
         _logger.LogInformation("Deleted user with ID: {UserId} and all their permissions", userId);
     }
 
+    public async Task<DocuScanUserDto> CreateUserAsync(CreateDocuScanUserDto dto)
+    {
+        _logger.LogInformation("Creating new DocuScan user: {AccountName}", dto.AccountName);
+
+        await using var context = await _contextFactory.CreateDbContextAsync();
+
+        // Check if user with same account name already exists
+        var existsByAccountName = await context.DocuScanUsers
+            .AnyAsync(u => u.AccountName == dto.AccountName);
+
+        if (existsByAccountName)
+        {
+            throw new ValidationException($"User with account name '{dto.AccountName}' already exists");
+        }
+
+        // Check if user with same identifier already exists
+        var existsByIdentifier = await context.DocuScanUsers
+            .AnyAsync(u => u.UserIdentifier == dto.UserIdentifier);
+
+        if (existsByIdentifier)
+        {
+            throw new ValidationException($"User with identifier '{dto.UserIdentifier}' already exists");
+        }
+
+        var entity = new DocuScanUser
+        {
+            AccountName = dto.AccountName,
+            UserIdentifier = dto.UserIdentifier,
+            IsSuperUser = dto.IsSuperUser,
+            CreatedOn = DateTime.UtcNow,
+            LastLogon = null,
+            ModifiedOn = null
+        };
+
+        context.DocuScanUsers.Add(entity);
+        await context.SaveChangesAsync();
+
+        _logger.LogInformation("Created DocuScan user with ID: {UserId}", entity.UserId);
+
+        return new DocuScanUserDto
+        {
+            UserId = entity.UserId,
+            AccountName = entity.AccountName,
+            UserIdentifier = entity.UserIdentifier,
+            LastLogon = entity.LastLogon,
+            IsSuperUser = entity.IsSuperUser,
+            CreatedOn = entity.CreatedOn,
+            ModifiedOn = entity.ModifiedOn,
+            PermissionCount = 0
+        };
+    }
+
+    public async Task<DocuScanUserDto> UpdateUserAsync(UpdateDocuScanUserDto dto)
+    {
+        _logger.LogInformation("Updating DocuScan user ID: {UserId}", dto.UserId);
+
+        await using var context = await _contextFactory.CreateDbContextAsync();
+
+        var entity = await context.DocuScanUsers
+            .Include(u => u.UserPermissions)
+            .FirstOrDefaultAsync(u => u.UserId == dto.UserId);
+
+        if (entity == null)
+        {
+            throw new ValidationException($"User with ID {dto.UserId} not found");
+        }
+
+        // Check if another user has the same account name
+        var duplicateAccountName = await context.DocuScanUsers
+            .AnyAsync(u => u.AccountName == dto.AccountName && u.UserId != dto.UserId);
+
+        if (duplicateAccountName)
+        {
+            throw new ValidationException($"Another user with account name '{dto.AccountName}' already exists");
+        }
+
+        // Check if another user has the same identifier
+        var duplicateIdentifier = await context.DocuScanUsers
+            .AnyAsync(u => u.UserIdentifier == dto.UserIdentifier && u.UserId != dto.UserId);
+
+        if (duplicateIdentifier)
+        {
+            throw new ValidationException($"Another user with identifier '{dto.UserIdentifier}' already exists");
+        }
+
+        entity.AccountName = dto.AccountName;
+        entity.UserIdentifier = dto.UserIdentifier;
+        entity.IsSuperUser = dto.IsSuperUser;
+        entity.ModifiedOn = DateTime.UtcNow;
+
+        await context.SaveChangesAsync();
+
+        _logger.LogInformation("Updated DocuScan user ID: {UserId}", dto.UserId);
+
+        return new DocuScanUserDto
+        {
+            UserId = entity.UserId,
+            AccountName = entity.AccountName,
+            UserIdentifier = entity.UserIdentifier,
+            LastLogon = entity.LastLogon,
+            IsSuperUser = entity.IsSuperUser,
+            CreatedOn = entity.CreatedOn,
+            ModifiedOn = entity.ModifiedOn,
+            PermissionCount = entity.UserPermissions.Count
+        };
+    }
+
     private static UserPermissionDto MapToDto(UserPermission entity)
     {
         return new UserPermissionDto
