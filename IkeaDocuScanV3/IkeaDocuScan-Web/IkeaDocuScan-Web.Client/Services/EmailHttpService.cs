@@ -79,4 +79,36 @@ public class EmailHttpService
             throw;
         }
     }
+
+    /// <summary>
+    /// Send email with document links
+    /// </summary>
+    public async Task<bool> SendEmailWithLinksAsync(SendEmailWithLinksRequest request)
+    {
+        try
+        {
+            _logger.LogInformation("Sending email with {Count} document links to {ToEmail} via API",
+                request.DocumentIds.Count, request.ToEmail);
+
+            var response = await _http.PostAsJsonAsync("/api/email/send-with-links", request);
+
+            if (response.IsSuccessStatusCode)
+            {
+                _logger.LogInformation("Email with document links sent successfully to {ToEmail}", request.ToEmail);
+                return true;
+            }
+            else
+            {
+                var errorContent = await response.Content.ReadAsStringAsync();
+                _logger.LogError("Failed to send email with document links. Status: {StatusCode}, Error: {Error}",
+                    response.StatusCode, errorContent);
+                return false;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error sending email with document links to {ToEmail}", request.ToEmail);
+            throw;
+        }
+    }
 }

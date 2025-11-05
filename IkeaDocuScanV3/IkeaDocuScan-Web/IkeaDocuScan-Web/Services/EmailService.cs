@@ -334,6 +334,8 @@ public class EmailService : IEmailService
                 var data = new Dictionary<string, object>
                 {
                     { "Count", documentList.Count },
+                    { "DocumentCount", documentList.Count }, // Alternative placeholder name
+                    { "Barcodes", string.Join(", ", documentList.Select(d => d.BarCode)) }, // Comma-separated barcodes
                     { "Message", message ?? string.Empty },
                     { "Date", DateTime.Now }
                 };
@@ -410,6 +412,8 @@ public class EmailService : IEmailService
                 var data = new Dictionary<string, object>
                 {
                     { "Count", documentList.Count },
+                    { "DocumentCount", documentList.Count }, // Alternative placeholder name
+                    { "Barcodes", string.Join(", ", documentList.Select(d => d.BarCode)) }, // Comma-separated barcodes
                     { "Message", message ?? string.Empty },
                     { "Date", DateTime.Now }
                 };

@@ -128,21 +128,22 @@
                     </div>
                     <div class="card-body">
                         <div class="email-preview">
-                            <div class="preview-header mb-3 pb-2 border-bottom">
-                                <div class="mb-2"><strong>To:</strong> @recipient</div>
-                                <div><strong>Subject:</strong> @subject</div>
-                            </div>
-                            <div class="preview-body">
-                                @if (!string.IsNullOrWhiteSpace(additionalText))
-                                {
-                                    <div class="additional-text alert alert-light border">
-                                        <strong>Your Message:</strong>
-                                        <div class="mt-2" style="white-space: pre-wrap;">@additionalText</div>
-                                    </div>
-                                }
-                                <iframe srcdoc="@emailBodyHtml"
-                                        style="width: 100%; min-height: 600px; border: 1px solid #ddd; border-radius: 4px;">
-                                </iframe>
+                            <!-- Show database template notice for both attachments and links -->
+                            <div class="alert alert-info">
+                                <h6><i class="bi bi-info-circle"></i> Database Template Will Be Used</h6>
+                                <p class="mb-2">The actual email will be generated from the <strong>@(emailType == "attach" ? "DocumentAttachments" : "DocumentLinks")</strong> database template with these details:</p>
+                                <ul class="mb-2">
+                                    <li><strong>Recipient:</strong> @recipient</li>
+                                    <li><strong>Document Count:</strong> @documents.Count</li>
+                                    <li><strong>Barcodes:</strong> @string.Join(", ", documents.Select(d => d.BarCode))</li>
+                                    @if (!string.IsNullOrWhiteSpace(additionalText))
+                                    {
+                                        <li><strong>Additional Message:</strong> @additionalText</li>
+                                    }
+                                </ul>
+                                <p class="mb-0 text-muted small">
+                                    <em>Preview not available. The email template is managed via Configuration Management.</em>
+                                </p>
                             </div>
                         </div>
                     </div>
@@ -323,34 +324,6 @@
                 return;
             }
 
-            // Prepare final email body with additional text
-            var finalBody = emailBodyHtml;
-            if (!string.IsNullOrWhiteSpace(additionalText))
-            {
-                // Insert additional text at the beginning of the email body (after greeting)
-                var greetingIndex = finalBody.IndexOf("class='greeting'");
-                if (greetingIndex >= 0)
-                {
-                    var greetingEnd = finalBody.IndexOf("</div>", greetingIndex);
-                    if (greetingEnd > 0)
-                    {
-                        var additionalHtml = $"<div class='alert alert-light border' style='background-color:#f8f9fa;border:1px solid #dee2e6;padding:15px;margin:15px 0;'><div style='white-space:pre-wrap;'>{System.Web.HttpUtility.HtmlEncode(additionalText)}</div></div>";
-                        finalBody = finalBody.Insert(greetingEnd + 6, additionalHtml);
-                    }
-                }
-                else
-                {
-                    // If no greeting found, insert at the beginning of the content section
-                    var contentIndex = finalBody.IndexOf("<div class='content'>");
-                    if (contentIndex >= 0)
-                    {
-                        var insertPosition = finalBody.IndexOf(">", contentIndex) + 1;
-                        var additionalHtml = $"<div class='alert alert-light border' style='background-color:#f8f9fa;border:1px solid #dee2e6;padding:15px;margin:15px 0;'><div style='white-space:pre-wrap;'>{System.Web.HttpUtility.HtmlEncode(additionalText)}</div></div>";
-                        finalBody = finalBody.Insert(insertPosition, additionalHtml);
-                    }
-                }
-            }
-
             Logger.LogInformation("Sending email to {Recipient} with {Count} documents (type: {Type})",
                 recipient, documents.Count, emailType);
 
@@ -358,26 +331,25 @@
             bool success;
             if (emailType == "attach")
             {
-                // Send with attachments
+                // Send with attachments - using database template
                 var request = new SendEmailWithAttachmentsRequest
                 {
                     ToEmail = recipient,
-                    Subject = subject,
-                    HtmlBody = finalBody,
+                    AdditionalMessage = additionalText, // This will be rendered in the {{Message}} placeholder
                     DocumentIds = documentIds
                 };
                 success = await EmailService.SendEmailWithAttachmentsAsync(request);
             }
             else
             {
-                // Send with links (no attachments)
-                var request = new SendEmailRequest
+                // Send with links (no attachments) - using database template
+                var request = new SendEmailWithLinksRequest
                 {
                     ToEmail = recipient,
-                    Subject = subject,
-                    HtmlBody = finalBody
+                    AdditionalMessage = additionalText, // This will be rendered in the {{Message}} placeholder
+                    DocumentIds = documentIds
                 };
-                success = await EmailService.SendEmailAsync(request);
+                success = await EmailService.SendEmailWithLinksAsync(request);
             }
 
             if (!success)

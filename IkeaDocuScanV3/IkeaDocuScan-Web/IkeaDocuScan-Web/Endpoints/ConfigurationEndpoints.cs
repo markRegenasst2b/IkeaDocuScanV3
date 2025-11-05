@@ -2,6 +2,7 @@ using IkeaDocuScan.Shared.DTOs.Configuration;
 using IkeaDocuScan.Shared.Interfaces;
 using IkeaDocuScan_Web.Services;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace IkeaDocuScan_Web.Endpoints;
 
@@ -443,6 +444,153 @@ public static class ConfigurationEndpoints
         .WithName("GetEmailTemplatePlaceholders")
         .Produces(200)
         .WithDescription("Get available placeholders and loops for email templates");
+
+        // ===== Diagnostic Endpoint for DocumentAttachment Template =====
+
+        group.MapGet("/email-templates/diagnostic/DocumentAttachment", async (
+            ISystemConfigurationManager service,
+            Microsoft.EntityFrameworkCore.IDbContextFactory<IkeaDocuScan.Infrastructure.Data.AppDbContext> contextFactory) =>
+        {
+            var diagnosticResult = new
+            {
+                timestamp = DateTime.UtcNow,
+                checks = new List<object>()
+            };
+
+            try
+            {
+                // Check 1: Query database directly without cache
+                await using var context = await contextFactory.CreateDbContextAsync();
+                var allTemplatesRaw = await context.EmailTemplates
+                    .AsNoTracking()
+                    .Where(t => t.TemplateKey.Contains("Document"))
+                    .ToListAsync();
+
+                // Convert to output format with hex bytes (client-side evaluation)
+                var allTemplates = allTemplatesRaw.Select(t => new
+                {
+                    t.TemplateId,
+                    t.TemplateKey,
+                    TemplateKeyLength = t.TemplateKey.Length,
+                    TemplateKeyBytes = string.Join("-", System.Text.Encoding.UTF8.GetBytes(t.TemplateKey).Select(b => b.ToString("X2"))),
+                    t.TemplateName,
+                    t.IsActive,
+                    t.IsDefault,
+                    t.Category,
+                    t.CreatedDate,
+                    t.CreatedBy
+                }).ToList();
+
+                diagnosticResult.checks.Add(new
+                {
+                    checkName = "Database Query - Templates with 'Document' in key",
+                    status = "success",
+                    foundCount = allTemplates.Count,
+                    templates = allTemplates
+                });
+
+                // Check 2: Query exact "DocumentAttachment" template
+                var exactTemplate = await context.EmailTemplates
+                    .AsNoTracking()
+                    .Where(t => t.TemplateKey == "DocumentAttachment")
+                    .Select(t => new
+                    {
+                        t.TemplateId,
+                        t.TemplateKey,
+                        t.TemplateName,
+                        t.IsActive,
+                        t.IsDefault,
+                        t.Category,
+                        SubjectPreview = t.Subject.Length > 100 ? t.Subject.Substring(0, 100) + "..." : t.Subject,
+                        HtmlBodyPreview = t.HtmlBody.Length > 200 ? t.HtmlBody.Substring(0, 200) + "..." : t.HtmlBody,
+                        HasPlainText = !string.IsNullOrEmpty(t.PlainTextBody),
+                        t.CreatedDate,
+                        t.CreatedBy,
+                        t.ModifiedDate,
+                        t.ModifiedBy
+                    })
+                    .FirstOrDefaultAsync();
+
+                diagnosticResult.checks.Add(new
+                {
+                    checkName = "Exact Match Query - TemplateKey == 'DocumentAttachment'",
+                    status = exactTemplate != null ? "success" : "not_found",
+                    template = exactTemplate
+                });
+
+                // Check 3: Query with IsActive filter (mimics what GetEmailTemplateAsync does)
+                var activeTemplate = await context.EmailTemplates
+                    .AsNoTracking()
+                    .Where(t => t.TemplateKey == "DocumentAttachment" && t.IsActive)
+                    .FirstOrDefaultAsync();
+
+                diagnosticResult.checks.Add(new
+                {
+                    checkName = "Active Template Query - TemplateKey == 'DocumentAttachment' && IsActive",
+                    status = activeTemplate != null ? "success" : "not_found",
+                    found = activeTemplate != null,
+                    templateId = activeTemplate?.TemplateId,
+                    isActive = activeTemplate?.IsActive
+                });
+
+                // Check 4: Test through service layer (uses cache)
+                var serviceTemplate = await service.GetEmailTemplateAsync("DocumentAttachment");
+
+                diagnosticResult.checks.Add(new
+                {
+                    checkName = "Service Layer Retrieval (with cache)",
+                    status = serviceTemplate != null ? "success" : "not_found",
+                    found = serviceTemplate != null,
+                    templateId = serviceTemplate?.TemplateId,
+                    templateName = serviceTemplate?.TemplateName
+                });
+
+                // Check 5: Character analysis of expected key
+                var expectedKey = "DocumentAttachment";
+                diagnosticResult.checks.Add(new
+                {
+                    checkName = "Expected TemplateKey Analysis",
+                    status = "info",
+                    expectedKey = expectedKey,
+                    expectedLength = expectedKey.Length,
+                    expectedBytes = System.Text.Encoding.UTF8.GetBytes(expectedKey).Select(b => b.ToString("X2")).ToArray(),
+                    expectedBytesAsString = string.Join("-", System.Text.Encoding.UTF8.GetBytes(expectedKey).Select(b => b.ToString("X2")))
+                });
+
+                // Summary
+                var summary = new
+                {
+                    templatesInDatabase = allTemplates.Count,
+                    exactMatchFound = exactTemplate != null,
+                    activeMatchFound = activeTemplate != null,
+                    serviceRetrievalSuccessful = serviceTemplate != null,
+                    recommendation = activeTemplate != null && serviceTemplate == null
+                        ? "Template exists and is active in database, but service retrieval failed. Try clearing cache with POST /api/configuration/reload"
+                        : activeTemplate == null && exactTemplate != null
+                        ? "Template exists but is INACTIVE. Activate it to use it."
+                        : exactTemplate == null
+                        ? "Template does not exist in database. Run migration: POST /api/configuration/migrate"
+                        : "Template is being retrieved successfully."
+                };
+
+                return Results.Ok(new { diagnostic = diagnosticResult, summary });
+            }
+            catch (Exception ex)
+            {
+                diagnosticResult.checks.Add(new
+                {
+                    checkName = "Exception",
+                    status = "error",
+                    message = ex.Message,
+                    stackTrace = ex.StackTrace
+                });
+
+                return Results.Ok(diagnosticResult);
+            }
+        })
+        .WithName("DiagnoseDocumentAttachmentTemplate")
+        .Produces(200)
+        .WithDescription("Comprehensive diagnostic for DocumentAttachment email template");
     }
 }
 

@@ -32,6 +32,13 @@ public static class EmailEndpoints
             .Produces(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status500InternalServerError);
 
+        // POST /api/email/send-with-links - Send email with document links
+        group.MapPost("/send-with-links", SendEmailWithLinksAsync)
+            .WithName("SendEmailWithLinks")
+            .Produces(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status500InternalServerError);
+
         return app;
     }
 
@@ -85,7 +92,7 @@ public static class EmailEndpoints
     }
 
     /// <summary>
-    /// Send email with document attachments
+    /// Send email with document attachments using database template
     /// </summary>
     private static async Task<IResult> SendEmailWithAttachmentsAsync(
         SendEmailWithAttachmentsRequest request,
@@ -101,16 +108,6 @@ public static class EmailEndpoints
                 return Results.BadRequest(new { error = "Recipient email is required" });
             }
 
-            if (string.IsNullOrWhiteSpace(request.Subject))
-            {
-                return Results.BadRequest(new { error = "Subject is required" });
-            }
-
-            if (string.IsNullOrWhiteSpace(request.HtmlBody))
-            {
-                return Results.BadRequest(new { error = "Email body is required" });
-            }
-
             if (request.DocumentIds == null || !request.DocumentIds.Any())
             {
                 return Results.BadRequest(new { error = "At least one document is required" });
@@ -119,45 +116,46 @@ public static class EmailEndpoints
             logger.LogInformation("Sending email with {Count} attachments to {ToEmail}",
                 request.DocumentIds.Count, request.ToEmail);
 
-            // Load document files
-            var attachments = new List<IkeaDocuScan.Shared.Models.Email.EmailAttachment>();
+            // Load all documents and their files
+            var documents = new List<(string BarCode, byte[] Data, string FileName)>();
+
             foreach (var documentId in request.DocumentIds)
             {
-                var fileData = await documentService.GetDocumentFileAsync(documentId);
-                if (fileData != null)
+                var document = await documentService.GetByIdAsync(documentId);
+                if (document == null)
                 {
-                    attachments.Add(new IkeaDocuScan.Shared.Models.Email.EmailAttachment
-                    {
-                        FileName = fileData.FileName,
-                        Content = fileData.FileBytes,
-                        ContentType = GetContentType(fileData.FileName)
-                    });
+                    logger.LogWarning("Document not found for ID {DocumentId}", documentId);
+                    continue;
                 }
-                else
+
+                var fileData = await documentService.GetDocumentFileAsync(documentId);
+                if (fileData == null)
                 {
                     logger.LogWarning("Document file not found for document ID {DocumentId}", documentId);
+                    continue;
                 }
+
+                documents.Add((document.BarCode.ToString(), fileData.FileBytes, fileData.FileName));
             }
 
-            if (!attachments.Any())
+            if (!documents.Any())
             {
                 return Results.BadRequest(new { error = "No document files found for the specified document IDs" });
             }
 
-            await emailService.SendEmailAsync(
+            // Send ONE email with all attachments using the DocumentAttachments template
+            await emailService.SendDocumentAttachmentsAsync(
                 request.ToEmail,
-                request.Subject,
-                request.HtmlBody,
-                request.PlainTextBody,
-                attachments);
+                documents,
+                request.AdditionalMessage);
 
             logger.LogInformation("Email with {Count} attachments sent successfully to {ToEmail}",
-                attachments.Count, request.ToEmail);
+                documents.Count, request.ToEmail);
 
             return Results.Ok(new
             {
                 success = true,
-                message = $"Email with {attachments.Count} attachment(s) sent successfully to {request.ToEmail}"
+                message = $"Email with {request.DocumentIds.Count} attachment(s) sent successfully to {request.ToEmail}"
             });
         }
         catch (Exception ex)
@@ -167,6 +165,79 @@ public static class EmailEndpoints
                 detail: ex.Message,
                 statusCode: StatusCodes.Status500InternalServerError,
                 title: "Failed to send email with attachments");
+        }
+    }
+
+    /// <summary>
+    /// Send email with document links using database template
+    /// </summary>
+    private static async Task<IResult> SendEmailWithLinksAsync(
+        SendEmailWithLinksRequest request,
+        IEmailService emailService,
+        IDocumentService documentService,
+        IConfiguration configuration,
+        ILogger<IEmailService> logger)
+    {
+        try
+        {
+            // Validate request
+            if (string.IsNullOrWhiteSpace(request.ToEmail))
+            {
+                return Results.BadRequest(new { error = "Recipient email is required" });
+            }
+
+            if (request.DocumentIds == null || !request.DocumentIds.Any())
+            {
+                return Results.BadRequest(new { error = "At least one document is required" });
+            }
+
+            logger.LogInformation("Sending email with {Count} document links to {ToEmail}",
+                request.DocumentIds.Count, request.ToEmail);
+
+            // Load all documents and generate links
+            var documents = new List<(string BarCode, string Link)>();
+            var baseUrl = configuration.GetValue<string>("ApplicationUrl") ?? "https://localhost:44101";
+
+            foreach (var documentId in request.DocumentIds)
+            {
+                var document = await documentService.GetByIdAsync(documentId);
+                if (document == null)
+                {
+                    logger.LogWarning("Document not found for ID {DocumentId}", documentId);
+                    continue;
+                }
+
+                var link = $"{baseUrl}/documents/preview/{documentId}";
+                documents.Add((document.BarCode.ToString(), link));
+            }
+
+            if (!documents.Any())
+            {
+                return Results.BadRequest(new { error = "No documents found for the specified document IDs" });
+            }
+
+            // Send ONE email with all document links using the DocumentLinks template
+            await emailService.SendDocumentLinksAsync(
+                request.ToEmail,
+                documents,
+                request.AdditionalMessage);
+
+            logger.LogInformation("Email with {Count} document links sent successfully to {ToEmail}",
+                documents.Count, request.ToEmail);
+
+            return Results.Ok(new
+            {
+                success = true,
+                message = $"Email with {documents.Count} document link(s) sent successfully to {request.ToEmail}"
+            });
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error sending email with document links to {ToEmail}", request.ToEmail);
+            return Results.Problem(
+                detail: ex.Message,
+                statusCode: StatusCodes.Status500InternalServerError,
+                title: "Failed to send email with document links");
         }
     }
 
