@@ -318,9 +318,10 @@
         }
     }
 
-    private void GoBack()
+    private async Task GoBack()
     {
-        Navigation.NavigateTo("/documents/search");
+        // Use browser history to go back, preserving search state
+        await JS.InvokeVoidAsync("history.back");
     }
 
     // Preview methods
