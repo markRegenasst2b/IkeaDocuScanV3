@@ -144,6 +144,21 @@ public class ConfigurationHttpService : IConfigurationHttpService
         return result?.Success ?? false;
     }
 
+    public async Task<bool> UpdateSmtpConfigurationAsync(object smtpConfig, bool skipTest = false)
+    {
+        var url = skipTest ? "/api/configuration/smtp?skipTest=true" : "/api/configuration/smtp";
+        var response = await _httpClient.PostAsJsonAsync(url, smtpConfig);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            var error = await response.Content.ReadAsStringAsync();
+            throw new HttpRequestException($"SMTP configuration update failed: {error}");
+        }
+
+        var result = await response.Content.ReadFromJsonAsync<SmtpUpdateResponse>();
+        return result?.Success ?? false;
+    }
+
     public async Task ReloadCacheAsync()
     {
         var response = await _httpClient.PostAsync("/api/configuration/reload", null);
@@ -157,6 +172,7 @@ public class ConfigurationHttpService : IConfigurationHttpService
     private record GetEmailRecipientsResponse(string GroupKey, string[] Recipients);
     private record GetConfigurationResponse(string Section, string Key, string Value);
     private record TestSmtpResponse(bool Success, string? Message);
+    private record SmtpUpdateResponse(bool Success, string? Message);
     private record PreviewTemplateResponse(string Preview);
 
     #endregion

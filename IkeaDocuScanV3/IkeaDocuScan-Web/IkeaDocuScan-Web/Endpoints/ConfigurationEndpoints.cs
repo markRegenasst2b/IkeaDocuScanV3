@@ -260,9 +260,56 @@ public static class ConfigurationEndpoints
         .WithName("SetConfiguration")
         .Produces(200)
         .Produces(400)
-        .WithDescription("Set configuration value (with automatic rollback on errors, SMTP testing for email configs)");
+        .WithDescription("Set individual configuration value (with automatic rollback on errors). Use POST /smtp for bulk SMTP updates with testing.");
 
         // ===== Testing & Management Endpoints =====
+
+        group.MapPost("/smtp", async (
+            [FromBody] SmtpConfigurationDto config,
+            [FromQuery] bool? skipTest,
+            ISystemConfigurationManager service,
+            HttpContext httpContext) =>
+        {
+            try
+            {
+                var username = httpContext.User.Identity?.Name ?? "Unknown";
+                var skip = skipTest ?? false;
+
+                await service.SetSmtpConfigurationAsync(config, username, "SMTP configuration update", skip);
+
+                var message = skip
+                    ? "SMTP configuration saved without testing (validation skipped)"
+                    : "SMTP configuration updated and tested successfully";
+
+                return Results.Ok(new
+                {
+                    success = true,
+                    message,
+                    tested = !skip
+                });
+            }
+            catch (InvalidOperationException ex) when (ex.Message.Contains("SMTP configuration test failed"))
+            {
+                return Results.BadRequest(new
+                {
+                    success = false,
+                    error = "SMTP test failed. Configuration not saved.",
+                    details = ex.Message
+                });
+            }
+            catch (Exception ex)
+            {
+                return Results.BadRequest(new
+                {
+                    success = false,
+                    error = ex.Message
+                });
+            }
+        })
+        .WithName("UpdateSmtpConfiguration")
+        .Produces(200)
+        .Produces(400)
+        .WithDescription("Update all SMTP settings atomically. Add ?skipTest=true query parameter to save without testing (not recommended).");
 
         group.MapPost("/test-smtp", async (ISystemConfigurationManager service) =>
         {

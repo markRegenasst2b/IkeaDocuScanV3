@@ -65,4 +65,14 @@ public interface ISystemConfigurationManager
     /// Test SMTP configuration
     /// </summary>
     Task<bool> TestSmtpConnectionAsync();
+
+    /// <summary>
+    /// Update all SMTP settings atomically with automatic testing and rollback
+    /// All settings are saved in a transaction and tested together before commit
+    /// </summary>
+    /// <param name="config">SMTP configuration settings</param>
+    /// <param name="changedBy">User making the change</param>
+    /// <param name="reason">Optional reason for the change</param>
+    /// <param name="skipTest">If true, skips SMTP testing and saves immediately (use with caution)</param>
+    Task SetSmtpConfigurationAsync(SmtpConfigurationDto config, string changedBy, string? reason = null, bool skipTest = false);
 }

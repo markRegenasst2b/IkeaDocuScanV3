@@ -9,7 +9,13 @@
     <div class="card-body">
         <div class="alert alert-info" role="alert">
             <i class="fa fa-info-circle me-2"></i>
-            Configure SMTP settings for sending emails. Changes are automatically tested before saving.
+            Configure SMTP settings for sending emails. Changes are saved immediately. Use "Test Connection" to verify saved settings.
+        </div>
+
+        <div class="alert alert-warning" role="alert">
+            <i class="fa fa-exclamation-triangle me-2"></i>
+            <strong>Important:</strong> The "Test Connection" button tests the <strong>saved configuration in the database</strong>, not your current form values.
+            You must save your changes first, then test to verify they work.
         </div>
 
         <div class="row">
@@ -67,14 +73,7 @@
 
         <hr />
 
-        <div class="d-flex gap-2">
-            <button class="btn btn-success" @onclick="TestSmtpConnection" disabled="@isTesting">
-                @if (isTesting)
-                {
-                    <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                }
-                <i class="fa fa-check-circle me-2"></i>Test Connection
-            </button>
+        <div class="d-flex gap-2 align-items-center">
             <button class="btn btn-primary" @onclick="SaveSettings" disabled="@isSaving">
                 @if (isSaving)
                 {
@@ -82,6 +81,16 @@
                 }
                 <i class="fa fa-save me-2"></i>Save Settings
             </button>
+            <button class="btn btn-outline-success" @onclick="TestSmtpConnection" disabled="@isTesting">
+                @if (isTesting)
+                {
+                    <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                }
+                <i class="fa fa-check-circle me-2"></i>Test Saved Configuration
+            </button>
+            <small class="text-muted ms-2">
+                <i class="fa fa-info-circle"></i> Test uses saved values from database
+            </small>
         </div>
 
         @if (testResult != null)
@@ -150,9 +159,6 @@
             isTesting = true;
             testResult = null;
 
-            // Save settings first (they will be rolled back if test fails)
-            await SaveSettingsInternal(testOnly: true);
-
             testResult = await ConfigService.TestSmtpConnectionAsync();
         }
         catch (Exception ex)
@@ -172,8 +178,43 @@
         try
         {
             isSaving = true;
-            await SaveSettingsInternal(testOnly: false);
-            await OnSaved.InvokeAsync("SMTP settings saved successfully");
+            testResult = null;
+
+            // Validate required fields
+            if (string.IsNullOrWhiteSpace(smtpHost))
+            {
+                await OnError.InvokeAsync("SMTP Host is required");
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(fromAddress))
+            {
+                await OnError.InvokeAsync("From Address is required");
+                return;
+            }
+
+            // Save ALL settings WITHOUT testing (skipTest = true)
+            // User must explicitly test saved configuration separately
+            var result = await ConfigService.UpdateSmtpConfigurationAsync(new
+            {
+                smtpHost,
+                smtpPort,
+                useSsl,
+                smtpUsername,
+                smtpPassword,
+                fromAddress,
+                fromName = fromDisplayName
+            }, skipTest: true);
+
+            if (result)
+            {
+                await OnSaved.InvokeAsync("SMTP settings saved successfully. Use 'Test Saved Configuration' to verify.");
+                changeReason = string.Empty; // Clear reason after save
+            }
+            else
+            {
+                await OnError.InvokeAsync("Failed to save SMTP settings.");
+            }
         }
         catch (Exception ex)
         {
@@ -183,23 +224,6 @@
         finally
         {
             isSaving = false;
-        }
-    }
-
-    private async Task SaveSettingsInternal(bool testOnly)
-    {
-        // Save all SMTP settings
-        await ConfigService.SetConfigurationAsync("Email", "SmtpHost", smtpHost, testOnly ? "Testing connection" : changeReason);
-        await ConfigService.SetConfigurationAsync("Email", "SmtpPort", smtpPort.ToString(), testOnly ? "Testing connection" : changeReason);
-        await ConfigService.SetConfigurationAsync("Email", "SmtpUsername", smtpUsername, testOnly ? "Testing connection" : changeReason);
-        await ConfigService.SetConfigurationAsync("Email", "SmtpPassword", smtpPassword, testOnly ? "Testing connection" : changeReason);
-        await ConfigService.SetConfigurationAsync("Email", "UseSsl", useSsl.ToString(), testOnly ? "Testing connection" : changeReason);
-        await ConfigService.SetConfigurationAsync("Email", "FromAddress", fromAddress, testOnly ? "Testing connection" : changeReason);
-        await ConfigService.SetConfigurationAsync("Email", "FromDisplayName", fromDisplayName, testOnly ? "Testing connection" : changeReason);
-
-        if (!testOnly)
-        {
-            changeReason = string.Empty; // Clear reason after save
         }
     }
 }

@@ -113,6 +113,15 @@ public class CounterPartyService : ICounterPartyService
             throw new ValidationException($"Counter party with name '{dto.Name}' already exists");
         }
 
+        // Validate that the country code exists in the Country table
+        var countryExists = await context.Countries
+            .AnyAsync(c => c.CountryCode == dto.Country);
+
+        if (!countryExists)
+        {
+            throw new ValidationException($"Invalid country code '{dto.Country}'. Country does not exist in the system.");
+        }
+
         var entity = new CounterParty
         {
             Name = dto.Name,
@@ -156,6 +165,15 @@ public class CounterPartyService : ICounterPartyService
         if (duplicateName)
         {
             throw new ValidationException($"Counter party with name '{dto.Name}' already exists");
+        }
+
+        // Validate that the country code exists in the Country table
+        var countryExists = await context.Countries
+            .AnyAsync(c => c.CountryCode == dto.Country);
+
+        if (!countryExists)
+        {
+            throw new ValidationException($"Invalid country code '{dto.Country}'. Country does not exist in the system.");
         }
 
         entity.Name = dto.Name;
