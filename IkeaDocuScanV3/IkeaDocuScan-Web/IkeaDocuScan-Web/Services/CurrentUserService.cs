@@ -213,7 +213,6 @@ public class CurrentUserService : ICurrentUserService
             var newUser = new DocuScanUser
             {
                 AccountName = username,
-                UserIdentifier = username,
                 IsSuperUser = false,
                 CreatedOn = DateTime.Now,
                 LastLogon = null

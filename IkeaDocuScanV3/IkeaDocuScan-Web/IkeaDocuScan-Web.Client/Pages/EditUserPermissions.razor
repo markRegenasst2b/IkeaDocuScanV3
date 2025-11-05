@@ -393,7 +393,6 @@
                                 <ul class="mb-0">
                                     <li><strong>User ID:</strong> @userToDelete.UserId</li>
                                     <li><strong>Account Name:</strong> @userToDelete.AccountName</li>
-                                    <li><strong>User Identifier:</strong> @userToDelete.UserIdentifier</li>
                                     <li><strong>Super User:</strong> @(userToDelete.IsSuperUser ? "Yes" : "No")</li>
                                     <li><strong>Total Permissions:</strong> @userToDelete.PermissionCount</li>
                                 </ul>
@@ -462,18 +461,6 @@
                                    @bind="newUserAccountName" />
                             <div class="form-text">
                                 The Windows account name or email address for the user
-                            </div>
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="userIdentifier" class="form-label">
-                                User Identifier <span class="text-danger">*</span>
-                            </label>
-                            <input type="text" class="form-control" id="userIdentifier"
-                                   placeholder="e.g., SID or unique identifier"
-                                   @bind="newUserIdentifier" />
-                            <div class="form-text">
-                                Unique identifier for the user (typically Windows SID or GUID)
                             </div>
                         </div>
 
@@ -559,7 +546,6 @@
     private bool isSavingUser = false;
     private DocuScanUserDto? editingUser = null;
     private string newUserAccountName = string.Empty;
-    private string newUserIdentifier = string.Empty;
     private bool newUserIsSuperUser = false;
     private string? userFormErrorMessage = null;
 
@@ -904,7 +890,6 @@
     {
         editingUser = null;
         newUserAccountName = string.Empty;
-        newUserIdentifier = string.Empty;
         newUserIsSuperUser = false;
         userFormErrorMessage = null;
         showUserFormModal = true;
@@ -915,7 +900,6 @@
         showUserFormModal = false;
         editingUser = null;
         newUserAccountName = string.Empty;
-        newUserIdentifier = string.Empty;
         newUserIsSuperUser = false;
         userFormErrorMessage = null;
     }
@@ -925,12 +909,6 @@
         if (string.IsNullOrWhiteSpace(newUserAccountName))
         {
             userFormErrorMessage = "Account Name is required";
-            return;
-        }
-
-        if (string.IsNullOrWhiteSpace(newUserIdentifier))
-        {
-            userFormErrorMessage = "User Identifier is required";
             return;
         }
 
@@ -947,7 +925,6 @@
                 var createDto = new CreateDocuScanUserDto
                 {
                     AccountName = newUserAccountName.Trim(),
-                    UserIdentifier = newUserIdentifier.Trim(),
                     IsSuperUser = newUserIsSuperUser
                 };
 
@@ -973,7 +950,6 @@
                 {
                     UserId = editingUser.UserId,
                     AccountName = newUserAccountName.Trim(),
-                    UserIdentifier = newUserIdentifier.Trim(),
                     IsSuperUser = newUserIsSuperUser
                 };
 
@@ -1006,7 +982,6 @@
     {
         editingUser = null;
         newUserAccountName = string.Empty;
-        newUserIdentifier = string.Empty;
         newUserIsSuperUser = false;
         userFormErrorMessage = null;
     }

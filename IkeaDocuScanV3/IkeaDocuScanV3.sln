@@ -41,6 +41,10 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Migration", "Migration", "{
 		..\DbMigration\db-scripts\01_Add_FK_Columns.sql = ..\DbMigration\db-scripts\01_Add_FK_Columns.sql
 		..\DbMigration\db-scripts\02_Migrate_FK_Data.sql = ..\DbMigration\db-scripts\02_Migrate_FK_Data.sql
 		..\DbMigration\db-scripts\03_Finalize_FK_Constraints.sql = ..\DbMigration\db-scripts\03_Finalize_FK_Constraints.sql
+		..\DbMigration\db-scripts\04_Create_DocuScanUser_Table.sql = ..\DbMigration\db-scripts\04_Create_DocuScanUser_Table.sql
+		..\DbMigration\db-scripts\05_Migrate_Users_To_DocuScanUser.sql = ..\DbMigration\db-scripts\05_Migrate_Users_To_DocuScanUser.sql
+		..\DbMigration\db-scripts\06_Add_FK_Constraint_UserPermissions.sql = ..\DbMigration\db-scripts\06_Add_FK_Constraint_UserPermissions.sql
+		..\DbMigration\db-scripts\07_Remove_AccountName_From_UserPermissions.sql = ..\DbMigration\db-scripts\07_Remove_AccountName_From_UserPermissions.sql
 	EndProjectSection
 EndProject
 Global

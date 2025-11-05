@@ -10,7 +10,6 @@ namespace IkeaDocuScan.Infrastructure.Entities;
 [Index("IsSuperUser", Name = "IX_DocuScanUser_IsSuperUser")]
 [Index("LastLogon", Name = "IX_DocuScanUser_LastLogon")]
 [Index("AccountName", Name = "UK_DocuScanUser_AccountName", IsUnique = true)]
-[Index("UserIdentifier", Name = "UK_DocuScanUser_UserIdentifier", IsUnique = true)]
 public partial class DocuScanUser
 {
     [Key]
@@ -19,10 +18,6 @@ public partial class DocuScanUser
     [StringLength(255)]
     [Unicode(false)]
     public string AccountName { get; set; } = null!;
-
-    [StringLength(255)]
-    [Unicode(false)]
-    public string UserIdentifier { get; set; } = null!;
 
     [Column(TypeName = "datetime")]
     public DateTime? LastLogon { get; set; }

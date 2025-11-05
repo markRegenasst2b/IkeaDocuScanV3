@@ -47,7 +47,6 @@ public class UserPermissionService : IUserPermissionService
         {
             UserId = u.UserId,
             AccountName = u.AccountName,
-            UserIdentifier = u.UserIdentifier,
             LastLogon = u.LastLogon,
             IsSuperUser = u.IsSuperUser,
             CreatedOn = u.CreatedOn,
@@ -239,19 +238,9 @@ public class UserPermissionService : IUserPermissionService
             throw new ValidationException($"User with account name '{dto.AccountName}' already exists");
         }
 
-        // Check if user with same identifier already exists
-        var existsByIdentifier = await context.DocuScanUsers
-            .AnyAsync(u => u.UserIdentifier == dto.UserIdentifier);
-
-        if (existsByIdentifier)
-        {
-            throw new ValidationException($"User with identifier '{dto.UserIdentifier}' already exists");
-        }
-
         var entity = new DocuScanUser
         {
             AccountName = dto.AccountName,
-            UserIdentifier = dto.UserIdentifier,
             IsSuperUser = dto.IsSuperUser,
             CreatedOn = DateTime.UtcNow,
             LastLogon = null,
@@ -267,7 +256,6 @@ public class UserPermissionService : IUserPermissionService
         {
             UserId = entity.UserId,
             AccountName = entity.AccountName,
-            UserIdentifier = entity.UserIdentifier,
             LastLogon = entity.LastLogon,
             IsSuperUser = entity.IsSuperUser,
             CreatedOn = entity.CreatedOn,
@@ -300,17 +288,7 @@ public class UserPermissionService : IUserPermissionService
             throw new ValidationException($"Another user with account name '{dto.AccountName}' already exists");
         }
 
-        // Check if another user has the same identifier
-        var duplicateIdentifier = await context.DocuScanUsers
-            .AnyAsync(u => u.UserIdentifier == dto.UserIdentifier && u.UserId != dto.UserId);
-
-        if (duplicateIdentifier)
-        {
-            throw new ValidationException($"Another user with identifier '{dto.UserIdentifier}' already exists");
-        }
-
         entity.AccountName = dto.AccountName;
-        entity.UserIdentifier = dto.UserIdentifier;
         entity.IsSuperUser = dto.IsSuperUser;
         entity.ModifiedOn = DateTime.UtcNow;
 
@@ -322,7 +300,6 @@ public class UserPermissionService : IUserPermissionService
         {
             UserId = entity.UserId,
             AccountName = entity.AccountName,
-            UserIdentifier = entity.UserIdentifier,
             LastLogon = entity.LastLogon,
             IsSuperUser = entity.IsSuperUser,
             CreatedOn = entity.CreatedOn,
