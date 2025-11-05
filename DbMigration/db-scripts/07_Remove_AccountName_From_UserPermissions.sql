@@ -106,7 +106,7 @@ PRINT '========================================';
 PRINT 'REFACTORING COMPLETE!';
 PRINT '========================================';
 PRINT 'Summary:';
-PRINT '- Created DocuScanUser table with UserId, AccountName, UserIdentifier, LastLogon, and IsSuperUser fields';
+PRINT '- Created DocuScanUser table with UserId, AccountName, LastLogon, and IsSuperUser fields';
 PRINT '- Migrated user data from UserPermissions to DocuScanUser';
 PRINT '- Added UserId foreign key to UserPermissions';
 PRINT '- Removed AccountName column from UserPermissions';

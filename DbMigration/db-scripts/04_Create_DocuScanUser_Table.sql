@@ -16,14 +16,12 @@ BEGIN
     (
         [UserId] INT IDENTITY NOT NULL CONSTRAINT DOCUSCANUSER_PK PRIMARY KEY,
         [AccountName] VARCHAR(255) NOT NULL,
-        [UserIdentifier] VARCHAR(255) NOT NULL,
         [LastLogon] DATETIME NULL,
         [IsSuperUser] BIT NOT NULL CONSTRAINT DF_DocuScanUser_IsSuperUser DEFAULT(0),
         [CreatedOn] DATETIME NOT NULL CONSTRAINT DF_DocuScanUser_CreatedOn DEFAULT(GETDATE()),
         [ModifiedOn] DATETIME NULL,
 
-        CONSTRAINT UK_DocuScanUser_AccountName UNIQUE ([AccountName]),
-        CONSTRAINT UK_DocuScanUser_UserIdentifier UNIQUE ([UserIdentifier])
+        CONSTRAINT UK_DocuScanUser_AccountName UNIQUE ([AccountName])
     );
 
     PRINT 'DocuScanUser table created successfully.';

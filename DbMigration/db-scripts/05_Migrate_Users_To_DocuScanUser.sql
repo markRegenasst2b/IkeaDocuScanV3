@@ -11,10 +11,9 @@ GO
 PRINT 'Migrating users from UserPermissions to DocuScanUser...';
 GO
 
-INSERT INTO [dbo].[DocuScanUser] ([AccountName], [UserIdentifier], [LastLogon], [IsSuperUser], [CreatedOn])
+INSERT INTO [dbo].[DocuScanUser] ([AccountName], [LastLogon], [IsSuperUser], [CreatedOn])
 SELECT DISTINCT
     [AccountName],
-    [AccountName] AS [UserIdentifier], -- Initially using AccountName as UserIdentifier
     NULL AS [LastLogon], -- No historical logon data available
     0 AS [IsSuperUser], -- Default to non-superuser; update manually if needed
     GETDATE() AS [CreatedOn]
