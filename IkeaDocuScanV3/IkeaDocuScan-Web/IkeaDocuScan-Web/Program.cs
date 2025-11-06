@@ -138,6 +138,12 @@ builder.Services.AddScoped<ConfigurationMigrationService>();
 // Excel Reporting Services
 builder.Services.AddExcelReporting(builder.Configuration);
 
+// Excel Preview Data Service (for passing data to preview page - shared between server and client)
+builder.Services.AddScoped<IkeaDocuScan_Web.Client.Services.ExcelPreviewDataService>();
+
+// Property Metadata Extractor (for extracting ExcelExportAttribute metadata)
+builder.Services.AddScoped<ExcelReporting.Services.PropertyMetadataExtractor>();
+
 // SignalR for real-time updates
 builder.Services.AddSignalR();
 

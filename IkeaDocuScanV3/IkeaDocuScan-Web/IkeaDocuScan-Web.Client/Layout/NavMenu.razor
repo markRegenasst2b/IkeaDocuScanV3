@@ -1,4 +1,7 @@
 ﻿@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Components.Web
+@namespace IkeaDocuScan_Web.Client.Layout
+@rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
 
 <div class="top-row ps-3 navbar navbar-dark">
     <div class="container-fluid">
@@ -48,37 +51,53 @@
 
                 <div class="nav-section-header">SPECIAL REPORTS</div>
 
+                @if (reportError != null)
+                {
+                    <div class="alert alert-danger mx-3 my-2" role="alert">
+                        <small>@reportError</small>
+                    </div>
+                }
+
+                @if (isLoadingReport)
+                {
+                    <div class="nav-item px-3">
+                        <div class="nav-link">
+                            <span class="spinner-border spinner-border-sm" role="status"></span> Loading...
+                        </div>
+                    </div>
+                }
+
                 <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="excel-preview?reportType=barcode-gaps">
+                    <a class="nav-link" @onclick="ShowBarcodeGapsReport" @onclick:preventDefault @onclick:stopPropagation style="cursor: pointer;">
                         <span class="bi bi-bar-chart" aria-hidden="true"></span> Barcode Gaps
-                    </NavLink>
+                    </a>
                 </div>
                 <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="excel-preview?reportType=duplicate-documents">
+                    <a class="nav-link" @onclick="ShowDuplicateDocumentsReport" @onclick:preventDefault @onclick:stopPropagation style="cursor: pointer;">
                         <span class="bi bi-files" aria-hidden="true"></span> Duplicate Documents
-                    </NavLink>
+                    </a>
                 </div>
                 <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="excel-preview?reportType=unlinked-registrations">
+                    <a class="nav-link" @onclick="ShowUnlinkedRegistrationsReport" @onclick:preventDefault @onclick:stopPropagation style="cursor: pointer;">
                         <span class="bi bi-link-45deg" aria-hidden="true"></span> Unlinked Registrations
-                    </NavLink>
+                    </a>
                 </div>
                 <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="excel-preview?reportType=scan-copies">
+                    <a class="nav-link" @onclick="ShowScanCopiesReport" @onclick:preventDefault @onclick:stopPropagation style="cursor: pointer;">
                         <span class="bi bi-file-earmark-image" aria-hidden="true"></span> Scan Copies
-                    </NavLink>
+                    </a>
                 </div>
 
                 <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="excel-preview?reportType=suppliers">
+                    <a class="nav-link" @onclick="ShowSuppliersReport" @onclick:preventDefault @onclick:stopPropagation style="cursor: pointer;">
                         <span class="bi bi-building" aria-hidden="true"></span> Suppliers
-                    </NavLink>
+                    </a>
                 </div>
 
                 <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="excel-preview?reportType=all-documents">
+                    <a class="nav-link" @onclick="ShowAllDocumentsReport" @onclick:preventDefault @onclick:stopPropagation style="cursor: pointer;">
                         <span class="bi bi-file-earmark-text" aria-hidden="true"></span> All Documents
-                    </NavLink>
+                    </a>
                 </div>
 
                 <div class="nav-section-header">ADMINISTRATION</div>

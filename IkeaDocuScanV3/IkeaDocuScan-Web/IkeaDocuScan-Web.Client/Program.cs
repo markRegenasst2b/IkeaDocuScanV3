@@ -6,7 +6,16 @@ using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
 
-builder.Services.AddAuthorizationCore();
+builder.Services.AddAuthorizationCore(options =>
+{
+    // Register the same authorization policies as the server
+    // Note: Client-side policies are for UI only, server enforces actual security
+    options.AddPolicy("HasAccess", policy =>
+        policy.RequireAuthenticatedUser());
+
+    options.AddPolicy("SuperUser", policy =>
+        policy.RequireAuthenticatedUser());
+});
 builder.Services.AddCascadingAuthenticationState();
 builder.Services.AddSingleton<AuthenticationStateProvider, PersistentAuthenticationStateProvider>();
 
@@ -35,6 +44,12 @@ builder.Services.AddScoped<ConfigurationHttpService>();
 
 // Excel Export Service
 builder.Services.AddScoped<ExcelExportHttpService>();
+
+// Excel Preview Data Service (for passing data to preview page)
+builder.Services.AddScoped<ExcelPreviewDataService>();
+
+// Property Metadata Extractor (for extracting ExcelExportAttribute metadata)
+builder.Services.AddScoped<ExcelReporting.Services.PropertyMetadataExtractor>();
 
 // Register DocumentHttpService (using HttpClient factory pattern)
 builder.Services.AddScoped<DocumentHttpService>();
