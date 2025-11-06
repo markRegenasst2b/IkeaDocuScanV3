@@ -44,6 +44,14 @@
                         }
                     </small>
                 </div>
+
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="filterNoPermissions"
+                           @bind="showOnlyUsersWithoutPermissions">
+                    <label class="form-check-label" for="filterNoPermissions">
+                        <i class="fa fa-filter"></i> Show only users without permissions (registration requests)
+                    </label>
+                </div>
             </div>
         </div>
 
@@ -55,7 +63,18 @@
 
         <div class="card mt-4">
             <div class="card-header">
-                <h5 class="mb-0">DocuScan Users (@(users?.Count ?? 0))</h5>
+                <h5 class="mb-0">
+                    DocuScan Users
+                    @if (showOnlyUsersWithoutPermissions)
+                    {
+                        <span class="badge bg-warning text-dark">@(FilteredUsers?.Count ?? 0) without permissions</span>
+                        <span class="text-muted small">(of @(users?.Count ?? 0) total)</span>
+                    }
+                    else
+                    {
+                        <span>(@(FilteredUsers?.Count ?? 0))</span>
+                    }
+                </h5>
             </div>
             <div class="card-body">
                 @if (isLoading)
@@ -73,7 +92,7 @@
                         @errorMessage
                     </div>
                 }
-                else if (users != null && users.Count > 0)
+                else if (FilteredUsers != null && FilteredUsers.Count > 0)
                 {
                     <div class="table-responsive">
                         <table class="table table-hover table-striped">
@@ -88,7 +107,7 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                @foreach (var user in users)
+                                @foreach (var user in FilteredUsers)
                                 {
                                     <tr style="cursor: pointer;" @onclick="() => SelectUser(user)">
                                         <td>@user.UserId</td>
@@ -121,7 +140,14 @@
                 else
                 {
                     <div class="alert alert-info">
-                        No users found. @(string.IsNullOrWhiteSpace(searchTerm) ? "" : "Try a different search term.")
+                        @if (showOnlyUsersWithoutPermissions)
+                        {
+                            <span>No users without permissions found. All users have been assigned permissions.</span>
+                        }
+                        else
+                        {
+                            <span>No users found. @(string.IsNullOrWhiteSpace(searchTerm) ? "" : "Try a different search term.")</span>
+                        }
                     </div>
                 }
             </div>
@@ -505,6 +531,25 @@
     private List<DocuScanUserDto>? users;
     private DocuScanUserDto? selectedUser;
 
+    // Filtered users based on search and permission filter
+    private List<DocuScanUserDto>? FilteredUsers
+    {
+        get
+        {
+            if (users == null) return null;
+
+            var filtered = users.AsEnumerable();
+
+            // Apply permission count filter
+            if (showOnlyUsersWithoutPermissions)
+            {
+                filtered = filtered.Where(u => u.PermissionCount == 0);
+            }
+
+            return filtered.ToList();
+        }
+    }
+
     // Permissions for selected user
     private List<UserPermissionDto>? permissions;
     private UserPermissionDto? editingPermission;
@@ -535,6 +580,7 @@
     private string searchTerm = string.Empty;
     private Timer? _debounceTimer;
     private const int DebounceDelayMs = 500;
+    private bool showOnlyUsersWithoutPermissions = false;
 
     // Edit form values
     private int? selectedDocumentTypeId;

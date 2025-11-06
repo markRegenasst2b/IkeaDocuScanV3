@@ -24,6 +24,91 @@ public partial class SearchDocuments : ComponentBase
     [Inject] private NavigationManager NavigationManager { get; set; } = default!;
     [Inject] private IOptions<EmailSearchResultsOptions>? EmailOptions { get; set; }
 
+    // Query parameters for preserving search state
+    [Parameter]
+    [SupplyParameterFromQuery(Name = "q")]
+    public string? QuerySearchString { get; set; }
+
+    [Parameter]
+    [SupplyParameterFromQuery(Name = "barcodes")]
+    public string? QueryBarcodes { get; set; }
+
+    [Parameter]
+    [SupplyParameterFromQuery(Name = "types")]
+    public string? QueryDocumentTypeIds { get; set; }
+
+    [Parameter]
+    [SupplyParameterFromQuery(Name = "nameId")]
+    public int? QueryDocumentNameId { get; set; }
+
+    [Parameter]
+    [SupplyParameterFromQuery(Name = "docNo")]
+    public string? QueryDocumentNumber { get; set; }
+
+    [Parameter]
+    [SupplyParameterFromQuery(Name = "version")]
+    public string? QueryVersionNo { get; set; }
+
+    [Parameter]
+    [SupplyParameterFromQuery(Name = "pua")]
+    public string? QueryAssociatedToPua { get; set; }
+
+    [Parameter]
+    [SupplyParameterFromQuery(Name = "appendix")]
+    public string? QueryAssociatedToAppendix { get; set; }
+
+    [Parameter]
+    [SupplyParameterFromQuery(Name = "cpName")]
+    public string? QueryCounterpartyName { get; set; }
+
+    [Parameter]
+    [SupplyParameterFromQuery(Name = "cpNo")]
+    public string? QueryCounterpartyNo { get; set; }
+
+    [Parameter]
+    [SupplyParameterFromQuery(Name = "cpCountry")]
+    public string? QueryCounterpartyCountry { get; set; }
+
+    [Parameter]
+    [SupplyParameterFromQuery(Name = "cpCity")]
+    public string? QueryCounterpartyCity { get; set; }
+
+    [Parameter]
+    [SupplyParameterFromQuery(Name = "contractFrom")]
+    public string? QueryDateOfContractFrom { get; set; }
+
+    [Parameter]
+    [SupplyParameterFromQuery(Name = "contractTo")]
+    public string? QueryDateOfContractTo { get; set; }
+
+    [Parameter]
+    [SupplyParameterFromQuery(Name = "currency")]
+    public string? QueryCurrencyCode { get; set; }
+
+    [Parameter]
+    [SupplyParameterFromQuery(Name = "amountFrom")]
+    public decimal? QueryAmountFrom { get; set; }
+
+    [Parameter]
+    [SupplyParameterFromQuery(Name = "amountTo")]
+    public decimal? QueryAmountTo { get; set; }
+
+    [Parameter]
+    [SupplyParameterFromQuery(Name = "page")]
+    public int? QueryPageNumber { get; set; }
+
+    [Parameter]
+    [SupplyParameterFromQuery(Name = "pageSize")]
+    public int? QueryPageSize { get; set; }
+
+    [Parameter]
+    [SupplyParameterFromQuery(Name = "sort")]
+    public string? QuerySortColumn { get; set; }
+
+    [Parameter]
+    [SupplyParameterFromQuery(Name = "dir")]
+    public string? QuerySortDirection { get; set; }
+
     // Search request and results
     private DocumentSearchRequestDto searchRequest = new();
     private DocumentSearchResultDto? searchResults;
@@ -67,6 +152,16 @@ public partial class SearchDocuments : ComponentBase
         {
             Logger.LogInformation("SearchDocuments page initializing");
             await LoadReferenceData();
+
+            // Populate search request from query parameters
+            InitializeSearchFromQueryParameters();
+
+            // If query parameters present, execute search automatically
+            if (HasQueryParameters())
+            {
+                Logger.LogInformation("Query parameters detected, executing search automatically");
+                await ExecuteSearch();
+            }
         }
         catch (Exception ex)
         {
@@ -109,6 +204,176 @@ public partial class SearchDocuments : ComponentBase
             documentTypes.Count, allDocumentNames.Count, counterParties.Count, currencies.Count, countries.Count);
     }
 
+    private void InitializeSearchFromQueryParameters()
+    {
+        Logger.LogInformation("Initializing search request from query parameters");
+
+        searchRequest = new DocumentSearchRequestDto
+        {
+            SearchString = QuerySearchString,
+            Barcodes = QueryBarcodes,
+            DocumentNumber = QueryDocumentNumber,
+            VersionNo = QueryVersionNo,
+            AssociatedToPua = QueryAssociatedToPua,
+            AssociatedToAppendix = QueryAssociatedToAppendix,
+            CounterpartyName = QueryCounterpartyName,
+            CounterpartyNo = QueryCounterpartyNo,
+            CounterpartyCountry = QueryCounterpartyCountry,
+            CounterpartyCity = QueryCounterpartyCity,
+            CurrencyCode = QueryCurrencyCode,
+            AmountFrom = QueryAmountFrom,
+            AmountTo = QueryAmountTo,
+            PageNumber = QueryPageNumber ?? 1,
+            PageSize = QueryPageSize ?? 25,
+            SortColumn = QuerySortColumn,
+            SortDirection = QuerySortDirection
+        };
+
+        // Parse DocumentNameId
+        if (QueryDocumentNameId.HasValue)
+        {
+            searchRequest.DocumentNameId = QueryDocumentNameId.Value;
+        }
+
+        // Parse comma-separated DocumentTypeIds
+        if (!string.IsNullOrWhiteSpace(QueryDocumentTypeIds))
+        {
+            try
+            {
+                searchRequest.DocumentTypeIds = QueryDocumentTypeIds
+                    .Split(',', StringSplitOptions.RemoveEmptyEntries)
+                    .Select(int.Parse)
+                    .ToList();
+            }
+            catch (Exception ex)
+            {
+                Logger.LogWarning(ex, "Failed to parse DocumentTypeIds from query parameter: {Value}", QueryDocumentTypeIds);
+            }
+        }
+
+        // Parse date strings to DateTime
+        if (DateTime.TryParse(QueryDateOfContractFrom, out var contractFrom))
+            searchRequest.DateOfContractFrom = contractFrom;
+
+        if (DateTime.TryParse(QueryDateOfContractTo, out var contractTo))
+            searchRequest.DateOfContractTo = contractTo;
+
+        Logger.LogInformation("Search request initialized from query parameters");
+    }
+
+    private bool HasQueryParameters()
+    {
+        return !string.IsNullOrWhiteSpace(QuerySearchString) ||
+               !string.IsNullOrWhiteSpace(QueryBarcodes) ||
+               !string.IsNullOrWhiteSpace(QueryDocumentTypeIds) ||
+               QueryDocumentNameId.HasValue ||
+               !string.IsNullOrWhiteSpace(QueryDocumentNumber) ||
+               !string.IsNullOrWhiteSpace(QueryVersionNo) ||
+               !string.IsNullOrWhiteSpace(QueryAssociatedToPua) ||
+               !string.IsNullOrWhiteSpace(QueryAssociatedToAppendix) ||
+               !string.IsNullOrWhiteSpace(QueryCounterpartyName) ||
+               !string.IsNullOrWhiteSpace(QueryCounterpartyNo) ||
+               !string.IsNullOrWhiteSpace(QueryCounterpartyCountry) ||
+               !string.IsNullOrWhiteSpace(QueryCounterpartyCity) ||
+               !string.IsNullOrWhiteSpace(QueryDateOfContractFrom) ||
+               !string.IsNullOrWhiteSpace(QueryDateOfContractTo) ||
+               !string.IsNullOrWhiteSpace(QueryCurrencyCode) ||
+               QueryAmountFrom.HasValue ||
+               QueryAmountTo.HasValue ||
+               (QueryPageNumber.HasValue && QueryPageNumber.Value > 1) ||
+               !string.IsNullOrWhiteSpace(QuerySortColumn);
+    }
+
+    private void UpdateUrlWithSearchParameters()
+    {
+        var queryParams = new Dictionary<string, string?>();
+
+        // Add non-empty parameters
+        if (!string.IsNullOrWhiteSpace(searchRequest.SearchString))
+            queryParams["q"] = searchRequest.SearchString;
+
+        if (!string.IsNullOrWhiteSpace(searchRequest.Barcodes))
+            queryParams["barcodes"] = searchRequest.Barcodes;
+
+        if (searchRequest.DocumentTypeIds?.Any() == true)
+            queryParams["types"] = string.Join(",", searchRequest.DocumentTypeIds);
+
+        if (searchRequest.DocumentNameId.HasValue && searchRequest.DocumentNameId.Value > 0)
+            queryParams["nameId"] = searchRequest.DocumentNameId.Value.ToString();
+
+        if (!string.IsNullOrWhiteSpace(searchRequest.DocumentNumber))
+            queryParams["docNo"] = searchRequest.DocumentNumber;
+
+        if (!string.IsNullOrWhiteSpace(searchRequest.VersionNo))
+            queryParams["version"] = searchRequest.VersionNo;
+
+        if (!string.IsNullOrWhiteSpace(searchRequest.AssociatedToPua))
+            queryParams["pua"] = searchRequest.AssociatedToPua;
+
+        if (!string.IsNullOrWhiteSpace(searchRequest.AssociatedToAppendix))
+            queryParams["appendix"] = searchRequest.AssociatedToAppendix;
+
+        if (!string.IsNullOrWhiteSpace(searchRequest.CounterpartyName))
+            queryParams["cpName"] = searchRequest.CounterpartyName;
+
+        if (!string.IsNullOrWhiteSpace(searchRequest.CounterpartyNo))
+            queryParams["cpNo"] = searchRequest.CounterpartyNo;
+
+        if (!string.IsNullOrWhiteSpace(searchRequest.CounterpartyCountry))
+            queryParams["cpCountry"] = searchRequest.CounterpartyCountry;
+
+        if (!string.IsNullOrWhiteSpace(searchRequest.CounterpartyCity))
+            queryParams["cpCity"] = searchRequest.CounterpartyCity;
+
+        if (searchRequest.DateOfContractFrom.HasValue)
+            queryParams["contractFrom"] = searchRequest.DateOfContractFrom.Value.ToString("yyyy-MM-dd");
+
+        if (searchRequest.DateOfContractTo.HasValue)
+            queryParams["contractTo"] = searchRequest.DateOfContractTo.Value.ToString("yyyy-MM-dd");
+
+        if (!string.IsNullOrWhiteSpace(searchRequest.CurrencyCode))
+            queryParams["currency"] = searchRequest.CurrencyCode;
+
+        if (searchRequest.AmountFrom.HasValue)
+            queryParams["amountFrom"] = searchRequest.AmountFrom.Value.ToString();
+
+        if (searchRequest.AmountTo.HasValue)
+            queryParams["amountTo"] = searchRequest.AmountTo.Value.ToString();
+
+        // Always include pagination if not default
+        if (searchRequest.PageNumber > 1)
+            queryParams["page"] = searchRequest.PageNumber.ToString();
+
+        if (searchRequest.PageSize != 25) // 25 is default
+            queryParams["pageSize"] = searchRequest.PageSize.ToString();
+
+        // Add sorting if present
+        if (!string.IsNullOrWhiteSpace(searchRequest.SortColumn))
+            queryParams["sort"] = searchRequest.SortColumn;
+
+        if (!string.IsNullOrWhiteSpace(searchRequest.SortDirection))
+            queryParams["dir"] = searchRequest.SortDirection;
+
+        // Build query string
+        if (queryParams.Any())
+        {
+            var queryString = string.Join("&", queryParams.Select(kvp =>
+                $"{Uri.EscapeDataString(kvp.Key)}={Uri.EscapeDataString(kvp.Value ?? "")}"));
+
+            var newUrl = $"/documents/search?{queryString}";
+
+            // Navigate without forcing a reload
+            NavigationManager.NavigateTo(newUrl, forceLoad: false);
+
+            Logger.LogInformation("Updated URL with search parameters");
+        }
+        else
+        {
+            // No parameters, just navigate to clean URL
+            NavigationManager.NavigateTo("/documents/search", forceLoad: false);
+        }
+    }
+
     private async Task ExecuteSearch()
     {
         try
@@ -118,6 +383,9 @@ public partial class SearchDocuments : ComponentBase
             StateHasChanged();
 
             Logger.LogInformation("Executing document search");
+
+            // Update URL with current search parameters
+            UpdateUrlWithSearchParameters();
 
             searchResults = await DocumentService.SearchAsync(searchRequest);
 
@@ -155,6 +423,11 @@ public partial class SearchDocuments : ComponentBase
 
         searchResults = null;
         errorMessage = null;
+        selectedDocumentIds.Clear();
+
+        // Clear URL parameters
+        NavigationManager.NavigateTo("/documents/search", forceLoad: false);
+
         StateHasChanged();
     }
 

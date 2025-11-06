@@ -11,6 +11,7 @@
 @inject NavigationManager Navigation
 @inject ILogger<ComposeDocumentEmail> Logger
 @inject IOptions<EmailSearchResultsOptions> EmailOptions
+@inject IJSRuntime JSRuntime
 
 <PageTitle>Compose Email - Documents</PageTitle>
 
@@ -361,9 +362,9 @@
 
             successMessage = $"Email sent successfully to {recipient}!";
 
-            // Navigate back after a short delay
+            // Navigate back after a short delay, preserving search state
             await Task.Delay(2000);
-            Navigation.NavigateTo("/documents/search");
+            await JSRuntime.InvokeVoidAsync("history.back");
         }
         catch (Exception ex)
         {
@@ -376,8 +377,9 @@
         }
     }
 
-    private void Cancel()
+    private async Task Cancel()
     {
-        Navigation.NavigateTo("/documents/search");
+        // Use browser history to go back, preserving search state
+        await JSRuntime.InvokeVoidAsync("history.back");
     }
 }

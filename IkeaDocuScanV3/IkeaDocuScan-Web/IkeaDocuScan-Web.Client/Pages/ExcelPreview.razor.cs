@@ -437,8 +437,9 @@ public partial class ExcelPreview : ComponentBase
         }
     }
 
-    private void Cancel()
+    private async Task Cancel()
     {
-        NavigationManager.NavigateTo("/documents/search");
+        // Use browser history to go back, preserving search state
+        await JSRuntime.InvokeVoidAsync("history.back");
     }
 }

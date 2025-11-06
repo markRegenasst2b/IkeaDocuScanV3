@@ -1,0 +1,73 @@
+    filter search request according permissions
+    remove issuperuser from gui, keep it hidden.
+    create an authorization table with the three roles reader, publisher, superuser as columns and all access points as rows to report the authorization configuration
+    print summary and detailed of selected does not work. is it already implemented?
+    need a manage document names page
+    the remaining reports
+      A)  barcode gaps
+            with barcodes as (
+                select barcode, lead(barcode,1,0) over (order by barcode) as NextBarcode
+                from dbo.document
+            )
+            select barcode+1 as MissingFrom, NextBarcode-1 as MissingTo, nextbarcode-barcode-1 as MissingCount 
+            from barcodes bc 
+            where barcode+1 <> NextBarcode and NextBarcode <> 0
+            order by barcode
+      B)  Duplicated documents
+            with docs as (
+                select dt.DT_Name[Document type], d.DocumentNo[Document No], d.VersionNo,cp.CounterPartyId, cp.CounterPartyNoAlpha, cp.Name as Counterparty
+                from dbo.document d
+                join dbo.DocumentType dt on dt.DT_ID = d.DT_ID
+                join CounterParty cp on cp.CounterPartyId=d.CounterPartyId
+            )
+            select[Document type], [Document No], VersionNo, CounterPartyNoAlpha, Counterparty, count(*)[Count]
+            FROM docs
+            group by[Document type], [Document No], VersionNo, CounterPartyNoAlpha, Counterparty
+            having count(*) > 1
+            order by[Document type], [count] desc, [Document No], VersionNo, CounterPartyNoAlpha
+      C) Registrations without PDF
+            with docs as (
+                select d.BarCode, dt.DT_Name [Document type], dn.Name [Document name],d.DocumentNo [Document No] , cp.Name [Counterparty], cp.CounterPartyNo [Counterparty No]  
+                ,FileId
+                from dbo.document d
+                left join dbo.DocumentType dt on dt.DT_ID = d.DT_ID
+                left join dbo.DocumentName dn on dn.ID = d.DocumentNameId
+                left join dbo.CounterParty cp on cp.CounterPartyId=d.CounterPartyId
+            )
+            select BarCode, [Document type], [Document name], [Document No], Counterparty, [Counterparty No] from docs
+            where docs.FileId is null
+            order by [Document type], [Document No]
+       D) Scan copies
+            with docs as (
+                select d.BarCode, dt.DT_Name [Document type], dn.Name [Document name],d.DocumentNo [Document No] , cp.Name [Counterparty], cp.CounterPartyNo [Counterparty No]  
+                from dbo.document d
+                left join dbo.DocumentType dt on dt.DT_ID = d.DT_ID
+                left join dbo.DocumentName dn on dn.ID = d.DocumentNameId
+                left join dbo.CounterParty cp on cp.CounterPartyId=d.CounterPartyId
+                where d.Fax=1 and d.OriginalReceived=0
+            )
+            select BarCode, [Document type], [Document name], [Document No], Counterparty, [Counterparty No] from docs
+            order by [Document type], [Document No]
+       E) Suppliers
+            SELECT cp.[CounterPartyNo]
+                ,cp.CounterPartyNoAlpha
+                ,cp.[Name]
+                ,cp.[Country]
+                ,cp.[AffiliatedTo]
+            FROM [dbo].[CounterParty] cp
+            where cp.DisplayAtCheckIn=1
+            order by cp.name, cp.Country       
+       F) All Documents
+            SELECT dbo.CounterParty.CounterPartyNo AS CPNo, dbo.CounterParty.CounterPartyNoAlpha AS CPNoAlpha, dbo.CounterParty.Name AS CPName, dbo.Country.CountryCode, dbo.Country.Name AS Country, dbo.CounterParty.City, 
+                              dbo.CounterParty.AffiliatedTo, dbo.[Document].BarCode AS DocBarcode, dbo.DocumentType.DT_Name AS DocType, 
+                              --dbo.DocumentName.Name AS DocName, 
+                              dbo.DocumentFile.FileName, dbo.[Document].DateOfContract, 
+                              dbo.[Document].Comment, dbo.[Document].ReceivingDate, dbo.[Document].DispatchDate, dbo.[Document].Fax, dbo.[Document].OriginalReceived, dbo.[Document].ActionDate, dbo.[Document].ActionDescription, 
+                              dbo.[Document].DocumentNo, dbo.[Document].AssociatedToPUA, dbo.[Document].VersionNo, dbo.[Document].AssociatedToAppendix, dbo.[Document].ValidUntil, dbo.[Document].CurrencyCode, dbo.[Document].Amount, 
+                              dbo.[Document].Confidential, dbo.[Document].ThirdParty, dbo.[Document].Authorisation, dbo.[Document].BankConfirmation, dbo.[Document].TranslatedVersionReceived
+            FROM     dbo.CounterParty 
+            left JOIN dbo.Country ON dbo.CounterParty.Country = dbo.Country.CountryCode 
+            left JOIN dbo.[Document] ON dbo.CounterParty.CounterPartyId = dbo.[Document].CounterPartyId 
+            left  JOIN dbo.DocumentName ON dbo.[Document].DocumentNameId = dbo.DocumentName.ID AND dbo.DocumentName.DocumentTypeId = dbo.Document.DT_ID
+            INNER JOIN dbo.DocumentType ON dbo.[Document].DT_ID = dbo.DocumentType.DT_ID 
+            left JOIN dbo.DocumentFile ON dbo.[Document].FileId = dbo.DocumentFile.Id AND dbo.[Document].FileId = dbo.DocumentFile.Id      

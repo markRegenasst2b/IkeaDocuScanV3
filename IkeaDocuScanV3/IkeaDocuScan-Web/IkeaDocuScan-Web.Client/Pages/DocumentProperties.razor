@@ -5,6 +5,7 @@
 @inject IDocumentService DocumentService
 @inject NavigationManager Navigation
 @inject ILogger<DocumentProperties> Logger
+@inject IJSRuntime JSRuntime
 
 <PageTitle>Document Properties - @(document?.BarCode.ToString() ?? "Loading...")</PageTitle>
 
@@ -315,9 +316,10 @@
         Navigation.NavigateTo($"/documents/edit/{document.BarCode}");
     }
 
-    private void GoBack()
+    private async Task GoBack()
     {
-        Navigation.NavigateTo("/documents/search");
+        // Use browser history to go back, preserving search state
+        await JSRuntime.InvokeVoidAsync("history.back");
     }
 
     private string FormatBoolean(bool? value)
