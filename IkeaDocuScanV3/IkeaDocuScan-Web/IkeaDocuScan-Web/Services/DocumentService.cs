@@ -1,5 +1,6 @@
 using IkeaDocuScan.Infrastructure.Data;
 using IkeaDocuScan.Infrastructure.Entities;
+using IkeaDocuScan.Infrastructure.Extensions;
 using IkeaDocuScan.Shared.DTOs.Documents;
 using IkeaDocuScan.Shared.Interfaces;
 using IkeaDocuScan.Shared.Exceptions;
@@ -19,6 +20,7 @@ public class DocumentService : IDocumentService
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IAuditTrailService _auditTrailService;
     private readonly IEmailService _emailService;
+    private readonly ICurrentUserService _currentUserService;
     private readonly ILogger<DocumentService> _logger;
     private readonly DocumentSearchOptions _searchOptions;
 
@@ -28,6 +30,7 @@ public class DocumentService : IDocumentService
         IHttpContextAccessor httpContextAccessor,
         IAuditTrailService auditTrailService,
         IEmailService emailService,
+        ICurrentUserService currentUserService,
         ILogger<DocumentService> logger,
         IOptions<DocumentSearchOptions> searchOptions)
     {
@@ -36,6 +39,7 @@ public class DocumentService : IDocumentService
         _httpContextAccessor = httpContextAccessor;
         _auditTrailService = auditTrailService;
         _emailService = emailService;
+        _currentUserService = currentUserService;
         _logger = logger;
         _searchOptions = searchOptions.Value;
     }
@@ -44,12 +48,22 @@ public class DocumentService : IDocumentService
     {
         _logger.LogInformation("Fetching all documents");
 
-        // Load entities from database first (with navigation properties)
-        var entities = await _context.Documents
+        var currentUser = await _currentUserService.GetCurrentUserAsync();
+
+        // Load entities from database with permission filtering
+        var query = _context.Documents
             .Include(d => d.DocumentName)
             .Include(d => d.Dt)
             .Include(d => d.CounterParty)
-            .ToListAsync();
+            .AsQueryable();
+
+        // Apply permission filter
+        query = query.FilterByUserPermissions(currentUser, _context);
+
+        var entities = await query.ToListAsync();
+
+        _logger.LogInformation("Fetched {Count} documents for user {User}",
+            entities.Count, currentUser.AccountName);
 
         // Then map to DTOs in memory
         return entities.Select(d => MapToDto(d)).ToList();
@@ -59,14 +73,25 @@ public class DocumentService : IDocumentService
     {
         _logger.LogInformation("Fetching document {DocumentId}", id);
 
-        var entity = await _context.Documents
+        var currentUser = await _currentUserService.GetCurrentUserAsync();
+
+        var query = _context.Documents
             .Include(d => d.DocumentName)
             .Include(d => d.Dt)
             .Include(d => d.CounterParty)
-            .FirstOrDefaultAsync(d => d.Id == id);
+            .Where(d => d.Id == id);
+
+        // Apply permission filter
+        query = query.FilterByUserPermissions(currentUser, _context);
+
+        var entity = await query.FirstOrDefaultAsync();
 
         if (entity == null)
+        {
+            _logger.LogWarning("Document {DocumentId} not found or access denied for user {User}",
+                id, currentUser.AccountName);
             throw new DocumentNotFoundException(id);
+        }
 
         return MapToDto(entity);
     }
@@ -81,15 +106,23 @@ public class DocumentService : IDocumentService
             return null;
         }
 
-        var entity = await _context.Documents
+        var currentUser = await _currentUserService.GetCurrentUserAsync();
+
+        var query = _context.Documents
             .Include(d => d.DocumentName)
             .Include(d => d.Dt)
             .Include(d => d.CounterParty)
-            .FirstOrDefaultAsync(d => d.BarCode == barCodeInt);
+            .Where(d => d.BarCode == barCodeInt);
+
+        // Apply permission filter
+        query = query.FilterByUserPermissions(currentUser, _context);
+
+        var entity = await query.FirstOrDefaultAsync();
 
         if (entity == null)
         {
-            _logger.LogWarning("Document not found with BarCode {BarCode}", barCode);
+            _logger.LogWarning("Document not found or access denied for BarCode {BarCode} for user {User}",
+                barCode, currentUser.AccountName);
             return null;
         }
 
@@ -366,6 +399,8 @@ public class DocumentService : IDocumentService
     {
         _logger.LogInformation("Searching documents with filters");
 
+        var currentUser = await _currentUserService.GetCurrentUserAsync();
+
         // Start with base query including all necessary navigation properties
         IQueryable<Document> query = _context.Documents
             .Include(d => d.Dt)
@@ -374,7 +409,12 @@ public class DocumentService : IDocumentService
                 .ThenInclude(cp => cp!.CountryNavigation)
             .AsQueryable();
 
-        // Apply filters
+        // Apply permission filter FIRST (before search criteria)
+        query = query.FilterByUserPermissions(currentUser, _context);
+
+        _logger.LogDebug("Applied permission filter for user {User}", currentUser.AccountName);
+
+        // Apply search filters
         query = ApplySearchFilters(query, request);
 
         // Apply sorting BEFORE limiting results
@@ -915,18 +955,27 @@ public class DocumentService : IDocumentService
     {
         _logger.LogInformation("Getting document file for document ID: {Id}", id);
 
-        var document = await _context.Documents
+        var currentUser = await _currentUserService.GetCurrentUserAsync();
+
+        var query = _context.Documents
             .Include(d => d.File)
-            .FirstOrDefaultAsync(d => d.Id == id);
+            .Include(d => d.CounterParty)
+            .Where(d => d.Id == id);
+
+        // Apply permission filter to ensure user has access to this document
+        query = query.FilterByUserPermissions(currentUser, _context);
+
+        var document = await query.FirstOrDefaultAsync();
 
         if (document?.File == null)
         {
-            _logger.LogWarning("Document file not found for document ID: {Id}", id);
+            _logger.LogWarning("Document file not found or access denied for document ID: {Id}, user: {User}",
+                id, currentUser.AccountName);
             return null;
         }
 
-        _logger.LogInformation("Document file found: {FileName}, Size: {Size} bytes",
-            document.File.FileName, document.File.Bytes?.Length ?? 0);
+        _logger.LogInformation("Document file found: {FileName}, Size: {Size} bytes for user {User}",
+            document.File.FileName, document.File.Bytes?.Length ?? 0, currentUser.AccountName);
 
         return new DocumentFileDto
         {
