@@ -33,10 +33,35 @@
     }
     else if (errorMessage != null)
     {
-        <div class="alert alert-danger alert-dismissible fade show" role="alert">
-            <strong><i class="bi bi-exclamation-triangle"></i> Error:</strong> @errorMessage
-            <button type="button" class="btn-close" @onclick="() => errorMessage = null"></button>
-        </div>
+        @if (errorMessage.Contains("No data found"))
+        {
+            <div class="alert alert-info" role="alert">
+                <h5 class="alert-heading"><i class="bi bi-info-circle-fill"></i> No Data Found</h5>
+                <p class="mb-0">@errorMessage</p>
+                @if (contextInfo != null && contextInfo.Any())
+                {
+                    <hr>
+                    <p class="mb-2"><strong>Report Details:</strong></p>
+                    @foreach (var item in contextInfo)
+                    {
+                        <small class="d-block">@item.Key: @item.Value</small>
+                    }
+                }
+                <hr class="mt-3">
+                <div class="d-flex gap-2">
+                    <button class="btn btn-outline-secondary btn-sm" @onclick="Cancel">
+                        <i class="bi bi-arrow-left"></i> Go Back
+                    </button>
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                <strong><i class="bi bi-exclamation-triangle"></i> Error:</strong> @errorMessage
+                <button type="button" class="btn-close" @onclick="() => errorMessage = null"></button>
+            </div>
+        }
     }
     else if (!HasData())
     {

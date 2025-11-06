@@ -109,14 +109,40 @@ public class ReportService : IReportService
         var currentUser = await _currentUserService.GetCurrentUserAsync();
         _logger.LogInformation("User {User} requested Unlinked Registrations report", currentUser.AccountName);
 
-        // TODO: Implement unlinked registrations logic
-        // Logic:
-        // 1. Query Documents where FileId IS NULL
-        // 2. Calculate days since creation
-        // 3. Include document details
-        // 4. Return list of UnlinkedRegistrationsReportDto
+        await using var context = await _contextFactory.CreateDbContextAsync();
 
-        throw new NotImplementedException("Unlinked Registrations report logic not yet implemented");
+        // Execute SQL query to find documents without linked files
+        // Uses LEFT JOINs to handle documents without type, name, or counterparty
+        var unlinked = await context.Database.SqlQueryRaw<UnlinkedRegistrationsReportDto>(@"
+            WITH docs AS (
+                SELECT
+                    d.BarCode,
+                    dt.DT_Name AS [Document type],
+                    dn.Name AS [Document name],
+                    d.DocumentNo AS [Document No],
+                    cp.Name AS Counterparty,
+                    cp.CounterPartyNoAlpha AS [Counterparty No],
+                    FileId
+                FROM dbo.Document d
+                LEFT JOIN dbo.DocumentType dt ON dt.DT_ID = d.DT_ID
+                LEFT JOIN dbo.DocumentName dn ON dn.ID = d.DocumentNameId
+                LEFT JOIN dbo.CounterParty cp ON cp.CounterPartyId = d.CounterPartyId
+            )
+            SELECT
+                BarCode,
+                [Document type] AS DocumentType,
+                [Document name] AS DocumentName,
+                [Document No] AS DocumentNo,
+                Counterparty,
+                [Counterparty No] AS CounterpartyNo,
+                NULL AS ExportedAt
+            FROM docs
+            WHERE docs.FileId IS NULL
+            ORDER BY [Document type], [Document No]
+        ").ToListAsync();
+
+        _logger.LogInformation("Found {Count} unlinked registrations for user {User}", unlinked.Count, currentUser.AccountName);
+        return unlinked;
     }
 
     /// <summary>

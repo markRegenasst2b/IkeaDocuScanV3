@@ -35,25 +35,52 @@ public partial class ExcelPreview : ComponentBase
     // UI State
     private bool isLoading = true;
     private string? errorMessage;
+    private string? lastSource; // Track last source to detect navigation changes
 
-    protected override void OnInitialized()
+    protected override void OnParametersSet()
+    {
+        // Check if we're navigating to a different report
+        // This ensures we reload data when switching between reports
+        if (lastSource != Source)
+        {
+            lastSource = Source;
+            LoadPreviewData();
+        }
+    }
+
+    private void LoadPreviewData()
     {
         try
         {
             isLoading = true;
+            errorMessage = null;
 
             // Get data from service
             var (retrievedData, title, context) = PreviewDataService.GetData();
 
+            pageTitle = title ?? "Data Preview";
+            contextInfo = context;
+
+            // Reset paging
+            currentPage = 1;
+
+            // Handle no data scenario with contextual message
             if (retrievedData == null || !retrievedData.Any())
             {
-                errorMessage = "No data available to preview. Please navigate from a report or search page.";
+                if (!string.IsNullOrEmpty(title))
+                {
+                    errorMessage = $"No data found for {title}. The report completed successfully but returned no records matching the criteria.";
+                }
+                else
+                {
+                    errorMessage = "No data available to preview. Please navigate from a report or search page.";
+                }
+                data = new List<ExportableBase>();
+                columnMetadata = new List<ExcelExportMetadata>();
                 return;
             }
 
             data = retrievedData;
-            pageTitle = title ?? "Data Preview";
-            contextInfo = context;
 
             // Extract metadata using reflection and ExcelExportAttribute
             var dataType = data.First().GetType();
@@ -67,6 +94,8 @@ public partial class ExcelPreview : ComponentBase
         catch (Exception ex)
         {
             errorMessage = $"Failed to load preview: {ex.Message}";
+            data = new List<ExportableBase>();
+            columnMetadata = new List<ExcelExportMetadata>();
         }
         finally
         {

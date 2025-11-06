@@ -78,20 +78,16 @@ public partial class NavMenu : ComponentBase
 
             var reportData = await loadDataFunc();
 
-            if (reportData == null || !reportData.Any())
-            {
-                reportError = $"No data found for {title}";
-                return;
-            }
-
+            // Always navigate to preview page, even if no data
+            // Let the ExcelPreview page handle the "no data" scenario
             var context = new Dictionary<string, string>
             {
                 ["Report Type"] = title,
                 ["Generated"] = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
-                ["Record Count"] = reportData.Count.ToString()
+                ["Record Count"] = (reportData?.Count ?? 0).ToString()
             };
 
-            PreviewDataService.SetData(reportData, title, context);
+            PreviewDataService.SetData(reportData ?? new List<T>(), title, context);
             NavigationManager.NavigateTo($"/excel-preview?source={reportType}");
         }
         catch (NotImplementedException)
