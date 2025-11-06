@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Options;
+using Microsoft.JSInterop;
+using System.Net.Http.Json;
 using IkeaDocuScan.Shared.DTOs.Documents;
 using IkeaDocuScan.Shared.DTOs.DocumentTypes;
 using IkeaDocuScan.Shared.DTOs.DocumentNames;
@@ -25,6 +27,8 @@ public partial class SearchDocuments : ComponentBase
     [Inject] private ILogger<SearchDocuments> Logger { get; set; } = default!;
     [Inject] private NavigationManager NavigationManager { get; set; } = default!;
     [Inject] private ExcelPreviewDataService PreviewDataService { get; set; } = default!;
+    [Inject] private IJSRuntime JSRuntime { get; set; } = default!;
+    [Inject] private HttpClient HttpClient { get; set; } = default!;
     [Inject] private IOptions<EmailSearchResultsOptions>? EmailOptions { get; set; }
 
     // Query parameters for preserving search state

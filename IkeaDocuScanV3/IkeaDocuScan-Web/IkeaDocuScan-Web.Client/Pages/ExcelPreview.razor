@@ -160,6 +160,12 @@
             <button class="btn btn-outline-secondary btn-lg" @onclick="Cancel">
                 <i class="bi bi-arrow-left"></i> Back
             </button>
+            @if (!string.IsNullOrEmpty(excelDownloadUrl))
+            {
+                <a href="@excelDownloadUrl" class="btn btn-success btn-lg" download>
+                    <i class="bi bi-file-earmark-spreadsheet"></i> Download Excel
+                </a>
+            }
         </div>
     }
 </div>

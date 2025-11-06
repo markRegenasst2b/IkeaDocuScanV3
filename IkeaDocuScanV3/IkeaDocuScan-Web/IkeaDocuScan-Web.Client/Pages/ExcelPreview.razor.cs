@@ -43,6 +43,7 @@ public partial class ExcelPreview : ComponentBase
     private string? errorMessage;
     private string? lastSource; // Track last source to detect navigation changes
     private string? lastReportType; // Track last report type to detect navigation changes
+    private string? excelDownloadUrl; // URL for Excel download
 
     protected override void OnParametersSet()
     {
@@ -80,11 +81,18 @@ public partial class ExcelPreview : ComponentBase
                     ["Generated"] = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
                     ["Record Count"] = (retrievedData?.Count ?? 0).ToString()
                 };
+
+                // Set Excel download URL for reports
+                excelDownloadUrl = $"/api/reports/{ReportType}/excel";
             }
             else
             {
                 // Get data from service (for search results, etc.)
                 (retrievedData, title, context) = PreviewDataService.GetData();
+
+                // For search/selection, Excel download needs to be handled differently
+                // We can't use a simple URL since we need to post the data
+                excelDownloadUrl = null;
             }
 
             pageTitle = title ?? "Data Preview";
