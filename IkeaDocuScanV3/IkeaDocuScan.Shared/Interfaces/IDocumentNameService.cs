@@ -23,4 +23,19 @@ public interface IDocumentNameService
     /// Get a specific document name by ID
     /// </summary>
     Task<DocumentNameDto?> GetByIdAsync(int id);
+
+    /// <summary>
+    /// Create a new document name (SuperUser only)
+    /// </summary>
+    Task<DocumentNameDto> CreateAsync(CreateDocumentNameDto createDto);
+
+    /// <summary>
+    /// Update an existing document name (SuperUser only)
+    /// </summary>
+    Task<DocumentNameDto> UpdateAsync(UpdateDocumentNameDto updateDto);
+
+    /// <summary>
+    /// Delete a document name (SuperUser only)
+    /// </summary>
+    Task DeleteAsync(int id);
 }

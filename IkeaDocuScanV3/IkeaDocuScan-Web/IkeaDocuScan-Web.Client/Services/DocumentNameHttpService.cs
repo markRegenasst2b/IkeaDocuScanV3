@@ -76,4 +76,62 @@ public class DocumentNameHttpService : IDocumentNameService
             throw;
         }
     }
+
+    /// <summary>
+    /// Create a new document name (SuperUser only)
+    /// </summary>
+    public async Task<DocumentNameDto> CreateAsync(CreateDocumentNameDto createDto)
+    {
+        try
+        {
+            _logger.LogInformation("Creating document name: {Name}", createDto.Name);
+            var response = await _http.PostAsJsonAsync("/api/documentnames", createDto);
+            response.EnsureSuccessStatusCode();
+            var created = await response.Content.ReadFromJsonAsync<DocumentNameDto>();
+            return created ?? throw new InvalidOperationException("Failed to deserialize created document name");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error creating document name");
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Update an existing document name (SuperUser only)
+    /// </summary>
+    public async Task<DocumentNameDto> UpdateAsync(UpdateDocumentNameDto updateDto)
+    {
+        try
+        {
+            _logger.LogInformation("Updating document name ID {Id}", updateDto.Id);
+            var response = await _http.PutAsJsonAsync($"/api/documentnames/{updateDto.Id}", updateDto);
+            response.EnsureSuccessStatusCode();
+            var updated = await response.Content.ReadFromJsonAsync<DocumentNameDto>();
+            return updated ?? throw new InvalidOperationException("Failed to deserialize updated document name");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error updating document name ID {Id}", updateDto.Id);
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Delete a document name (SuperUser only)
+    /// </summary>
+    public async Task DeleteAsync(int id)
+    {
+        try
+        {
+            _logger.LogInformation("Deleting document name ID {Id}", id);
+            var response = await _http.DeleteAsync($"/api/documentnames/{id}");
+            response.EnsureSuccessStatusCode();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error deleting document name ID {Id}", id);
+            throw;
+        }
+    }
 }
