@@ -8,6 +8,11 @@ main {
     flex: 1;
 }
 
+/* Add padding to bottom of content to prevent footer overlap */
+.content {
+    padding-bottom: 60px !important;
+}
+
 .sidebar {
     background-image: linear-gradient(180deg, rgb(5, 39, 103) 0%, #3a0647 70%);
 }

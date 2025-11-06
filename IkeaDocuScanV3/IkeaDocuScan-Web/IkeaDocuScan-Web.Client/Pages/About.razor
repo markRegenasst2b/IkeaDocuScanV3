@@ -1,0 +1,123 @@
+@page "/about"
+@rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
+@attribute [Authorize(Policy = "HasAccess")]
+@inject IConfiguration Configuration
+
+<PageTitle>About - IkeaDocuScan</PageTitle>
+
+<div class="container mt-4">
+    <div class="card">
+        <div class="card-header bg-primary text-white">
+            <h4><i class="bi bi-info-circle"></i> System Information</h4>
+        </div>
+        <div class="card-body">
+            <table class="table table-borderless">
+                <tbody>
+                    <tr>
+                        <th style="width: 200px;">Application:</th>
+                        <td>IkeaDocuScan Document Management System</td>
+                    </tr>
+                    <tr>
+                        <th>Version:</th>
+                        <td><span class="badge bg-primary fs-6">@GetVersion()</span></td>
+                    </tr>
+                    <tr>
+                        <th>Environment:</th>
+                        <td>
+                            <span class="badge @GetEnvironmentBadgeClass() fs-6">
+                                @GetEnvironment()
+                            </span>
+                            @if (!IsProduction())
+                            {
+                                <span class="text-warning ms-2">
+                                    <i class="bi bi-exclamation-triangle"></i>
+                                    Non-production environment
+                                </span>
+                            }
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>Framework:</th>
+                        <td>.NET 9.0 with Blazor WebAssembly</td>
+                    </tr>
+                    <tr>
+                        <th>Company:</th>
+                        <td>IKEA</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            @if (IsDevelopment())
+            {
+                <div class="alert alert-warning mt-3">
+                    <i class="bi bi-exclamation-triangle"></i>
+                    <strong>Development Mode</strong><br/>
+                    This application is running in development mode.
+                    Enhanced logging and debugging features are enabled.
+                </div>
+            }
+
+            <div class="mt-4">
+                <h5 class="border-bottom pb-2">Features</h5>
+                <ul class="list-unstyled">
+                    <li><i class="bi bi-check-circle text-success"></i> Document Management & Search</li>
+                    <li><i class="bi bi-check-circle text-success"></i> Scanned File Check-in</li>
+                    <li><i class="bi bi-check-circle text-success"></i> User Permissions Management</li>
+                    <li><i class="bi bi-check-circle text-success"></i> Email Notifications</li>
+                    <li><i class="bi bi-check-circle text-success"></i> Document Export (Excel, PDF)</li>
+                    <li><i class="bi bi-check-circle text-success"></i> Audit Trail</li>
+                    <li><i class="bi bi-check-circle text-success"></i> Action Reminders</li>
+                </ul>
+            </div>
+
+            <div class="mt-4">
+                <h5 class="border-bottom pb-2">Support</h5>
+                <p class="mb-1">For technical support or questions, please contact:</p>
+                <p class="text-muted mb-0">
+                    <i class="bi bi-envelope"></i> IKEA Document Management Team
+                </p>
+            </div>
+        </div>
+        <div class="card-footer text-muted text-center">
+            <small>
+                Copyright © 2025 IKEA. All rights reserved.
+            </small>
+        </div>
+    </div>
+</div>
+
+@code {
+    private string GetVersion()
+    {
+        var assembly = System.Reflection.Assembly.GetExecutingAssembly();
+        var version = assembly.GetName().Version;
+        return version != null ? $"{version.Major}.{version.Minor}.{version.Build}" : "1.0.0";
+    }
+
+    private string GetEnvironment()
+    {
+        return Configuration["Environment"] ?? "Unknown";
+    }
+
+    private bool IsProduction()
+    {
+        return Configuration["Environment"]?.Equals("Production", StringComparison.OrdinalIgnoreCase) ?? false;
+    }
+
+    private bool IsDevelopment()
+    {
+        return Configuration["Environment"]?.Equals("Development", StringComparison.OrdinalIgnoreCase) ?? false;
+    }
+
+    private string GetEnvironmentBadgeClass()
+    {
+        return GetEnvironment().ToLower() switch
+        {
+            "production" => "bg-success",
+            "staging" => "bg-warning text-dark",
+            "test" => "bg-info",
+            "development" => "bg-secondary",
+            _ => "bg-dark"
+        };
+    }
+}

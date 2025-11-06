@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk.Web">
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
     <TargetFramework>net9.0</TargetFramework>
@@ -7,6 +7,9 @@
     <RootNamespace>IkeaDocuScan-Web</RootNamespace>
     <AssemblyName>$(AssemblyName.Replace(' ', '_'))</AssemblyName>
     <UserSecretsId>74a314ee-2410-466f-9b19-15c0dbd38fa9</UserSecretsId>
+    <VersionPrefix>3.0.*</VersionPrefix>
+	<VersionSuffix>beta.10Nov25</VersionSuffix>
+
   </PropertyGroup>
 
   <ItemGroup>

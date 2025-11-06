@@ -1,0 +1,19 @@
+<Project>
+  <PropertyGroup>
+    <!-- Version Information - SINGLE SOURCE OF TRUTH -->
+    <Version>3.1.0</Version>
+    <AssemblyVersion>3.1.0.0</AssemblyVersion>
+    <FileVersion>3.1.0.0</FileVersion>
+
+    <!-- Product Information -->
+    <Product>IkeaDocuScan</Product>
+    <Company>IKEA</Company>
+    <Copyright>Copyright © 2025 IKEA</Copyright>
+    <Authors>IKEA Document Management Team</Authors>
+
+    <!-- Common Settings -->
+    <TargetFramework>net9.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+</Project>

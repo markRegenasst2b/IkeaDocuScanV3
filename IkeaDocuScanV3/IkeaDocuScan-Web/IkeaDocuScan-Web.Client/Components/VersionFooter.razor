@@ -1,0 +1,54 @@
+@inject IConfiguration Configuration
+
+<footer class="app-footer">
+    <div class="container-fluid d-flex justify-content-between align-items-center py-2">
+        <small class="text-muted">
+            IkeaDocuScan @GetVersion()
+        </small>
+        @if (!IsProduction())
+        {
+            <span class="badge @GetEnvironmentBadgeClass()">
+                @GetEnvironment()
+            </span>
+        }
+    </div>
+</footer>
+
+@code {
+    private string GetVersion()
+    {
+        var assembly = System.Reflection.Assembly.GetExecutingAssembly();
+        var version = assembly.GetName().Version;
+        return version != null ? $"V{version.Major}.{version.Minor}.{version.Build}" : "1.0.0";
+    }
+
+    private string GetEnvironment()
+    {
+        return Configuration["Environment"]?.ToUpper() ?? "UNKNOWN";
+    }
+
+    private bool IsProduction()
+    {
+        return Configuration["Environment"]?.Equals("Production", StringComparison.OrdinalIgnoreCase) ?? false;
+    }
+
+    private string GetEnvironmentBadgeClass()
+    {
+        return GetEnvironment().ToLower() switch
+        {
+            "development" => "bg-secondary",
+            "test" => "bg-info",
+            "staging" => "bg-warning text-dark",
+            _ => "bg-dark"
+        };
+    }
+}
+
+<style>
+    .app-footer {
+        border-top: 1px solid #dee2e6;
+        background-color: #f8f9fa;
+        font-size: 0.875rem;
+        margin-top: auto;
+    }
+</style>

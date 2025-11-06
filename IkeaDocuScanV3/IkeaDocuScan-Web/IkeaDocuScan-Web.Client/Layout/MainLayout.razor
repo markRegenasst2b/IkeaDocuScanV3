@@ -1,4 +1,5 @@
 ﻿@inherits LayoutComponentBase
+@using IkeaDocuScan_Web.Client.Components
 
 <div class="page">
     <div class="sidebar">
@@ -7,7 +8,7 @@
 
     <main>
         <div class="top-row px-4">
-            <a href="https://learn.microsoft.com/aspnet/core/" target="_blank">About</a>
+            <a href="/about">About</a>
         </div>
 
         <article class="content px-4">
@@ -15,6 +16,8 @@
         </article>
     </main>
 </div>
+
+<VersionFooter />
 
 <div id="blazor-error-ui" data-nosnippet>
     An unhandled error has occurred.
