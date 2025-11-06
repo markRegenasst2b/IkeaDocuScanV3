@@ -1,5 +1,6 @@
 using IkeaDocuScan.Shared.DTOs.Documents;
 using IkeaDocuScan.Shared.DTOs.Excel;
+using IkeaDocuScan.Shared.Interfaces;
 using IkeaDocuScan_Web.Client.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
@@ -10,6 +11,7 @@ public partial class ExcelPreview : ComponentBase
 {
     [Inject] private ExcelExportHttpService ExcelService { get; set; } = null!;
     [Inject] private DocumentHttpService DocumentService { get; set; } = null!;
+    [Inject] private IReportService ReportService { get; set; } = null!;
     [Inject] private IJSRuntime JSRuntime { get; set; } = null!;
     [Inject] private NavigationManager NavigationManager { get; set; } = null!;
 
@@ -49,9 +51,13 @@ public partial class ExcelPreview : ComponentBase
     [SupplyParameterFromQuery(Name = "selectedIds")]
     public string? SelectedIdsParam { get; set; }
 
+    [SupplyParameterFromQuery(Name = "reportType")]
+    public string? ReportType { get; set; }
+
     // State
     private DocumentSearchResultDto? searchResults;
     private bool isSelectionMode => !string.IsNullOrEmpty(SelectedIdsParam);
+    private bool isReportMode => !string.IsNullOrEmpty(ReportType);
     private List<ExcelColumnMetadataDto> columnMetadata = new();
     private Dictionary<string, string>? filterContext;
     private ExcelExportValidationResult? validationResult;
@@ -78,7 +84,12 @@ public partial class ExcelPreview : ComponentBase
             // Get column metadata
             columnMetadata = await ExcelService.GetMetadataAsync();
 
-            if (isSelectionMode)
+            if (isReportMode)
+            {
+                // Report mode: Load report data based on report type
+                await LoadReportData();
+            }
+            else if (isSelectionMode)
             {
                 // Selection mode: Load specific selected documents by IDs
                 await LoadSelectedDocuments();
@@ -107,6 +118,90 @@ public partial class ExcelPreview : ComponentBase
         finally
         {
             isLoading = false;
+        }
+    }
+
+    private async Task LoadReportData()
+    {
+        if (string.IsNullOrEmpty(ReportType))
+        {
+            errorMessage = "Report type not specified";
+            return;
+        }
+
+        try
+        {
+            switch (ReportType.ToLower())
+            {
+                case "barcode-gaps":
+                    var barcodeGaps = await ReportService.GetBarcodeGapsReportAsync();
+                    // Convert to searchResults format for display
+                    searchResults = new DocumentSearchResultDto
+                    {
+                        Items = new List<DocumentSearchItemDto>(),
+                        TotalCount = barcodeGaps.Count
+                    };
+                    // Store report data for export (will be handled by ExcelService)
+                    break;
+
+                case "duplicate-documents":
+                    var duplicates = await ReportService.GetDuplicateDocumentsReportAsync();
+                    searchResults = new DocumentSearchResultDto
+                    {
+                        Items = new List<DocumentSearchItemDto>(),
+                        TotalCount = duplicates.Count
+                    };
+                    break;
+
+                case "unlinked-registrations":
+                    var unlinked = await ReportService.GetUnlinkedRegistrationsReportAsync();
+                    searchResults = new DocumentSearchResultDto
+                    {
+                        Items = new List<DocumentSearchItemDto>(),
+                        TotalCount = unlinked.Count
+                    };
+                    break;
+
+                case "scan-copies":
+                    var scanCopies = await ReportService.GetScanCopiesReportAsync();
+                    searchResults = new DocumentSearchResultDto
+                    {
+                        Items = new List<DocumentSearchItemDto>(),
+                        TotalCount = scanCopies.Count
+                    };
+                    break;
+
+                case "suppliers":
+                    var suppliers = await ReportService.GetSuppliersReportAsync();
+                    searchResults = new DocumentSearchResultDto
+                    {
+                        Items = new List<DocumentSearchItemDto>(),
+                        TotalCount = suppliers.Count
+                    };
+                    break;
+
+                case "all-documents":
+                    var allDocs = await ReportService.GetAllDocumentsReportAsync();
+                    searchResults = new DocumentSearchResultDto
+                    {
+                        Items = new List<DocumentSearchItemDto>(),
+                        TotalCount = allDocs.Count
+                    };
+                    break;
+
+                default:
+                    errorMessage = $"Unknown report type: {ReportType}";
+                    break;
+            }
+        }
+        catch (NotImplementedException)
+        {
+            errorMessage = $"Report '{ReportType}' is not yet implemented";
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error loading report: {ex.Message}";
+            throw;
         }
     }
 

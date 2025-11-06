@@ -128,6 +128,7 @@ builder.Services.AddScoped<IUserPermissionService, UserPermissionService>();
 builder.Services.AddScoped<IDocumentNameService, DocumentNameService>();
 builder.Services.AddScoped<ICurrencyService, CurrencyService>();
 builder.Services.AddScoped<IActionReminderService, ActionReminderService>();
+builder.Services.AddScoped<IReportService, ReportService>();
 
 // Configuration management services
 builder.Services.AddScoped<ISystemConfigurationManager, IkeaDocuScan.Infrastructure.Services.ConfigurationManagerService>();
@@ -181,6 +182,7 @@ app.MapHub<DataUpdateHub>("/hubs/data-updates");
 
 // Map API endpoints
 app.MapDocumentEndpoints();
+app.MapReportEndpoints();
 app.MapActionReminderEndpoints();
 app.MapCounterPartyEndpoints();
 app.MapCountryEndpoints();
