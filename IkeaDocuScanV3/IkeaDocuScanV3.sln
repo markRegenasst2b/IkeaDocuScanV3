@@ -49,6 +49,12 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Migration", "Migration", "{
 		..\DbMigration\db-scripts\07_Remove_AccountName_From_UserPermissions.sql = ..\DbMigration\db-scripts\07_Remove_AccountName_From_UserPermissions.sql
 	EndProjectSection
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Documentation", "Documentation", "{3CA0CEEC-0948-4133-825D-A4EBA58802F9}"
+	ProjectSection(SolutionItems) = preProject
+		Documentation\DEPLOYMENT_CHECKLIST.md = Documentation\DEPLOYMENT_CHECKLIST.md
+		Documentation\DEPLOYMENT_PLAN.md = Documentation\DEPLOYMENT_PLAN.md
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -93,6 +99,7 @@ Global
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{02EA681E-C7D8-13C7-8484-4AC65E1B71E8} = {8EC462FD-D22E-90A8-E5CE-7E832BA40C5D}
+		{3CA0CEEC-0948-4133-825D-A4EBA58802F9} = {8EC462FD-D22E-90A8-E5CE-7E832BA40C5D}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {C4D0F886-D9F1-4CB8-8EAE-58C2DEA784C2}
