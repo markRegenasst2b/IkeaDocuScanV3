@@ -58,6 +58,8 @@ public partial class ExcelPreview : ComponentBase
     private DocumentSearchResultDto? searchResults;
     private bool isSelectionMode => !string.IsNullOrEmpty(SelectedIdsParam);
     private bool isReportMode => !string.IsNullOrEmpty(ReportType);
+    private object? reportData; // Stores report data for any report type
+    private int reportDataCount = 0;
     private List<ExcelColumnMetadataDto> columnMetadata = new();
     private Dictionary<string, string>? filterContext;
     private ExcelExportValidationResult? validationResult;
@@ -65,14 +67,27 @@ public partial class ExcelPreview : ComponentBase
     // Paging
     private int currentPage = 1;
     private int rowsPerPage = 25;
-    private int totalPages => searchResults != null && searchResults.Items.Any()
-        ? (int)Math.Ceiling((double)searchResults.Items.Count / rowsPerPage)
-        : 0;
+    private int totalPages
+    {
+        get
+        {
+            if (isReportMode)
+            {
+                return reportDataCount > 0
+                    ? (int)Math.Ceiling((double)reportDataCount / rowsPerPage)
+                    : 0;
+            }
+            return searchResults != null && searchResults.Items.Any()
+                ? (int)Math.Ceiling((double)searchResults.Items.Count / rowsPerPage)
+                : 0;
+        }
+    }
 
     // UI State
     private bool isLoading = true;
     private bool isExporting = false;
-    private bool canExport => searchResults != null && searchResults.Items.Any() && !isExporting;
+    private bool canExport => (isReportMode && reportDataCount > 0) ||
+                               (searchResults != null && searchResults.Items.Any() && !isExporting);
     private string? errorMessage;
 
     protected override async Task OnInitializedAsync()
@@ -81,22 +96,23 @@ public partial class ExcelPreview : ComponentBase
         {
             isLoading = true;
 
-            // Get column metadata
-            columnMetadata = await ExcelService.GetMetadataAsync();
-
             if (isReportMode)
             {
                 // Report mode: Load report data based on report type
                 await LoadReportData();
+                // Get metadata for the specific report type
+                columnMetadata = await GetReportMetadataAsync();
             }
             else if (isSelectionMode)
             {
                 // Selection mode: Load specific selected documents by IDs
+                columnMetadata = await ExcelService.GetMetadataAsync();
                 await LoadSelectedDocuments();
             }
             else
             {
                 // Filter mode: Search with criteria
+                columnMetadata = await ExcelService.GetMetadataAsync();
                 await LoadFilteredDocuments();
             }
 
@@ -121,6 +137,62 @@ public partial class ExcelPreview : ComponentBase
         }
     }
 
+    private async Task<List<ExcelColumnMetadataDto>> GetReportMetadataAsync()
+    {
+        // For now, extract metadata from the report data itself using reflection
+        // This is a temporary solution until we have dedicated metadata endpoints for reports
+        if (reportData == null || reportDataCount == 0)
+            return new List<ExcelColumnMetadataDto>();
+
+        var reportList = reportData as System.Collections.IEnumerable;
+        if (reportList == null)
+            return new List<ExcelColumnMetadataDto>();
+
+        var firstItem = reportList.Cast<object>().FirstOrDefault();
+        if (firstItem == null)
+            return new List<ExcelColumnMetadataDto>();
+
+        var itemType = firstItem.GetType();
+        var properties = itemType.GetProperties()
+            .Where(p => p.Name != "ExportedAt") // Exclude base class property
+            .OrderBy(p => p.Name)
+            .ToList();
+
+        var metadata = properties.Select((prop, index) => new ExcelColumnMetadataDto
+        {
+            PropertyName = prop.Name,
+            DisplayName = SplitCamelCase(prop.Name),
+            DataType = GetDataTypeString(prop.PropertyType),
+            Order = index,
+            IsExportable = true
+        }).ToList();
+
+        return metadata;
+    }
+
+    private string SplitCamelCase(string input)
+    {
+        // Convert "GapStart" to "Gap Start"
+        return System.Text.RegularExpressions.Regex.Replace(input, "([a-z])([A-Z])", "$1 $2");
+    }
+
+    private string GetDataTypeString(Type type)
+    {
+        // Handle nullable types
+        var underlyingType = Nullable.GetUnderlyingType(type) ?? type;
+
+        if (underlyingType == typeof(int) || underlyingType == typeof(long) || underlyingType == typeof(short))
+            return "Number";
+        if (underlyingType == typeof(decimal) || underlyingType == typeof(double) || underlyingType == typeof(float))
+            return "Currency";
+        if (underlyingType == typeof(DateTime))
+            return "Date";
+        if (underlyingType == typeof(bool))
+            return "Boolean";
+
+        return "Text";
+    }
+
     private async Task LoadReportData()
     {
         if (string.IsNullOrEmpty(ReportType))
@@ -135,58 +207,38 @@ public partial class ExcelPreview : ComponentBase
             {
                 case "barcode-gaps":
                     var barcodeGaps = await ReportService.GetBarcodeGapsReportAsync();
-                    // Convert to searchResults format for display
-                    searchResults = new DocumentSearchResultDto
-                    {
-                        Items = new List<DocumentSearchItemDto>(),
-                        TotalCount = barcodeGaps.Count
-                    };
-                    // Store report data for export (will be handled by ExcelService)
+                    reportData = barcodeGaps;
+                    reportDataCount = barcodeGaps.Count;
                     break;
 
                 case "duplicate-documents":
                     var duplicates = await ReportService.GetDuplicateDocumentsReportAsync();
-                    searchResults = new DocumentSearchResultDto
-                    {
-                        Items = new List<DocumentSearchItemDto>(),
-                        TotalCount = duplicates.Count
-                    };
+                    reportData = duplicates;
+                    reportDataCount = duplicates.Count;
                     break;
 
                 case "unlinked-registrations":
                     var unlinked = await ReportService.GetUnlinkedRegistrationsReportAsync();
-                    searchResults = new DocumentSearchResultDto
-                    {
-                        Items = new List<DocumentSearchItemDto>(),
-                        TotalCount = unlinked.Count
-                    };
+                    reportData = unlinked;
+                    reportDataCount = unlinked.Count;
                     break;
 
                 case "scan-copies":
                     var scanCopies = await ReportService.GetScanCopiesReportAsync();
-                    searchResults = new DocumentSearchResultDto
-                    {
-                        Items = new List<DocumentSearchItemDto>(),
-                        TotalCount = scanCopies.Count
-                    };
+                    reportData = scanCopies;
+                    reportDataCount = scanCopies.Count;
                     break;
 
                 case "suppliers":
                     var suppliers = await ReportService.GetSuppliersReportAsync();
-                    searchResults = new DocumentSearchResultDto
-                    {
-                        Items = new List<DocumentSearchItemDto>(),
-                        TotalCount = suppliers.Count
-                    };
+                    reportData = suppliers;
+                    reportDataCount = suppliers.Count;
                     break;
 
                 case "all-documents":
                     var allDocs = await ReportService.GetAllDocumentsReportAsync();
-                    searchResults = new DocumentSearchResultDto
-                    {
-                        Items = new List<DocumentSearchItemDto>(),
-                        TotalCount = allDocs.Count
-                    };
+                    reportData = allDocs;
+                    reportDataCount = allDocs.Count;
                     break;
 
                 default:
@@ -374,17 +426,38 @@ public partial class ExcelPreview : ComponentBase
         return null;
     }
 
-    private IEnumerable<DocumentSearchItemDto> GetPagedData()
+    private IEnumerable<object> GetPagedData()
     {
+        if (isReportMode)
+        {
+            if (reportData == null || reportDataCount == 0)
+                return Enumerable.Empty<object>();
+
+            var reportList = reportData as System.Collections.IEnumerable;
+            if (reportList == null)
+                return Enumerable.Empty<object>();
+
+            var skip2 = (currentPage - 1) * rowsPerPage;
+            return reportList.Cast<object>().Skip(skip2).Take(rowsPerPage);
+        }
+
         if (searchResults == null || !searchResults.Items.Any())
-            return Enumerable.Empty<DocumentSearchItemDto>();
+            return Enumerable.Empty<object>();
 
         var skip = (currentPage - 1) * rowsPerPage;
-        return searchResults.Items.Skip(skip).Take(rowsPerPage);
+        return searchResults.Items.Skip(skip).Take(rowsPerPage).Cast<object>();
     }
 
     private int GetStartRow()
     {
+        if (isReportMode)
+        {
+            if (reportDataCount == 0)
+                return 0;
+
+            return ((currentPage - 1) * rowsPerPage) + 1;
+        }
+
         if (searchResults == null || !searchResults.Items.Any())
             return 0;
 
@@ -393,10 +466,61 @@ public partial class ExcelPreview : ComponentBase
 
     private int GetEndRow()
     {
+        if (isReportMode)
+        {
+            if (reportDataCount == 0)
+                return 0;
+
+            return Math.Min(currentPage * rowsPerPage, reportDataCount);
+        }
+
         if (searchResults == null || !searchResults.Items.Any())
             return 0;
 
         return Math.Min(currentPage * rowsPerPage, searchResults.Items.Count);
+    }
+
+    private int GetTotalCount()
+    {
+        if (isReportMode)
+            return reportDataCount;
+
+        return searchResults?.TotalCount ?? 0;
+    }
+
+    private bool HasData()
+    {
+        if (isReportMode)
+            return reportDataCount > 0;
+
+        return searchResults != null && searchResults.Items.Any();
+    }
+
+    private string GetPreviewTitle()
+    {
+        if (isReportMode)
+        {
+            return ReportType switch
+            {
+                "barcode-gaps" => "Barcode Gaps Report Preview",
+                "duplicate-documents" => "Duplicate Documents Report Preview",
+                "unlinked-registrations" => "Unlinked Registrations Report Preview",
+                "scan-copies" => "Scan Copies Report Preview",
+                "suppliers" => "Suppliers Report Preview",
+                "all-documents" => "All Documents Report Preview",
+                _ => "Report Preview"
+            };
+        }
+
+        return isSelectionMode ? "Selected Documents Export Preview" : "Document Export Preview";
+    }
+
+    private string GetPreviewDescription()
+    {
+        if (isReportMode)
+            return "Preview your report data before exporting to Excel";
+
+        return isSelectionMode ? "Preview your selected documents before exporting to Excel" : "Preview your filtered data before exporting to Excel";
     }
 
     private void FirstPage()
@@ -442,11 +566,15 @@ public partial class ExcelPreview : ComponentBase
         };
     }
 
-    private string GetCellValue(DocumentSearchItemDto item, string propertyName)
+    private string GetCellValue(object item, string propertyName)
     {
         try
         {
-            var property = typeof(DocumentSearchItemDto).GetProperty(propertyName);
+            if (item == null)
+                return string.Empty;
+
+            var itemType = item.GetType();
+            var property = itemType.GetProperty(propertyName);
             if (property == null)
                 return string.Empty;
 
@@ -476,6 +604,14 @@ public partial class ExcelPreview : ComponentBase
         {
             isExporting = true;
             errorMessage = null;
+
+            if (isReportMode)
+            {
+                // TODO: Implement report export functionality
+                // For now, show a message that export is not yet available for reports
+                errorMessage = "Excel export for reports is not yet implemented. Please view the data in the preview for now.";
+                return;
+            }
 
             DocumentSearchRequestDto searchCriteria;
 

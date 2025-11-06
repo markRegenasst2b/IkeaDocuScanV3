@@ -32,14 +32,29 @@ public class ReportService : IReportService
         var currentUser = await _currentUserService.GetCurrentUserAsync();
         _logger.LogInformation("User {User} requested Barcode Gaps report", currentUser.AccountName);
 
-        // TODO: Implement barcode gaps logic
-        // Logic:
-        // 1. Get all barcodes from Documents table ordered
-        // 2. Identify gaps in the sequence
-        // 3. Calculate gap size
-        // 4. Return list of BarcodeGapReportDto
+        await using var context = await _contextFactory.CreateDbContextAsync();
 
-        return new List<BarcodeGapReportDto>();
+        // Execute SQL query directly on server using window function LEAD()
+        var gaps = await context.Database.SqlQueryRaw<BarcodeGapReportDto>(@"
+            WITH barcodes AS (
+                SELECT BarCode,
+                       LEAD(BarCode, 1, 0) OVER (ORDER BY BarCode) AS NextBarcode
+                FROM dbo.Document
+            )
+            SELECT
+                BarCode + 1 AS GapStart,
+                NextBarcode - 1 AS GapEnd,
+                NextBarcode - BarCode - 1 AS GapSize,
+                BarCode AS PreviousBarcode,
+                NextBarcode AS NextBarcode,
+                NULL AS ExportedAt
+            FROM barcodes
+            WHERE BarCode + 1 <> NextBarcode AND NextBarcode <> 0
+            ORDER BY BarCode
+        ").ToListAsync();
+
+        _logger.LogInformation("Found {Count} barcode gaps for user {User}", gaps.Count, currentUser.AccountName);
+        return gaps;
     }
 
     /// <summary>

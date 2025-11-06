@@ -6,8 +6,8 @@
 
 <div class="excel-preview-container">
     <div class="excel-preview-header">
-        <h3>@(isSelectionMode ? "Selected Documents Export Preview" : "Document Export Preview")</h3>
-        <p class="text-muted">@(isSelectionMode ? "Preview your selected documents before exporting to Excel" : "Preview your filtered data before exporting to Excel")</p>
+        <h3>@GetPreviewTitle()</h3>
+        <p class="text-muted">@GetPreviewDescription()</p>
     </div>
 
     @if (filterContext != null && filterContext.Any())
@@ -48,7 +48,7 @@
             <button type="button" class="btn-close" @onclick="() => errorMessage = null"></button>
         </div>
     }
-    else if (searchResults == null || !searchResults.Items.Any())
+    else if (!HasData())
     {
         <div class="alert alert-warning" role="alert">
             <i class="bi bi-info-circle"></i> No data available to export. Please adjust your search criteria.
@@ -59,7 +59,7 @@
         <!-- Data Summary -->
         <div class="data-summary">
             <div class="summary-item">
-                <strong>Total Records:</strong> <span class="badge bg-primary">@searchResults.TotalCount</span>
+                <strong>Total Records:</strong> <span class="badge bg-primary">@GetTotalCount()</span>
             </div>
             <div class="summary-item">
                 <strong>Columns:</strong> <span class="badge bg-secondary">@columnMetadata.Count</span>
@@ -86,7 +86,7 @@
             </div>
 
             <div class="page-info">
-                <span>Showing @GetStartRow()-@GetEndRow() of @searchResults.TotalCount records</span>
+                <span>Showing @GetStartRow()-@GetEndRow() of @GetTotalCount() records</span>
             </div>
 
             <div class="page-navigation">
