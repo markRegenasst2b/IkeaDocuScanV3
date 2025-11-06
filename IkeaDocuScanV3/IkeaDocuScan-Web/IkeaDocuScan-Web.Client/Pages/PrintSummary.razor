@@ -370,6 +370,34 @@
         table {
             page-break-inside: avoid;
         }
+
+        /* Hide navigation and layout elements */
+        nav,
+        .navbar,
+        .nav,
+        .sidebar,
+        .top-nav,
+        .breadcrumb,
+        header,
+        footer,
+        .blazor-error-ui {
+            display: none !important;
+        }
+
+        /* Ensure full width for print */
+        body,
+        html {
+            margin: 0 !important;
+            padding: 0 !important;
+        }
+
+        .container,
+        .container-fluid {
+            width: 100% !important;
+            max-width: 100% !important;
+            margin: 0 !important;
+            padding: 0 !important;
+        }
     }
 </style>
 
