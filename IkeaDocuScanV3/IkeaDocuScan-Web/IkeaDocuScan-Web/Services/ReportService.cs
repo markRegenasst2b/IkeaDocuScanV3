@@ -146,58 +146,131 @@ public class ReportService : IReportService
     }
 
     /// <summary>
-    /// Get Scan Copies report - scanned files and their status
+    /// Get Scan Copies report - documents that are fax copies but original not yet received
     /// </summary>
     public async Task<List<ScanCopiesReportDto>> GetScanCopiesReportAsync()
     {
         var currentUser = await _currentUserService.GetCurrentUserAsync();
         _logger.LogInformation("User {User} requested Scan Copies report", currentUser.AccountName);
 
-        // TODO: Implement scan copies logic
-        // Logic:
-        // 1. Query all files from DocumentFile table
-        // 2. Check if linked to documents
-        // 3. Calculate file sizes
-        // 4. Determine status (linked/unlinked)
-        // 5. Return list of ScanCopiesReportDto
+        await using var context = await _contextFactory.CreateDbContextAsync();
 
-        throw new NotImplementedException("Scan Copies report logic not yet implemented");
+        // Execute SQL query to find fax copies where original not received
+        // Uses LEFT JOINs to handle documents without type, name, or counterparty
+        var scanCopies = await context.Database.SqlQueryRaw<ScanCopiesReportDto>(@"
+            WITH docs AS (
+                SELECT
+                    d.BarCode,
+                    dt.DT_Name AS [Document type],
+                    dn.Name AS [Document name],
+                    d.DocumentNo AS [Document No],
+                    cp.Name AS Counterparty,
+                    cp.CounterPartyNoAlpha AS [Counterparty No]
+                FROM dbo.Document d
+                LEFT JOIN dbo.DocumentType dt ON dt.DT_ID = d.DT_ID
+                LEFT JOIN dbo.DocumentName dn ON dn.ID = d.DocumentNameId
+                LEFT JOIN dbo.CounterParty cp ON cp.CounterPartyId = d.CounterPartyId
+                WHERE d.Fax = 1 AND d.OriginalReceived = 0
+            )
+            SELECT
+                BarCode,
+                [Document type] AS DocumentType,
+                [Document name] AS DocumentName,
+                [Document No] AS DocumentNo,
+                Counterparty,
+                [Counterparty No] AS CounterpartyNo,
+                NULL AS ExportedAt
+            FROM docs
+            ORDER BY [Document type], [Document No]
+        ").ToListAsync();
+
+        _logger.LogInformation("Found {Count} scan copies for user {User}", scanCopies.Count, currentUser.AccountName);
+        return scanCopies;
     }
 
     /// <summary>
-    /// Get Suppliers report - counterparty/supplier statistics
+    /// Get Suppliers report - counterparty/supplier list for check-in display
     /// </summary>
     public async Task<List<SuppliersReportDto>> GetSuppliersReportAsync()
     {
         var currentUser = await _currentUserService.GetCurrentUserAsync();
         _logger.LogInformation("User {User} requested Suppliers report", currentUser.AccountName);
 
-        // TODO: Implement suppliers report logic
-        // Logic:
-        // 1. Query CounterParty table with document counts
-        // 2. Calculate statistics (total documents, active contracts, etc.)
-        // 3. Aggregate amounts by supplier
-        // 4. Include country and city information
-        // 5. Return list of SuppliersReportDto
+        await using var context = await _contextFactory.CreateDbContextAsync();
 
-        throw new NotImplementedException("Suppliers report logic not yet implemented");
+        // Execute SQL query to get suppliers/counterparties displayed at check-in
+        var suppliers = await context.Database.SqlQueryRaw<SuppliersReportDto>(@"
+            SELECT
+                cp.CounterPartyNoAlpha,
+                cp.Name,
+                cp.Country,
+                cp.AffiliatedTo,
+                NULL AS ExportedAt
+            FROM dbo.CounterParty cp
+            WHERE cp.DisplayAtCheckIn = 1
+            ORDER BY cp.Name, cp.Country
+        ").ToListAsync();
+
+        _logger.LogInformation("Found {Count} suppliers for user {User}", suppliers.Count, currentUser.AccountName);
+        return suppliers;
     }
 
     /// <summary>
-    /// Get All Documents report - exports all documents in the system
+    /// Get All Documents report - exports all documents in the system with full details
     /// </summary>
     public async Task<List<AllDocumentsReportDto>> GetAllDocumentsReportAsync()
     {
         var currentUser = await _currentUserService.GetCurrentUserAsync();
         _logger.LogInformation("User {User} requested All Documents report", currentUser.AccountName);
 
-        // TODO: Implement all documents export logic
-        // Logic:
-        // 1. Query all documents with joins to related tables
-        // 2. Include DocumentType, CounterParty, Country, etc.
-        // 3. Map to AllDocumentsReportDto
-        // 4. Return complete list
+        await using var context = await _contextFactory.CreateDbContextAsync();
 
-        throw new NotImplementedException("All Documents report logic not yet implemented");
+        // Execute comprehensive SQL query to get all documents with full details
+        // Includes CounterParty, Country, DocumentType, DocumentFile information
+        var allDocuments = await context.Database.SqlQueryRaw<AllDocumentsReportDto>(@"
+            SELECT
+                dbo.CounterParty.CounterPartyNoAlpha AS CPNo,
+                dbo.CounterParty.CounterPartyNoAlpha AS CPNoAlpha,
+                dbo.CounterParty.Name AS CPName,
+                dbo.Country.CountryCode,
+                dbo.Country.Name AS Country,
+                dbo.CounterParty.City,
+                dbo.CounterParty.AffiliatedTo,
+                dbo.[Document].BarCode AS DocBarcode,
+                dbo.DocumentType.DT_Name AS DocType,
+                dbo.DocumentFile.FileName,
+                dbo.[Document].DateOfContract,
+                dbo.[Document].Comment,
+                dbo.[Document].ReceivingDate,
+                dbo.[Document].DispatchDate,
+                dbo.[Document].Fax,
+                dbo.[Document].OriginalReceived,
+                dbo.[Document].ActionDate,
+                dbo.[Document].ActionDescription,
+                dbo.[Document].DocumentNo,
+                dbo.[Document].AssociatedToPUA,
+                dbo.[Document].VersionNo,
+                dbo.[Document].AssociatedToAppendix,
+                dbo.[Document].ValidUntil,
+                dbo.[Document].CurrencyCode,
+                dbo.[Document].Amount,
+                dbo.[Document].Confidential,
+                dbo.[Document].ThirdParty,
+                dbo.[Document].Authorisation,
+                dbo.[Document].BankConfirmation,
+                dbo.[Document].TranslatedVersionReceived,
+                NULL AS ExportedAt
+            FROM dbo.CounterParty
+            LEFT JOIN dbo.Country ON dbo.CounterParty.Country = dbo.Country.CountryCode
+            LEFT JOIN dbo.[Document] ON dbo.CounterParty.CounterPartyId = dbo.[Document].CounterPartyId
+            LEFT JOIN dbo.DocumentName ON dbo.[Document].DocumentNameId = dbo.DocumentName.ID
+                AND dbo.DocumentName.DocumentTypeId = dbo.Document.DT_ID
+            INNER JOIN dbo.DocumentType ON dbo.[Document].DT_ID = dbo.DocumentType.DT_ID
+            LEFT JOIN dbo.DocumentFile ON dbo.[Document].FileId = dbo.DocumentFile.Id
+                AND dbo.[Document].FileId = dbo.DocumentFile.Id
+        ").ToListAsync();
+
+        _logger.LogInformation("Found {Count} documents for user {User}", allDocuments.Count, currentUser.AccountName);
+        return allDocuments;
     }
 }

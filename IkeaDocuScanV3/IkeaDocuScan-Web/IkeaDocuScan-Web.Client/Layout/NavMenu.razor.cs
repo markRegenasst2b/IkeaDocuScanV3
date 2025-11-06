@@ -58,15 +58,6 @@ public partial class NavMenu : ComponentBase
         );
     }
 
-    private async Task ShowAllDocumentsReport()
-    {
-        await LoadAndShowReport(
-            "all-documents",
-            "All Documents Report",
-            async () => await ReportService.GetAllDocumentsReportAsync()
-        );
-    }
-
     private async Task LoadAndShowReport<T>(string reportType, string title, Func<Task<List<T>>> loadDataFunc)
         where T : ExcelReporting.Models.ExportableBase
     {
