@@ -87,3 +87,16 @@ GO
 
 PRINT 'Script 06_Add_FK_Constraint_UserPermissions.sql completed successfully.';
 GO
+
+
+-- Composite index for permission matching on Document table
+CREATE NONCLUSTERED INDEX IX_Document_PermissionFilter
+ON dbo.Document (DT_ID, CounterPartyId)
+INCLUDE (BarCode, Name);
+GO
+
+-- Index on CounterParty.Country for permission filtering
+CREATE NONCLUSTERED INDEX IX_CounterParty_Country
+ON dbo.CounterParty (Country)
+INCLUDE (CounterPartyId);
+GO
