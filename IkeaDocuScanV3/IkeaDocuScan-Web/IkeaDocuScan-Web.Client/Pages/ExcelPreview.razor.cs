@@ -1,5 +1,6 @@
 using ExcelReporting.Models;
 using ExcelReporting.Services;
+using IkeaDocuScan.Shared.Interfaces;
 using IkeaDocuScan_Web.Client.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
@@ -9,16 +10,21 @@ namespace IkeaDocuScan_Web.Client.Pages;
 /// <summary>
 /// Generic Excel preview page for any DTO derived from ExportableBase
 /// Uses reflection and ExcelExportAttribute to dynamically render data
+/// Supports both direct report loading and data passed via ExcelPreviewDataService
 /// </summary>
 public partial class ExcelPreview : ComponentBase
 {
     [Inject] private ExcelPreviewDataService PreviewDataService { get; set; } = null!;
     [Inject] private PropertyMetadataExtractor MetadataExtractor { get; set; } = null!;
+    [Inject] private IReportService ReportService { get; set; } = null!;
     [Inject] private IJSRuntime JSRuntime { get; set; } = null!;
     [Inject] private NavigationManager NavigationManager { get; set; } = null!;
 
     [SupplyParameterFromQuery(Name = "source")]
     public string? Source { get; set; }
+
+    [SupplyParameterFromQuery(Name = "reportType")]
+    public string? ReportType { get; set; }
 
     // State
     private List<ExportableBase> data = new();
@@ -36,27 +42,50 @@ public partial class ExcelPreview : ComponentBase
     private bool isLoading = true;
     private string? errorMessage;
     private string? lastSource; // Track last source to detect navigation changes
+    private string? lastReportType; // Track last report type to detect navigation changes
 
     protected override void OnParametersSet()
     {
-        // Check if we're navigating to a different report
+        // Check if we're navigating to a different report or source
         // This ensures we reload data when switching between reports
-        if (lastSource != Source)
+        if (lastSource != Source || lastReportType != ReportType)
         {
             lastSource = Source;
+            lastReportType = ReportType;
             LoadPreviewData();
         }
     }
 
-    private void LoadPreviewData()
+    private async void LoadPreviewData()
     {
         try
         {
             isLoading = true;
             errorMessage = null;
 
-            // Get data from service
-            var (retrievedData, title, context) = PreviewDataService.GetData();
+            List<ExportableBase>? retrievedData = null;
+            string? title = null;
+            Dictionary<string, string>? context = null;
+
+            // Check if we're loading a report directly
+            if (!string.IsNullOrEmpty(ReportType))
+            {
+                // Load report data directly from ReportService
+                (retrievedData, title) = await LoadReportDataAsync(ReportType);
+
+                // Build context information
+                context = new Dictionary<string, string>
+                {
+                    ["Report Type"] = title ?? ReportType,
+                    ["Generated"] = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
+                    ["Record Count"] = (retrievedData?.Count ?? 0).ToString()
+                };
+            }
+            else
+            {
+                // Get data from service (for search results, etc.)
+                (retrievedData, title, context) = PreviewDataService.GetData();
+            }
 
             pageTitle = title ?? "Data Preview";
             contextInfo = context;
@@ -100,7 +129,40 @@ public partial class ExcelPreview : ComponentBase
         finally
         {
             isLoading = false;
+            StateHasChanged();
         }
+    }
+
+    private async Task<(List<ExportableBase>? Data, string Title)> LoadReportDataAsync(string reportType)
+    {
+        return reportType.ToLowerInvariant() switch
+        {
+            "barcode-gaps" => (
+                (await ReportService.GetBarcodeGapsReportAsync()).Cast<ExportableBase>().ToList(),
+                "Barcode Gaps Report"
+            ),
+            "duplicate-documents" => (
+                (await ReportService.GetDuplicateDocumentsReportAsync()).Cast<ExportableBase>().ToList(),
+                "Duplicate Documents Report"
+            ),
+            "unlinked-registrations" => (
+                (await ReportService.GetUnlinkedRegistrationsReportAsync()).Cast<ExportableBase>().ToList(),
+                "Unlinked Registrations Report"
+            ),
+            "scan-copies" => (
+                (await ReportService.GetScanCopiesReportAsync()).Cast<ExportableBase>().ToList(),
+                "Scan Copies Report"
+            ),
+            "suppliers" => (
+                (await ReportService.GetSuppliersReportAsync()).Cast<ExportableBase>().ToList(),
+                "Suppliers Report"
+            ),
+            "all-documents" => (
+                (await ReportService.GetAllDocumentsReportAsync()).Cast<ExportableBase>().ToList(),
+                "All Documents Report"
+            ),
+            _ => throw new ArgumentException($"Unknown report type: {reportType}")
+        };
     }
 
     private bool HasData() => data.Any();
