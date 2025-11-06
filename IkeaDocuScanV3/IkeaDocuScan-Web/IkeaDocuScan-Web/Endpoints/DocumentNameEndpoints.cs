@@ -48,5 +48,64 @@ public static class DocumentNameEndpoints
         .WithName("GetDocumentNameById")
         .Produces<DocumentNameDto>(200)
         .Produces(404);
+
+        // POST /api/documentnames (SuperUser only)
+        group.MapPost("/", async (CreateDocumentNameDto createDto, IDocumentNameService service) =>
+        {
+            try
+            {
+                var created = await service.CreateAsync(createDto);
+                return Results.Created($"/api/documentnames/{created.Id}", created);
+            }
+            catch (Exception ex)
+            {
+                return Results.BadRequest(new { error = ex.Message });
+            }
+        })
+        .RequireAuthorization("SuperUser")
+        .WithName("CreateDocumentName")
+        .Produces<DocumentNameDto>(201)
+        .Produces(400);
+
+        // PUT /api/documentnames/{id} (SuperUser only)
+        group.MapPut("/{id:int}", async (int id, UpdateDocumentNameDto updateDto, IDocumentNameService service) =>
+        {
+            if (id != updateDto.Id)
+            {
+                return Results.BadRequest(new { error = "ID mismatch between route and body" });
+            }
+
+            try
+            {
+                var updated = await service.UpdateAsync(updateDto);
+                return Results.Ok(updated);
+            }
+            catch (Exception ex)
+            {
+                return Results.BadRequest(new { error = ex.Message });
+            }
+        })
+        .RequireAuthorization("SuperUser")
+        .WithName("UpdateDocumentName")
+        .Produces<DocumentNameDto>(200)
+        .Produces(400);
+
+        // DELETE /api/documentnames/{id} (SuperUser only)
+        group.MapDelete("/{id:int}", async (int id, IDocumentNameService service) =>
+        {
+            try
+            {
+                await service.DeleteAsync(id);
+                return Results.NoContent();
+            }
+            catch (Exception ex)
+            {
+                return Results.BadRequest(new { error = ex.Message });
+            }
+        })
+        .RequireAuthorization("SuperUser")
+        .WithName("DeleteDocumentName")
+        .Produces(204)
+        .Produces(400);
     }
 }
