@@ -1,0 +1,485 @@
+@page "/documents/print-summary"
+@rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
+@using IkeaDocuScan.Shared.DTOs.Documents
+@using IkeaDocuScan.Shared.Interfaces
+@inject IDocumentService DocumentService
+@inject NavigationManager Navigation
+@inject ILogger<PrintSummary> Logger
+@inject IJSRuntime JSRuntime
+
+<PageTitle>Print Summary - @documents.Count Document(s)</PageTitle>
+
+<div class="container-fluid print-summary-container">
+    @if (isLoading)
+    {
+        <div class="text-center p-5">
+            <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-3">Loading document properties...</p>
+        </div>
+    }
+    else if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="alert alert-danger">
+            <i class="bi bi-exclamation-circle"></i> @errorMessage
+        </div>
+        <button class="btn btn-primary no-print" @onclick="GoBack">
+            <i class="bi bi-arrow-left"></i> Back to Search
+        </button>
+    }
+    else if (!documents.Any())
+    {
+        <div class="alert alert-warning">
+            <i class="bi bi-info-circle"></i> No documents to display.
+        </div>
+        <button class="btn btn-primary no-print" @onclick="GoBack">
+            <i class="bi bi-arrow-left"></i> Back to Search
+        </button>
+    }
+    else
+    {
+        @* Action Buttons - Hidden on print *@
+        <div class="no-print mb-3">
+            <div class="d-flex justify-content-between align-items-center">
+                <h3>Print Summary - @documents.Count Document(s)</h3>
+                <div>
+                    <button class="btn btn-primary" @onclick="PrintPage">
+                        <i class="bi bi-printer"></i> Print
+                    </button>
+                    <button class="btn btn-secondary ms-2" @onclick="GoBack">
+                        <i class="bi bi-arrow-left"></i> Back to Search
+                    </button>
+                </div>
+            </div>
+            <hr />
+        </div>
+
+        @* Print Header - Only visible on print *@
+        <div class="print-only">
+            <div class="text-center mb-4">
+                <h2>Document Summary Report</h2>
+                <p class="text-muted">Generated: @DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")</p>
+                <p class="text-muted">Total Documents: @documents.Count</p>
+            </div>
+            <hr />
+        </div>
+
+        @* Document Properties - Each document on one page *@
+        @for (int i = 0; i < documents.Count; i++)
+        {
+            var document = documents[i];
+            var isLastDocument = i == documents.Count - 1;
+
+            <div class="document-page @(isLastDocument ? "" : "page-break")">
+                <div class="card">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">
+                            <i class="bi bi-file-earmark-text"></i> Document @(i + 1) of @documents.Count - Barcode @document.BarCode
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        @* General Information *@
+                        <h6 class="section-header">General Information</h6>
+                        <table class="properties-table">
+                            <tr>
+                                <td class="property-label">Bar Code:</td>
+                                <td class="property-value">@document.BarCode</td>
+                            </tr>
+                            <tr>
+                                <td class="property-label">Document Name:</td>
+                                <td class="property-value">@document.Name</td>
+                            </tr>
+                            <tr>
+                                <td class="property-label">Document Type:</td>
+                                <td class="property-value">@document.DocumentTypeName</td>
+                            </tr>
+                            @if (!string.IsNullOrEmpty(document.DocumentNameText))
+                            {
+                                <tr>
+                                    <td class="property-label">Document Name Text:</td>
+                                    <td class="property-value">@document.DocumentNameText</td>
+                                </tr>
+                            }
+                            <tr>
+                                <td class="property-label">Document No:</td>
+                                <td class="property-value">@(document.DocumentNo ?? "-")</td>
+                            </tr>
+                            <tr>
+                                <td class="property-label">Version No:</td>
+                                <td class="property-value">@(document.VersionNo ?? "-")</td>
+                            </tr>
+                        </table>
+
+                        @* Counterparty Information *@
+                        <h6 class="section-header">Counterparty Information</h6>
+                        <table class="properties-table">
+                            <tr>
+                                <td class="property-label">Counterparty:</td>
+                                <td class="property-value">@(document.CounterPartyName ?? "-")</td>
+                            </tr>
+                            <tr>
+                                <td class="property-label">Third Party:</td>
+                                <td class="property-value">@FormatThirdParty(document.ThirdParty)</td>
+                            </tr>
+                            <tr>
+                                <td class="property-label">Third Party ID:</td>
+                                <td class="property-value">@(document.ThirdPartyId ?? "-")</td>
+                            </tr>
+                        </table>
+
+                        @* Financial Information *@
+                        <h6 class="section-header">Financial Information</h6>
+                        <table class="properties-table">
+                            <tr>
+                                <td class="property-label">Amount:</td>
+                                <td class="property-value">@FormatAmount(document.Amount, document.CurrencyCode)</td>
+                            </tr>
+                            <tr>
+                                <td class="property-label">Currency:</td>
+                                <td class="property-value">@(document.CurrencyCode ?? "-")</td>
+                            </tr>
+                        </table>
+
+                        @* Document Attributes *@
+                        <h6 class="section-header">Document Attributes</h6>
+                        <table class="properties-table">
+                            <tr>
+                                <td class="property-label">Fax:</td>
+                                <td class="property-value">@FormatBoolean(document.Fax)</td>
+                            </tr>
+                            <tr>
+                                <td class="property-label">Original Received:</td>
+                                <td class="property-value">@FormatBoolean(document.OriginalReceived)</td>
+                            </tr>
+                            <tr>
+                                <td class="property-label">Confidential:</td>
+                                <td class="property-value">@FormatBoolean(document.Confidential)</td>
+                            </tr>
+                            <tr>
+                                <td class="property-label">Bank Confirmation:</td>
+                                <td class="property-value">@FormatBoolean(document.BankConfirmation)</td>
+                            </tr>
+                            <tr>
+                                <td class="property-label">Translated Version:</td>
+                                <td class="property-value">@FormatBoolean(document.TranslatedVersionReceived)</td>
+                            </tr>
+                            <tr>
+                                <td class="property-label">Authorisation To:</td>
+                                <td class="property-value">@(document.Authorisation ?? "-")</td>
+                            </tr>
+                        </table>
+
+                        @* Dates *@
+                        <h6 class="section-header">Dates</h6>
+                        <table class="properties-table">
+                            <tr>
+                                <td class="property-label">Date of Contract:</td>
+                                <td class="property-value">@FormatDate(document.DateOfContract)</td>
+                            </tr>
+                            <tr>
+                                <td class="property-label">Receiving Date:</td>
+                                <td class="property-value">@FormatDate(document.ReceivingDate)</td>
+                            </tr>
+                            <tr>
+                                <td class="property-label">Sending Out Date:</td>
+                                <td class="property-value">@FormatDate(document.SendingOutDate)</td>
+                            </tr>
+                            <tr>
+                                <td class="property-label">Forwarded to Signatories:</td>
+                                <td class="property-value">@FormatDate(document.ForwardedToSignatoriesDate)</td>
+                            </tr>
+                            <tr>
+                                <td class="property-label">Dispatch Date:</td>
+                                <td class="property-value">@FormatDate(document.DispatchDate)</td>
+                            </tr>
+                            <tr>
+                                <td class="property-label">Action Date:</td>
+                                <td class="property-value">@FormatDate(document.ActionDate)</td>
+                            </tr>
+                            <tr>
+                                <td class="property-label">Valid Until:</td>
+                                <td class="property-value">@FormatDate(document.ValidUntil)</td>
+                            </tr>
+                        </table>
+
+                        @* References *@
+                        <h6 class="section-header">References</h6>
+                        <table class="properties-table">
+                            <tr>
+                                <td class="property-label">Associated to PUA/Agreement:</td>
+                                <td class="property-value">@(document.AssociatedToPua ?? "-")</td>
+                            </tr>
+                            <tr>
+                                <td class="property-label">Associated to Appendix:</td>
+                                <td class="property-value">@(document.AssociatedToAppendix ?? "-")</td>
+                            </tr>
+                            <tr>
+                                <td class="property-label">Reminder Group:</td>
+                                <td class="property-value">@(document.ReminderGroup ?? "-")</td>
+                            </tr>
+                        </table>
+
+                        @* Additional Information *@
+                        <h6 class="section-header">Additional Information</h6>
+                        <table class="properties-table">
+                            <tr>
+                                <td class="property-label">Comment:</td>
+                                <td class="property-value">@(document.Comment ?? "-")</td>
+                            </tr>
+                            <tr>
+                                <td class="property-label">Action Description:</td>
+                                <td class="property-value">@(document.ActionDescription ?? "-")</td>
+                            </tr>
+                        </table>
+
+                        @* Audit Information *@
+                        <h6 class="section-header">Audit Information</h6>
+                        <table class="properties-table">
+                            <tr>
+                                <td class="property-label">Created On:</td>
+                                <td class="property-value">@document.CreatedOn.ToString("yyyy-MM-dd HH:mm:ss")</td>
+                            </tr>
+                            <tr>
+                                <td class="property-label">Created By:</td>
+                                <td class="property-value">@document.CreatedBy</td>
+                            </tr>
+                            @if (document.ModifiedOn.HasValue)
+                            {
+                                <tr>
+                                    <td class="property-label">Modified On:</td>
+                                    <td class="property-value">@document.ModifiedOn.Value.ToString("yyyy-MM-dd HH:mm:ss")</td>
+                                </tr>
+                            }
+                            @if (!string.IsNullOrEmpty(document.ModifiedBy))
+                            {
+                                <tr>
+                                    <td class="property-label">Modified By:</td>
+                                    <td class="property-value">@document.ModifiedBy</td>
+                                </tr>
+                            }
+                        </table>
+                    </div>
+                </div>
+            </div>
+        }
+    }
+</div>
+
+<style>
+    /* Screen display styles */
+    .print-summary-container {
+        padding: 20px;
+    }
+
+    .document-page {
+        margin-bottom: 30px;
+    }
+
+    .section-header {
+        color: #0d6efd;
+        border-bottom: 2px solid #0d6efd;
+        padding-bottom: 8px;
+        margin-top: 20px;
+        margin-bottom: 15px;
+        font-weight: 600;
+    }
+
+    .properties-table {
+        width: 100%;
+        margin-bottom: 15px;
+        border-collapse: collapse;
+    }
+
+    .properties-table tr {
+        border-bottom: 1px solid #e0e0e0;
+    }
+
+    .property-label {
+        width: 35%;
+        padding: 8px 12px;
+        font-weight: 600;
+        vertical-align: top;
+        background-color: #f8f9fa;
+    }
+
+    .property-value {
+        padding: 8px 12px;
+        vertical-align: top;
+    }
+
+    .print-only {
+        display: none;
+    }
+
+    /* Print styles */
+    @@media print {
+        .no-print {
+            display: none !important;
+        }
+
+        .print-only {
+            display: block !important;
+        }
+
+        .print-summary-container {
+            padding: 0;
+        }
+
+        .document-page {
+            margin-bottom: 0;
+        }
+
+        .page-break {
+            page-break-after: always;
+        }
+
+        .card {
+            border: none;
+            box-shadow: none;
+        }
+
+        .card-header {
+            background-color: #0d6efd !important;
+            color: white !important;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        .section-header {
+            color: #0d6efd !important;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        .property-label {
+            background-color: #f8f9fa !important;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        .properties-table {
+            page-break-inside: avoid;
+        }
+
+        /* Prevent breaking inside sections */
+        h6 {
+            page-break-after: avoid;
+        }
+
+        table {
+            page-break-inside: avoid;
+        }
+    }
+</style>
+
+@code {
+    [Parameter]
+    [SupplyParameterFromQuery(Name = "documentIds")]
+    public string? DocumentIdsParam { get; set; }
+
+    private List<DocumentDto> documents = new();
+    private bool isLoading = true;
+    private string? errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDocuments();
+    }
+
+    private async Task LoadDocuments()
+    {
+        try
+        {
+            isLoading = true;
+            errorMessage = null;
+
+            if (string.IsNullOrWhiteSpace(DocumentIdsParam))
+            {
+                errorMessage = "No document IDs provided";
+                Logger.LogWarning("Print summary requested with no document IDs");
+                return;
+            }
+
+            // Parse document IDs from comma-separated string
+            var documentIds = DocumentIdsParam
+                .Split(',', StringSplitOptions.RemoveEmptyEntries)
+                .Select(id => int.TryParse(id.Trim(), out var result) ? result : 0)
+                .Where(id => id > 0)
+                .ToList();
+
+            if (!documentIds.Any())
+            {
+                errorMessage = "Invalid document IDs provided";
+                Logger.LogWarning("Print summary requested with invalid document IDs: {Ids}", DocumentIdsParam);
+                return;
+            }
+
+            Logger.LogInformation("Loading {Count} documents for print summary", documentIds.Count);
+
+            // Load all documents in parallel for better performance
+            var loadTasks = documentIds.Select(id => DocumentService.GetByIdAsync(id));
+            var results = await Task.WhenAll(loadTasks);
+
+            // Filter out null results (documents not found or access denied)
+            documents = results.Where(d => d != null).ToList()!;
+
+            if (!documents.Any())
+            {
+                errorMessage = "None of the requested documents could be loaded";
+                Logger.LogWarning("No documents loaded for IDs: {Ids}", DocumentIdsParam);
+            }
+            else
+            {
+                Logger.LogInformation("Loaded {Count} documents successfully", documents.Count);
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading documents for print summary");
+            errorMessage = $"Error loading documents: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task PrintPage()
+    {
+        await JSRuntime.InvokeVoidAsync("window.print");
+    }
+
+    private async Task GoBack()
+    {
+        // Use browser history to go back, preserving search state
+        await JSRuntime.InvokeVoidAsync("history.back");
+    }
+
+    private string FormatBoolean(bool? value)
+    {
+        return value.HasValue ? (value.Value ? "Yes" : "No") : "-";
+    }
+
+    private string FormatDate(DateTime? date)
+    {
+        return date?.ToString("yyyy-MM-dd") ?? "-";
+    }
+
+    private string FormatAmount(decimal? amount, string? currencyCode)
+    {
+        if (!amount.HasValue) return "-";
+        return string.IsNullOrEmpty(currencyCode)
+            ? amount.Value.ToString("N2")
+            : $"{currencyCode} {amount.Value:N2}";
+    }
+
+    private string FormatThirdParty(string? thirdParty)
+    {
+        if (string.IsNullOrWhiteSpace(thirdParty))
+            return "-";
+
+        var parties = thirdParty.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        return string.Join(", ", parties);
+    }
+}

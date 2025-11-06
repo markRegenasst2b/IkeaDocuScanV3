@@ -346,9 +346,6 @@
                     <button class="btn btn-secondary" @onclick="ClearFilters">
                         <i class="bi bi-x-circle"></i> Clear Filters
                     </button>
-                    <button class="btn btn-success" @onclick="NavigateToExcelPreview" disabled="@(!searchResults?.Items.Any() ?? true)">
-                        <i class="bi bi-file-earmark-spreadsheet"></i> Export to Excel
-                    </button>
                     <button class="btn btn-primary" @onclick="ExecuteSearch" disabled="@isSearching">
                         @if (isSearching)
                         {
@@ -433,7 +430,7 @@
                             <button class="btn btn-primary" @onclick="PrintSummary">
                                 <i class="bi bi-printer"></i> Print Summary
                             </button>
-                            <button class="btn btn-primary" @onclick="PrintDetailed">
+                            <button class="btn btn-primary" @onclick="ExportSelectedToExcel">
                                 <i class="bi bi-printer-fill"></i> Print Detailed
                             </button>
                             <button class="btn btn-success" @onclick="BulkEmailAttach">
@@ -441,9 +438,6 @@
                             </button>
                             <button class="btn btn-success" @onclick="BulkEmailLink">
                                 <i class="bi bi-link-45deg"></i> Email (Link)
-                            </button>
-                            <button class="btn btn-warning" @onclick="ExportSelectedToExcel">
-                                <i class="bi bi-file-earmark-spreadsheet"></i> Export Selected to Excel
                             </button>
                         </div>
                     </div>

@@ -3,7 +3,8 @@
     "allow": [
       "WebFetch(domain:tonybaloney.github.io)",
       "Bash(dotnet new:*)",
-      "Bash(mkdir:*)"
+      "Bash(mkdir:*)",
+      "Bash(dotnet build:*)"
     ],
     "deny": [],
     "ask": []

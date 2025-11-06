@@ -1204,19 +1204,21 @@ public partial class SearchDocuments : ComponentBase
     }
 
     /// <summary>
-    /// Generates and prints a summary report (placeholder)
+    /// Generates and prints a summary report for selected documents
     /// </summary>
     private void PrintSummary()
     {
         Logger.LogInformation("Print summary requested for {Count} documents", selectedDocumentIds.Count);
 
-        if (!selectedDocumentIds.Any()) return;
+        if (!selectedDocumentIds.Any())
+        {
+            Logger.LogWarning("Cannot print summary: No documents selected");
+            return;
+        }
 
-        // TODO: Implement actual print summary functionality
-        // For now, just show a message
-        Logger.LogWarning("Print summary not yet implemented");
-        errorMessage = "Print Summary feature is not yet implemented. This will generate a summary report of selected documents.";
-        StateHasChanged();
+        // Build query string with selected document IDs
+        var documentIds = string.Join(",", selectedDocumentIds);
+        NavigationManager.NavigateTo($"/documents/print-summary?documentIds={Uri.EscapeDataString(documentIds)}");
     }
 
     /// <summary>
