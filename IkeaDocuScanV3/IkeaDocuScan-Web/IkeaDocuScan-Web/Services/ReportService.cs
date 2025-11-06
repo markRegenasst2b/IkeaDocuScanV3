@@ -65,14 +65,40 @@ public class ReportService : IReportService
         var currentUser = await _currentUserService.GetCurrentUserAsync();
         _logger.LogInformation("User {User} requested Duplicate Documents report", currentUser.AccountName);
 
-        // TODO: Implement duplicate documents logic
-        // Logic:
-        // 1. Group documents by DocumentTypeId, DocumentNo, VersionNo
-        // 2. Find groups with more than 1 document
-        // 3. Assign duplicate group numbers
-        // 4. Return list of DuplicateDocumentsReportDto
+        await using var context = await _contextFactory.CreateDbContextAsync();
 
-        throw new NotImplementedException("Duplicate Documents report logic not yet implemented");
+        // Execute SQL query to find duplicate documents
+        // Groups by Document Type, Document No, Version No, and Counter Party
+        // Returns only groups with more than 1 document
+        var duplicates = await context.Database.SqlQueryRaw<DuplicateDocumentsReportDto>(@"
+            WITH docs AS (
+                SELECT
+                    dt.DT_Name AS [Document type],
+                    d.DocumentNo AS [Document No],
+                    d.VersionNo,
+                    cp.CounterPartyId,
+                    cp.CounterPartyNoAlpha,
+                    cp.Name AS Counterparty
+                FROM dbo.Document d
+                JOIN dbo.DocumentType dt ON dt.DT_ID = d.DT_ID
+                JOIN CounterParty cp ON cp.CounterPartyId = d.CounterPartyId
+            )
+            SELECT
+                [Document type] AS DocumentType,
+                [Document No] AS DocumentNo,
+                VersionNo,
+                CounterPartyNoAlpha,
+                Counterparty,
+                COUNT(*) AS [Count],
+                NULL AS ExportedAt
+            FROM docs
+            GROUP BY [Document type], [Document No], VersionNo, CounterPartyNoAlpha, Counterparty
+            HAVING COUNT(*) > 1
+            ORDER BY [Document type], COUNT(*) DESC, [Document No], VersionNo, CounterPartyNoAlpha
+        ").ToListAsync();
+
+        _logger.LogInformation("Found {Count} duplicate document groups for user {User}", duplicates.Count, currentUser.AccountName);
+        return duplicates;
     }
 
     /// <summary>
