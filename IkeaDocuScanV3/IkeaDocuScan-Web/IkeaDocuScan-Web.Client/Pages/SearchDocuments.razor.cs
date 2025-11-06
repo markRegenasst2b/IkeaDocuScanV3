@@ -1,14 +1,18 @@
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Options;
+using Microsoft.JSInterop;
+using System.Net.Http.Json;
 using IkeaDocuScan.Shared.DTOs.Documents;
 using IkeaDocuScan.Shared.DTOs.DocumentTypes;
 using IkeaDocuScan.Shared.DTOs.DocumentNames;
 using IkeaDocuScan.Shared.DTOs.CounterParties;
 using IkeaDocuScan.Shared.DTOs.Currencies;
 using IkeaDocuScan.Shared.DTOs.Countries;
+using IkeaDocuScan.Shared.DTOs.Excel;
 using IkeaDocuScan.Shared.Interfaces;
 using IkeaDocuScan.Shared.Configuration;
 using IkeaDocuScan_Web.Client.Models;
+using IkeaDocuScan_Web.Client.Services;
 
 namespace IkeaDocuScan_Web.Client.Pages;
 
@@ -22,6 +26,9 @@ public partial class SearchDocuments : ComponentBase
     [Inject] private ICountryService CountryService { get; set; } = default!;
     [Inject] private ILogger<SearchDocuments> Logger { get; set; } = default!;
     [Inject] private NavigationManager NavigationManager { get; set; } = default!;
+    [Inject] private ExcelPreviewDataService PreviewDataService { get; set; } = default!;
+    [Inject] private IJSRuntime JSRuntime { get; set; } = default!;
+    [Inject] private HttpClient HttpClient { get; set; } = default!;
     [Inject] private IOptions<EmailSearchResultsOptions>? EmailOptions { get; set; }
 
     // Query parameters for preserving search state
@@ -432,9 +439,9 @@ public partial class SearchDocuments : ComponentBase
     }
 
     /// <summary>
-    /// Navigates to the Excel Preview page with current search criteria
+    /// Navigates to the Excel Preview page with current search results
     /// </summary>
-    private void NavigateToExcelPreview()
+    private async Task NavigateToExcelPreview()
     {
         if (searchResults == null || !searchResults.Items.Any())
         {
@@ -442,72 +449,66 @@ public partial class SearchDocuments : ComponentBase
             return;
         }
 
-        Logger.LogInformation("Navigating to Excel preview with current search criteria");
+        Logger.LogInformation("Navigating to Excel preview with {Count} search results", searchResults.Items.Count);
 
-        // Build query string from current search request
-        var queryParams = new List<string>();
-
-        if (!string.IsNullOrEmpty(searchRequest.SearchString))
+        try
         {
-            queryParams.Add($"searchString={Uri.EscapeDataString(searchRequest.SearchString)}");
-        }
+            // Create a search request with no paging to get all results
+            var allResultsRequest = new DocumentSearchRequestDto
+            {
+                SearchString = searchRequest.SearchString,
+                DocumentTypeIds = searchRequest.DocumentTypeIds,
+                Fax = searchRequest.Fax,
+                OriginalReceived = searchRequest.OriginalReceived,
+                Confidential = searchRequest.Confidential,
+                BankConfirmation = searchRequest.BankConfirmation,
+                CounterpartyName = searchRequest.CounterpartyName,
+                DocumentNumber = searchRequest.DocumentNumber,
+                AssociatedToPua = searchRequest.AssociatedToPua,
+                VersionNo = searchRequest.VersionNo,
+                PageNumber = 1,
+                PageSize = Math.Min(searchResults.TotalCount, 1000) // Limit to 1000 records for performance
+            };
 
-        if (searchRequest.DocumentTypeIds.Any())
+            // Load all documents matching search criteria
+            var allResults = await DocumentService.SearchAsync(allResultsRequest);
+
+            // Convert to exportable DTOs
+            var exportData = allResults.Items
+                .Select(item => DocumentExportDto.FromSearchItem(item))
+                .ToList<ExcelReporting.Models.ExportableBase>();
+
+            // Build context information
+            var context = new Dictionary<string, string>
+            {
+                ["Search Type"] = "Document Search Results",
+                ["Generated"] = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
+                ["Total Records"] = allResults.TotalCount.ToString(),
+                ["Displayed Records"] = exportData.Count.ToString()
+            };
+
+            // Add search filters to context
+            if (!string.IsNullOrEmpty(searchRequest.SearchString))
+            {
+                context["Search Term"] = searchRequest.SearchString;
+            }
+            if (searchRequest.DocumentTypeIds.Any())
+            {
+                context["Document Types"] = string.Join(", ", searchRequest.DocumentTypeIds);
+            }
+
+            // Pass data to preview service
+            PreviewDataService.SetData(exportData, "Document Search Results", context);
+
+            // Navigate to preview page
+            NavigationManager.NavigateTo("/excel-preview?source=search");
+        }
+        catch (Exception ex)
         {
-            // Pass all selected document type IDs as comma-separated values
-            var documentTypeIds = string.Join(",", searchRequest.DocumentTypeIds);
-            queryParams.Add($"documentTypeIds={Uri.EscapeDataString(documentTypeIds)}");
+            Logger.LogError(ex, "Error loading documents for Excel preview");
+            errorMessage = $"Failed to load documents for preview: {ex.Message}";
+            StateHasChanged();
         }
-
-        // Boolean filters
-        if (searchRequest.Fax.HasValue)
-        {
-            queryParams.Add($"fax={searchRequest.Fax.Value}");
-        }
-
-        if (searchRequest.OriginalReceived.HasValue)
-        {
-            queryParams.Add($"originalReceived={searchRequest.OriginalReceived.Value}");
-        }
-
-        if (searchRequest.Confidential.HasValue)
-        {
-            queryParams.Add($"confidential={searchRequest.Confidential.Value}");
-        }
-
-        if (searchRequest.BankConfirmation.HasValue)
-        {
-            queryParams.Add($"bankConfirmation={searchRequest.BankConfirmation.Value}");
-        }
-
-        // Text filters
-        if (!string.IsNullOrEmpty(searchRequest.CounterpartyName))
-        {
-            queryParams.Add($"counterpartyName={Uri.EscapeDataString(searchRequest.CounterpartyName)}");
-        }
-
-        if (!string.IsNullOrEmpty(searchRequest.DocumentNumber))
-        {
-            queryParams.Add($"documentNumber={Uri.EscapeDataString(searchRequest.DocumentNumber)}");
-        }
-
-        if (!string.IsNullOrEmpty(searchRequest.AssociatedToPua))
-        {
-            queryParams.Add($"associatedToPua={Uri.EscapeDataString(searchRequest.AssociatedToPua)}");
-        }
-
-        if (!string.IsNullOrEmpty(searchRequest.VersionNo))
-        {
-            queryParams.Add($"versionNo={Uri.EscapeDataString(searchRequest.VersionNo)}");
-        }
-
-        // Add page size to show in preview
-        var totalCount = searchResults.TotalCount;
-        queryParams.Add($"pageSize={Math.Min(totalCount, 1000)}");
-
-        var queryString = queryParams.Any() ? "?" + string.Join("&", queryParams) : "";
-
-        NavigationManager.NavigateTo($"/excel-preview{queryString}");
     }
 
     // ========== Boolean Filter Change Handlers ==========
@@ -1166,7 +1167,7 @@ public partial class SearchDocuments : ComponentBase
     /// <summary>
     /// Exports selected documents to Excel preview
     /// </summary>
-    private void ExportSelectedToExcel()
+    private async Task ExportSelectedToExcel()
     {
         Logger.LogInformation("Export selected to Excel requested for {Count} documents", selectedDocumentIds.Count);
 
@@ -1182,25 +1183,49 @@ public partial class SearchDocuments : ComponentBase
             return;
         }
 
-        // Get barcodes for selected documents
-        var selectedBarcodes = searchResults.Items
-            .Where(d => selectedDocumentIds.Contains(d.Id))
-            .Select(d => d.BarCode)
-            .ToList();
-
-        if (!selectedBarcodes.Any())
+        try
         {
-            Logger.LogWarning("Cannot export: No matching documents found");
-            errorMessage = "Unable to find barcodes for selected documents.";
-            StateHasChanged();
-            return;
+            // Get selected documents from current search results
+            var selectedItems = searchResults.Items
+                .Where(d => selectedDocumentIds.Contains(d.Id))
+                .ToList();
+
+            if (!selectedItems.Any())
+            {
+                Logger.LogWarning("Cannot export: No matching documents found");
+                errorMessage = "Unable to find selected documents.";
+                StateHasChanged();
+                return;
+            }
+
+            Logger.LogInformation("Navigating to Excel preview with {Count} selected documents", selectedItems.Count);
+
+            // Convert to exportable DTOs
+            var exportData = selectedItems
+                .Select(item => DocumentExportDto.FromSearchItem(item))
+                .ToList<ExcelReporting.Models.ExportableBase>();
+
+            // Build context information
+            var context = new Dictionary<string, string>
+            {
+                ["Selection Type"] = "Selected Documents",
+                ["Generated"] = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
+                ["Selected Count"] = selectedItems.Count.ToString(),
+                ["From Total"] = searchResults.TotalCount.ToString()
+            };
+
+            // Pass data to preview service
+            PreviewDataService.SetData(exportData, "Selected Documents", context);
+
+            // Navigate to preview page
+            NavigationManager.NavigateTo("/excel-preview?source=selection");
         }
-
-        Logger.LogInformation("Navigating to Excel preview with {Count} selected barcodes", selectedBarcodes.Count);
-
-        // Build query string with selected barcodes
-        var selectedIds = string.Join(",", selectedBarcodes);
-        NavigationManager.NavigateTo($"/excel-preview?selectedIds={Uri.EscapeDataString(selectedIds)}");
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error exporting selected documents");
+            errorMessage = $"Failed to export selected documents: {ex.Message}";
+            StateHasChanged();
+        }
     }
 
     /// <summary>
