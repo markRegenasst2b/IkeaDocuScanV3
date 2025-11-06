@@ -89,14 +89,77 @@ PRINT 'Script 06_Add_FK_Constraint_UserPermissions.sql completed successfully.';
 GO
 
 
--- Composite index for permission matching on Document table
-CREATE NONCLUSTERED INDEX IX_Document_PermissionFilter
-ON dbo.Document (DT_ID, CounterPartyId)
-INCLUDE (BarCode, Name);
+PRINT 'Starting migration: Add Permission Filtering Indexes'
+PRINT 'Database: ' + DB_NAME()
+PRINT 'Date: ' + CONVERT(VARCHAR, GETDATE(), 120)
 GO
 
--- Index on CounterParty.Country for permission filtering
-CREATE NONCLUSTERED INDEX IX_CounterParty_Country
-ON dbo.CounterParty (Country)
-INCLUDE (CounterPartyId);
+-- =============================================
+-- Index 1: Document Permission Filter
+-- Purpose: Optimize filtering by DocumentTypeId and CounterPartyId
+-- Usage: Used in FilterByUserPermissions() extension method
+-- =============================================
+
+IF NOT EXISTS (
+    SELECT 1 FROM sys.indexes
+    WHERE name = 'IX_Document_PermissionFilter'
+    AND object_id = OBJECT_ID('dbo.Document')
+)
+BEGIN
+    PRINT 'Creating index: IX_Document_PermissionFilter on Document table...'
+
+    CREATE NONCLUSTERED INDEX IX_Document_PermissionFilter
+    ON dbo.Document (DT_ID, CounterPartyId)
+    INCLUDE (BarCode, Name, FileId, CreatedOn, CreatedBy)
+    WITH (
+        PAD_INDEX = OFF,
+        STATISTICS_NORECOMPUTE = OFF,
+        SORT_IN_TEMPDB = ON,
+        DROP_EXISTING = OFF,
+        ONLINE = OFF,
+        ALLOW_ROW_LOCKS = ON,
+        ALLOW_PAGE_LOCKS = ON
+    )
+
+    PRINT 'Index IX_Document_PermissionFilter created successfully'
+END
+ELSE
+BEGIN
+    PRINT 'Index IX_Document_PermissionFilter already exists - skipping'
+END
+GO
+
+-- =============================================
+-- Index 2: CounterParty Country Filter
+-- Purpose: Optimize country-based permission filtering via CounterParty
+-- Usage: Used when filtering documents by user's allowed countries
+-- =============================================
+
+IF NOT EXISTS (
+    SELECT 1 FROM sys.indexes
+    WHERE name = 'IX_CounterParty_Country'
+    AND object_id = OBJECT_ID('dbo.CounterParty')
+)
+BEGIN
+    PRINT 'Creating index: IX_CounterParty_Country on CounterParty table...'
+
+    CREATE NONCLUSTERED INDEX IX_CounterParty_Country
+    ON dbo.CounterParty (Country)
+    INCLUDE (CounterPartyId, Name, City)
+    WITH (
+        PAD_INDEX = OFF,
+        STATISTICS_NORECOMPUTE = OFF,
+        SORT_IN_TEMPDB = ON,
+        DROP_EXISTING = OFF,
+        ONLINE = OFF,
+        ALLOW_ROW_LOCKS = ON,
+        ALLOW_PAGE_LOCKS = ON
+    )
+
+    PRINT 'Index IX_CounterParty_Country created successfully'
+END
+ELSE
+BEGIN
+    PRINT 'Index IX_CounterParty_Country already exists - skipping'
+END
 GO
