@@ -65,6 +65,7 @@ public partial class DocumentPropertiesPage : ComponentBase, IDisposable
     private bool acceptChildCallbacks = false; // Only accept callbacks after parent finishes loading
     private readonly object childLoadLock = new();
     private bool isFirstLoad = true; // Track if this is the first load or a re-navigation
+    private CancellationTokenSource? timeoutCts; // For cancelling the child component loading timeout
 
     // ========================================
     // LIFECYCLE METHODS
@@ -140,8 +141,8 @@ public partial class DocumentPropertiesPage : ComponentBase, IDisposable
             var loadReferenceDataTask = Task.WhenAll(
                 LoadDocumentTypesAsync(),
                 LoadCounterPartiesAsync(),
-                LoadCurrenciesAsync()
-                // Note: DocumentNames depends on DocumentTypeId, so loaded per-document in child component
+                LoadCurrenciesAsync(),
+                LoadDocumentNamesForCurrentDocumentAsync() // Pre-load DocumentNames for Edit/Check-in modes
             );
 
             // Load page-specific data in parallel with reference data
@@ -217,31 +218,43 @@ public partial class DocumentPropertiesPage : ComponentBase, IDisposable
                 Logger.LogInformation("⏱️ PERF: StateHasChanged called. isLoading={IsLoading}, isLoadingChildren={IsLoadingChildren}",
                     isLoading, isLoadingChildren);
 
-                // Safety timeout: Wait a bit for components to mount, then check if all called back
+                // Safety timeout: Wait up to 10 seconds for all child components to load
+                // This will be cancelled early if all components finish loading before timeout
+                timeoutCts?.Cancel(); // Cancel any previous timeout
+                timeoutCts = new CancellationTokenSource();
+                var localCts = timeoutCts; // Capture for closure
+
                 _ = Task.Run(async () =>
                 {
-                    // Give components 500ms to mount and call their OnInitializedAsync
-                    await Task.Delay(500);
-
-                    // Then wait up to 5 more seconds for them to complete their initialization
-                    await Task.Delay(5000);
-                    lock (childLoadLock)
+                    try
                     {
-                        if (isLoadingChildren)
+                        // Wait up to 10 seconds for all components to load
+                        await Task.Delay(10000, localCts.Token);
+
+                        // Only execute if we actually timed out (not cancelled)
+                        lock (childLoadLock)
                         {
-                            Logger.LogWarning("⚠️ Child component loading timeout! Only {Count}/{Total} components called back. Forcing completion.",
-                                loadedChildComponentCount, TotalChildComponents);
-                            _ = InvokeAsync(() =>
+                            if (isLoadingChildren)
                             {
-                                // Preserve hasUnsavedChanges if it was set to true (e.g., check-in mode with pre-registered document)
-                                CreateSnapshot(preserveUnsavedChanges: hasUnsavedChanges);
-                                enableChangeTracking = true;
-                                isLoadingChildren = false;
-                                StateHasChanged();
-                            });
+                                Logger.LogWarning("⚠️ Child component loading timeout after 10s! Only {Count}/{Total} components loaded.",
+                                    loadedChildComponentCount, TotalChildComponents);
+                                _ = InvokeAsync(() =>
+                                {
+                                    // Preserve hasUnsavedChanges if it was set to true (e.g., check-in mode with pre-registered document)
+                                    CreateSnapshot(preserveUnsavedChanges: hasUnsavedChanges);
+                                    enableChangeTracking = true;
+                                    isLoadingChildren = false;
+                                    StateHasChanged();
+                                });
+                            }
                         }
                     }
-                });
+                    catch (TaskCanceledException)
+                    {
+                        // Normal completion - components finished before timeout
+                        Logger.LogInformation("⏱️ PERF: Child component timeout cancelled - all components loaded successfully");
+                    }
+                }, CancellationToken.None);
             }
         }
     }
@@ -288,6 +301,10 @@ public partial class DocumentPropertiesPage : ComponentBase, IDisposable
 
                 enableChangeTracking = true;
                 isLoadingChildren = false; // Hide the loading overlay now
+
+                // Cancel the timeout task since all components loaded successfully
+                timeoutCts?.Cancel();
+
                 Logger.LogInformation("All child components loaded. Snapshot created. Change tracking ENABLED: {Enabled}. Loading complete.", enableChangeTracking);
                 StateHasChanged();
             });
@@ -337,6 +354,30 @@ public partial class DocumentPropertiesPage : ComponentBase, IDisposable
         {
             Logger.LogError(ex, "Error loading currencies");
             currencies = new();
+        }
+    }
+
+    private async Task LoadDocumentNamesForCurrentDocumentAsync()
+    {
+        // Only load if we have a DocumentTypeId (Edit or Check-in mode)
+        if (Model.DocumentTypeId.HasValue)
+        {
+            try
+            {
+                documentNames = await DocumentNameService.GetByDocumentTypeIdAsync(Model.DocumentTypeId.Value);
+                Logger.LogInformation("Loaded {Count} document names for DocumentTypeId {Id}",
+                    documentNames.Count, Model.DocumentTypeId.Value);
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Failed to load document names for DocumentTypeId {Id}", Model.DocumentTypeId.Value);
+                documentNames = new();
+            }
+        }
+        else
+        {
+            // Register mode - no document type yet, clear document names
+            documentNames = new();
         }
     }
 
@@ -1430,6 +1471,10 @@ public partial class DocumentPropertiesPage : ComponentBase, IDisposable
 
     public void Dispose()
     {
+        // Clean up CancellationTokenSource
+        timeoutCts?.Cancel();
+        timeoutCts?.Dispose();
+
         // Clean up JavaScript navigation interception
         if (dotNetRef != null)
         {

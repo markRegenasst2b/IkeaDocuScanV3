@@ -5,67 +5,103 @@
 @inject ILogger<ThirdPartySelector> Logger
 
 <div class="third-party-selector">
-    <div class="row">
-        @* Available Third Parties (Left) *@
-        <div class="col-5">
-            <label class="form-label">Available Third Parties</label>
-            <select multiple
-                    size="7"
-                    class="form-select third-party-listbox"
-                    disabled="@Disabled">
-                @foreach (var item in availableItems)
-                {
-                    <option value="@item.Id"
-                            selected="@selectedAvailableIds.Contains(item.Id)"
-                            @onclick="@(() => ToggleAvailableSelection(item.Id))"
-                            @ondblclick="@(() => AddSingleItem(item.Id))">
-                        @item.DisplayText
-                    </option>
-                }
-            </select>
-            <small class="text-muted">
-                @availableItems.Count available | Double-click or use buttons to move
-            </small>
-        </div>
+    @* Search Box with Dropdown *@
+    <div class="mb-3">
+        <label class="form-label">Third Parties (Optional)</label>
+        <div class="search-container">
+            <input type="text"
+                   class="form-control"
+                   placeholder="Type to search and add third parties..."
+                   value="@searchTerm"
+                   @oninput="OnSearchChanged"
+                   @onfocus="OnSearchFocus"
+                   @onblur="OnSearchBlur"
+                   disabled="@Disabled"
+                   autocomplete="off" />
 
-        @* Add/Remove Buttons (Middle) *@
-        <div class="col-2 d-flex flex-column justify-content-center align-items-center">
-            <button class="btn btn-primary btn-sm mb-2"
-                    @onclick="AddSelectedItems"
-                    disabled="@(Disabled || !selectedAvailableIds.Any())"
-                    title="Add selected items">
-                &raquo;
-            </button>
-            <button class="btn btn-primary btn-sm"
-                    @onclick="RemoveSelectedItems"
-                    disabled="@(Disabled || !selectedSelectedIds.Any())"
-                    title="Remove selected items">
-                &laquo;
-            </button>
-        </div>
-
-        @* Selected Third Parties (Right) *@
-        <div class="col-5">
-            <label class="form-label">Selected Third Parties</label>
-            <select multiple
-                    size="5"
-                    class="form-select third-party-listbox"
-                    disabled="@Disabled">
-                @foreach (var item in selectedItems)
-                {
-                    <option value="@item.Id"
-                            selected="@selectedSelectedIds.Contains(item.Id)"
-                            @onclick="@(() => ToggleSelectedSelection(item.Id))"
-                            @ondblclick="@(() => RemoveSingleItem(item.Id))">
-                        @item.DisplayText
-                    </option>
-                }
-            </select>
-            <small class="text-success">
-                @selectedItems.Count selected
-            </small>
+            @if (showDropdown && !Disabled)
+            {
+                <div class="dropdown-results" @onmousedown:preventDefault>
+                    @if (string.IsNullOrWhiteSpace(searchTerm))
+                    {
+                        <div class="dropdown-hint">
+                            <i class="fa fa-info-circle me-2"></i>
+                            Start typing to search through @availableThirdParties.Count third parties...
+                        </div>
+                    }
+                    else if (!visibleThirdParties.Any())
+                    {
+                        <div class="dropdown-no-results">
+                            <i class="fa fa-search me-2"></i>
+                            No third parties found matching "@searchTerm"
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="dropdown-header">
+                            <small class="text-muted">
+                                Click to add • Showing @visibleThirdParties.Count of @filteredThirdParties.Count matches
+                                @if (filteredThirdParties.Count > MaxVisibleItems)
+                                {
+                                    <span>(refine search to see more)</span>
+                                }
+                            </small>
+                        </div>
+                        <div class="dropdown-list">
+                            @foreach (var item in visibleThirdParties)
+                            {
+                                <div class="dropdown-item"
+                                     @onclick="@(() => AddThirdParty(item))">
+                                    <div class="dropdown-item-name">
+                                        <strong>@HighlightMatch(item.Name, searchTerm)</strong>
+                                        @if (!string.IsNullOrEmpty(item.CounterPartyNoAlpha))
+                                        {
+                                            <span class="text-muted ms-2">(@item.CounterPartyNoAlpha)</span>
+                                        }
+                                    </div>
+                                    <div class="dropdown-item-details">
+                                        <small class="text-muted">
+                                            @item.City, @item.Country
+                                        </small>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+            }
         </div>
     </div>
+
+    @* Selected Third Parties Display *@
+    @if (selectedItems.Any())
+    {
+        <div class="selected-third-parties">
+            <small class="text-muted d-block mb-2">
+                @selectedItems.Count selected third part@(selectedItems.Count == 1 ? "y" : "ies"):
+            </small>
+            <div class="third-party-chips">
+                @foreach (var item in selectedItems)
+                {
+                    <div class="third-party-chip">
+                        <span class="chip-text">
+                            <strong>@item.Name</strong>
+                            @if (!string.IsNullOrEmpty(item.City) || !string.IsNullOrEmpty(item.Country))
+                            {
+                                <span class="text-muted ms-1">(@item.City, @item.Country)</span>
+                            }
+                        </span>
+                        <button class="btn-chip-remove"
+                                @onclick="@(() => RemoveThirdParty(item))"
+                                disabled="@Disabled"
+                                title="Remove @item.Name">
+                            <i class="fa fa-times"></i>
+                        </button>
+                    </div>
+                }
+            </div>
+        </div>
+    }
 </div>
 
 <style>
@@ -73,24 +109,131 @@
         width: 100%;
     }
 
-    .third-party-listbox {
-        width: 100%;
-        font-family: Tahoma, sans-serif;
-        font-size: 11px;
-        border: solid 1px gray;
+    .search-container {
+        position: relative;
     }
 
-    .third-party-listbox option {
-        padding: 2px 4px;
+    .dropdown-results {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        z-index: 1050;
+        background: white;
+        border: 1px solid #dee2e6;
+        border-radius: 4px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        margin-top: 2px;
+        max-height: 350px;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .dropdown-hint,
+    .dropdown-no-results {
+        padding: 20px;
+        text-align: center;
+        color: #6c757d;
+    }
+
+    .dropdown-header {
+        padding: 8px 12px;
+        background: #f8f9fa;
+        border-bottom: 1px solid #dee2e6;
+        flex-shrink: 0;
+    }
+
+    .dropdown-list {
+        overflow-y: auto;
+        max-height: 300px;
+    }
+
+    .dropdown-item {
+        padding: 10px 12px;
         cursor: pointer;
+        border-bottom: 1px solid #f0f0f0;
+        transition: background-color 0.15s ease;
     }
 
-    .third-party-listbox option:hover {
-        background-color: #f0f0f0;
+        .dropdown-item:last-child {
+            border-bottom: none;
+        }
+
+        .dropdown-item:hover {
+            background-color: #e7f3ff;
+        }
+
+    .dropdown-item-name {
+        margin-bottom: 4px;
+    }
+
+    .dropdown-item-details {
+        line-height: 1.3;
+    }
+
+    .selected-third-parties {
+        margin-top: 12px;
+    }
+
+    .third-party-chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .third-party-chip {
+        display: inline-flex;
+        align-items: center;
+        padding: 6px 8px 6px 12px;
+        background: #e7f3ff;
+        border: 1px solid #0d6efd;
+        border-radius: 20px;
+        font-size: 0.9rem;
+        gap: 8px;
+    }
+
+    .chip-text {
+        line-height: 1.2;
+    }
+
+    .btn-chip-remove {
+        background: transparent;
+        border: none;
+        color: #dc3545;
+        cursor: pointer;
+        padding: 0;
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.8rem;
+        transition: background-color 0.15s ease;
+    }
+
+        .btn-chip-remove:hover:not(:disabled) {
+            background-color: rgba(220, 53, 69, 0.1);
+        }
+
+        .btn-chip-remove:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+    /* Search term highlighting */
+    .highlight {
+        background-color: yellow;
+        font-weight: bold;
     }
 </style>
 
 @code {
+    // PERFORMANCE: Maximum number of items to render in dropdown
+    // This prevents rendering thousands of DOM elements and causing delays
+    private const int MaxVisibleItems = 50;
+
     /// <summary>
     /// List of selected third party IDs (bound to ViewModel)
     /// </summary>
@@ -141,10 +284,12 @@
 
     // Internal state
     private List<ThirdPartyItem> allThirdParties = new();
-    private List<ThirdPartyItem> availableItems = new();
+    private List<ThirdPartyItem> availableThirdParties = new();
     private List<ThirdPartyItem> selectedItems = new();
-    private HashSet<string> selectedAvailableIds = new();
-    private HashSet<string> selectedSelectedIds = new();
+    private List<ThirdPartyItem> filteredThirdParties = new();
+    private List<ThirdPartyItem> visibleThirdParties = new();
+    private string searchTerm = string.Empty;
+    private bool showDropdown = false;
 
     protected override async Task OnInitializedAsync()
     {
@@ -171,7 +316,7 @@
             if (CounterParties != null && CounterParties.Any())
             {
                 counterParties = CounterParties;
-                Logger.LogInformation("Using {Count} pre-loaded counterparties for third party selector", counterParties.Count);
+                Logger.LogInformation("✅ PERF: Using {Count} pre-loaded counterparties for third party selector", counterParties.Count);
             }
             else
             {
@@ -192,7 +337,7 @@
                 .OrderBy(tp => tp.Name)
                 .ToList();
 
-            Logger.LogInformation("Prepared {Count} third parties for selector", allThirdParties.Count);
+            Logger.LogInformation("✅ PERF: Prepared {Count} third parties for virtualized selector", allThirdParties.Count);
         }
         catch (Exception ex)
         {
@@ -207,7 +352,7 @@
             .Where(tp => SelectedThirdPartyIds.Contains(tp.Id))
             .ToList();
 
-        availableItems = allThirdParties
+        availableThirdParties = allThirdParties
             .Where(tp => !SelectedThirdPartyIds.Contains(tp.Id))
             .ToList();
 
@@ -217,73 +362,92 @@
             // TODO: Filter by relationship to main CounterParty if needed
             // For now, show all
         }
+
+        // Clear search when lists update
+        filteredThirdParties.Clear();
+        visibleThirdParties.Clear();
     }
 
-    private void ToggleAvailableSelection(string id)
+    private void OnSearchChanged(ChangeEventArgs e)
     {
-        if (selectedAvailableIds.Contains(id))
-            selectedAvailableIds.Remove(id);
-        else
-            selectedAvailableIds.Add(id);
+        searchTerm = e.Value?.ToString() ?? string.Empty;
+        ApplyFilter();
+        showDropdown = true;
+        StateHasChanged();
     }
 
-    private void ToggleSelectedSelection(string id)
+    private void OnSearchFocus()
     {
-        if (selectedSelectedIds.Contains(id))
-            selectedSelectedIds.Remove(id);
-        else
-            selectedSelectedIds.Add(id);
+        showDropdown = true;
     }
 
-    private async Task AddSingleItem(string id)
+    private void OnSearchBlur()
+    {
+        // Delay hiding dropdown to allow click events to fire
+        Task.Delay(200).ContinueWith(_ => InvokeAsync(() =>
+        {
+            showDropdown = false;
+            StateHasChanged();
+        }));
+    }
+
+    private void ApplyFilter()
+    {
+        if (string.IsNullOrWhiteSpace(searchTerm))
+        {
+            // Don't show all items when search is empty - show hint instead
+            filteredThirdParties = new();
+            visibleThirdParties = new();
+        }
+        else
+        {
+            var term = searchTerm.ToLower().Trim();
+
+            // Filter matching third parties (exclude already selected)
+            filteredThirdParties = availableThirdParties
+                .Where(tp =>
+                    (tp.Name != null && tp.Name.ToLower().Contains(term)) ||
+                    (tp.CounterPartyNoAlpha != null && tp.CounterPartyNoAlpha.ToLower().Contains(term)) ||
+                    (tp.City != null && tp.City.ToLower().Contains(term)) ||
+                    (tp.Country != null && tp.Country.ToLower().Contains(term)))
+                .ToList();
+
+            // PERFORMANCE: Only render first MaxVisibleItems (50) to keep DOM small
+            visibleThirdParties = filteredThirdParties.Take(MaxVisibleItems).ToList();
+
+            Logger.LogInformation("🔍 Filtered to {Filtered} third parties, showing {Visible} in dropdown",
+                filteredThirdParties.Count, visibleThirdParties.Count);
+        }
+    }
+
+    private async Task AddThirdParty(ThirdPartyItem item)
+    {
+        if (Disabled || SelectedThirdPartyIds.Contains(item.Id))
+            return;
+
+        SelectedThirdPartyIds.Add(item.Id);
+        SelectedThirdPartyNames.Add(item.Name);
+
+        // Clear search and update lists
+        searchTerm = string.Empty;
+        showDropdown = false;
+        UpdateLists();
+
+        // Notify parent
+        await SelectedThirdPartyIdsChanged.InvokeAsync(SelectedThirdPartyIds);
+        await SelectedThirdPartyNamesChanged.InvokeAsync(SelectedThirdPartyNames);
+
+        Logger.LogInformation("Added third party {Name}, total selected: {Total}",
+            item.Name, SelectedThirdPartyIds.Count);
+    }
+
+    private async Task RemoveThirdParty(ThirdPartyItem item)
     {
         if (Disabled)
             return;
 
-        var item = availableItems.FirstOrDefault(i => i.Id == id);
-        if (item != null && !SelectedThirdPartyIds.Contains(item.Id))
-        {
-            SelectedThirdPartyIds.Add(item.Id);
-            SelectedThirdPartyNames.Add(item.Name);
-
-            // Clear selection
-            selectedAvailableIds.Remove(id);
-
-            // Update lists
-            UpdateLists();
-
-            // Notify parent
-            await SelectedThirdPartyIdsChanged.InvokeAsync(SelectedThirdPartyIds);
-            await SelectedThirdPartyNamesChanged.InvokeAsync(SelectedThirdPartyNames);
-
-            Logger.LogInformation("Added third party {Name}, total selected: {Total}",
-                item.Name, SelectedThirdPartyIds.Count);
-        }
-    }
-
-    private async Task AddSelectedItems()
-    {
-        if (Disabled)
-            return;
-
-        if (!selectedAvailableIds.Any())
-            return;
-
-        // Move selected items from available to selected
-        foreach (var id in selectedAvailableIds.ToList())
-        {
-            var item = availableItems.FirstOrDefault(i => i.Id == id);
-            if (item != null)
-            {
-                SelectedThirdPartyIds.Add(item.Id);
-                SelectedThirdPartyNames.Add(item.Name);
-            }
-        }
-
-        var count = selectedAvailableIds.Count;
-
-        // Clear selection
-        selectedAvailableIds.Clear();
+        SelectedThirdPartyIds.Remove(item.Id);
+        SelectedThirdPartyNames.Remove(item.Name);
 
         // Update lists
         UpdateLists();
@@ -292,68 +456,23 @@
         await SelectedThirdPartyIdsChanged.InvokeAsync(SelectedThirdPartyIds);
         await SelectedThirdPartyNamesChanged.InvokeAsync(SelectedThirdPartyNames);
 
-        Logger.LogInformation("Added {Count} third parties, total selected: {Total}",
-            count, SelectedThirdPartyIds.Count);
+        Logger.LogInformation("Removed third party {Name}, total selected: {Total}",
+            item.Name, SelectedThirdPartyIds.Count);
     }
 
-    private async Task RemoveSingleItem(string id)
+    private MarkupString HighlightMatch(string? text, string searchTerm)
     {
-        if (Disabled)
-            return;
+        if (string.IsNullOrEmpty(text) || string.IsNullOrWhiteSpace(searchTerm))
+            return new MarkupString(text ?? string.Empty);
 
-        var item = selectedItems.FirstOrDefault(i => i.Id == id);
-        if (item != null)
-        {
-            SelectedThirdPartyIds.Remove(item.Id);
-            SelectedThirdPartyNames.Remove(item.Name);
+        // Simple highlighting - wrap matching text in mark with highlight class
+        var pattern = System.Text.RegularExpressions.Regex.Escape(searchTerm);
+        var highlighted = System.Text.RegularExpressions.Regex.Replace(
+            text,
+            pattern,
+            match => $"<mark class=\"highlight\">{match.Value}</mark>",
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase);
 
-            // Clear selection
-            selectedSelectedIds.Remove(id);
-
-            // Update lists
-            UpdateLists();
-
-            // Notify parent
-            await SelectedThirdPartyIdsChanged.InvokeAsync(SelectedThirdPartyIds);
-            await SelectedThirdPartyNamesChanged.InvokeAsync(SelectedThirdPartyNames);
-
-            Logger.LogInformation("Removed third party {Name}, total selected: {Total}",
-                item.Name, SelectedThirdPartyIds.Count);
-        }
-    }
-
-    private async Task RemoveSelectedItems()
-    {
-        if (Disabled)
-            return;
-
-        if (!selectedSelectedIds.Any())
-            return;
-
-        var count = selectedSelectedIds.Count;
-
-        // Move selected items from selected back to available
-        foreach (var id in selectedSelectedIds.ToList())
-        {
-            var item = selectedItems.FirstOrDefault(i => i.Id == id);
-            if (item != null)
-            {
-                SelectedThirdPartyIds.Remove(item.Id);
-                SelectedThirdPartyNames.Remove(item.Name);
-            }
-        }
-
-        // Clear selection
-        selectedSelectedIds.Clear();
-
-        // Update lists
-        UpdateLists();
-
-        // Notify parent
-        await SelectedThirdPartyIdsChanged.InvokeAsync(SelectedThirdPartyIds);
-        await SelectedThirdPartyNamesChanged.InvokeAsync(SelectedThirdPartyNames);
-
-        Logger.LogInformation("Removed {Count} third parties, total selected: {Total}",
-            count, SelectedThirdPartyIds.Count);
+        return new MarkupString(highlighted);
     }
 }

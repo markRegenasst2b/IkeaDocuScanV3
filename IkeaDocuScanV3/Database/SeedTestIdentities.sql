@@ -20,9 +20,9 @@ GO
 
 -- Check if we're in a production environment (basic check)
 DECLARE @Environment NVARCHAR(50);
-SELECT @Environment = [Value]
+SELECT @Environment = [ConfigValue]
 FROM [dbo].[SystemConfiguration]
-WHERE [Key] = 'Environment';
+WHERE [ConfigKey] = 'Environment';
 
 IF @Environment = 'Production'
 BEGIN
@@ -51,15 +51,14 @@ GO
 
 -- Check if test users already exist and delete them first (for re-running script)
 DELETE FROM [dbo].[UserPermissions] WHERE UserId IN (1001, 1002, 1003, 1004, 1005, 1006);
-DELETE FROM [dbo].[DocuScanUsers] WHERE UserId IN (1001, 1002, 1003, 1004, 1005, 1006);
+DELETE FROM [dbo].[DocuScanUser] WHERE UserId IN (1001, 1002, 1003, 1004, 1005, 1006);
 GO
 
 -- Enable IDENTITY_INSERT to use specific UserIds
-SET IDENTITY_INSERT [dbo].[DocuScanUsers] ON;
+SET IDENTITY_INSERT [dbo].[DocuScanUser] ON;
 GO
-
 -- 1. SuperUser (Database Flag)
-INSERT INTO [dbo].[DocuScanUsers] (
+INSERT INTO [dbo].[DocuScanUser] (
     UserId, AccountName, IsSuperUser, CreatedOn, LastLogon
 )
 VALUES (
@@ -71,7 +70,7 @@ VALUES (
 );
 
 -- 2. SuperUser (AD Group - will be granted via AD group membership, not DB flag)
-INSERT INTO [dbo].[DocuScanUsers] (
+INSERT INTO [dbo].[DocuScanUser] (
     UserId, AccountName, IsSuperUser, CreatedOn, LastLogon
 )
 VALUES (
@@ -83,7 +82,7 @@ VALUES (
 );
 
 -- 3. Publisher (Has database permissions + AD groups)
-INSERT INTO [dbo].[DocuScanUsers] (
+INSERT INTO [dbo].[DocuScanUser] (
     UserId, AccountName, IsSuperUser, CreatedOn, LastLogon
 )
 VALUES (
@@ -95,7 +94,7 @@ VALUES (
 );
 
 -- 4. Reader (Has limited database permissions + AD groups)
-INSERT INTO [dbo].[DocuScanUsers] (
+INSERT INTO [dbo].[DocuScanUser] (
     UserId, AccountName, IsSuperUser, CreatedOn, LastLogon
 )
 VALUES (
@@ -107,7 +106,7 @@ VALUES (
 );
 
 -- 5. Database Permissions Only (No AD groups)
-INSERT INTO [dbo].[DocuScanUsers] (
+INSERT INTO [dbo].[DocuScanUser] (
     UserId, AccountName, IsSuperUser, CreatedOn, LastLogon
 )
 VALUES (
@@ -119,7 +118,7 @@ VALUES (
 );
 
 -- 6. No Access (User exists but has no permissions)
-INSERT INTO [dbo].[DocuScanUsers] (
+INSERT INTO [dbo].[DocuScanUser] (
     UserId, AccountName, IsSuperUser, CreatedOn, LastLogon
 )
 VALUES (
@@ -130,7 +129,7 @@ VALUES (
     NULL
 );
 
-SET IDENTITY_INSERT [dbo].[DocuScanUsers] OFF;
+SET IDENTITY_INSERT [dbo].[DocuScanUser] OFF;
 GO
 
 PRINT 'DocuScanUsers seeded successfully.';
@@ -157,61 +156,61 @@ DECLARE @CounterParty1 INT, @CounterParty2 INT;
 DECLARE @Country1 NVARCHAR(2), @Country2 NVARCHAR(2);
 
 -- Get some document types (or use NULL for "all")
-SELECT TOP 1 @DocType1 = Id FROM [dbo].[DocumentTypes] ORDER BY Id;
-SELECT @DocType2 = Id FROM [dbo].[DocumentTypes] WHERE Id != ISNULL(@DocType1, 0) ORDER BY Id;
-SELECT @DocType3 = Id FROM [dbo].[DocumentTypes] WHERE Id NOT IN (ISNULL(@DocType1, 0), ISNULL(@DocType2, 0)) ORDER BY Id;
+SELECT TOP 1 @DocType1 = dt_Id FROM [dbo].[DocumentType] ORDER BY dt_Id;
+SELECT @DocType2 = dt_Id FROM [dbo].[DocumentType] WHERE dt_Id != ISNULL(@DocType1, 0) ORDER BY dt_Id;
+SELECT @DocType3 = dt_id FROM [dbo].[DocumentType] WHERE dt_Id NOT IN (ISNULL(@DocType1, 0), ISNULL(@DocType2, 0)) ORDER BY dt_Id;
 
 -- Get some counter parties
-SELECT TOP 1 @CounterParty1 = Id FROM [dbo].[CounterParties] ORDER BY Id;
-SELECT @CounterParty2 = Id FROM [dbo].[CounterParties] WHERE Id != ISNULL(@CounterParty1, 0) ORDER BY Id;
+SELECT TOP 1 @CounterParty1 = CounterPartyId FROM [dbo].[CounterParty] ORDER BY CounterPartyId;
+SELECT @CounterParty2 = CounterPartyId FROM [dbo].[CounterParty] WHERE CounterPartyId != ISNULL(@CounterParty1, 0) ORDER BY CounterPartyId;
 
 -- Get some countries
-SELECT TOP 1 @Country1 = CountryCode FROM [dbo].[Countries] ORDER BY CountryCode;
-SELECT @Country2 = CountryCode FROM [dbo].[Countries] WHERE CountryCode != ISNULL(@Country1, '') ORDER BY CountryCode;
+SELECT TOP 1 @Country1 = CountryCode FROM [dbo].[Country] ORDER BY CountryCode;
+SELECT @Country2 = CountryCode FROM [dbo].[Country] WHERE CountryCode != ISNULL(@Country1, '') ORDER BY CountryCode;
 
 -- Publisher Test User (1003) - Has broad permissions
 -- Permission 1: Access to specific document type and counter party
 IF @DocType1 IS NOT NULL AND @CounterParty1 IS NOT NULL
 BEGIN
-    INSERT INTO [dbo].[UserPermissions] (UserId, DocumentTypeId, CounterPartyId, CountryCode, CreatedOn)
-    VALUES (1003, @DocType1, @CounterParty1, NULL, GETDATE());
+    INSERT INTO [dbo].[UserPermissions] (UserId, DocumentTypeId, CounterPartyId, CountryCode)
+    VALUES (1003, @DocType1, @CounterParty1, NULL);
 END
 
 -- Permission 2: Access to specific document type and country
 IF @DocType2 IS NOT NULL AND @Country1 IS NOT NULL
 BEGIN
-    INSERT INTO [dbo].[UserPermissions] (UserId, DocumentTypeId, CounterPartyId, CountryCode, CreatedOn)
-    VALUES (1003, @DocType2, NULL, @Country1, GETDATE());
+    INSERT INTO [dbo].[UserPermissions] (UserId, DocumentTypeId, CounterPartyId, CountryCode)
+    VALUES (1003, @DocType2, NULL, @Country1);
 END
 
 -- Permission 3: Full access to one document type (all counter parties, all countries)
 IF @DocType3 IS NOT NULL
 BEGIN
-    INSERT INTO [dbo].[UserPermissions] (UserId, DocumentTypeId, CounterPartyId, CountryCode, CreatedOn)
-    VALUES (1003, @DocType3, NULL, NULL, GETDATE());
+    INSERT INTO [dbo].[UserPermissions] (UserId, DocumentTypeId, CounterPartyId, CountryCode)
+    VALUES (1003, @DocType3, NULL, NULL);
 END
 
 -- Reader Test User (1004) - Has limited permissions
 -- Permission 1: Read access to specific document type only
 IF @DocType1 IS NOT NULL
 BEGIN
-    INSERT INTO [dbo].[UserPermissions] (UserId, DocumentTypeId, CounterPartyId, CountryCode, CreatedOn)
-    VALUES (1004, @DocType1, NULL, NULL, GETDATE());
+    INSERT INTO [dbo].[UserPermissions] (UserId, DocumentTypeId, CounterPartyId, CountryCode)
+    VALUES (1004, @DocType1, NULL, NULL);
 END
 
 -- Database Only Test User (1005) - Has some permissions but no AD groups
 -- Permission 1: Access to specific counter party only
 IF @CounterParty1 IS NOT NULL
 BEGIN
-    INSERT INTO [dbo].[UserPermissions] (UserId, DocumentTypeId, CounterPartyId, CountryCode, CreatedOn)
-    VALUES (1005, NULL, @CounterParty1, NULL, GETDATE());
+    INSERT INTO [dbo].[UserPermissions] (UserId, DocumentTypeId, CounterPartyId, CountryCode)
+    VALUES (1005, NULL, @CounterParty1, NULL);
 END
 
 -- Permission 2: Access to specific country only
 IF @Country1 IS NOT NULL
 BEGIN
-    INSERT INTO [dbo].[UserPermissions] (UserId, DocumentTypeId, CounterPartyId, CountryCode, CreatedOn)
-    VALUES (1005, NULL, NULL, @Country1, GETDATE());
+    INSERT INTO [dbo].[UserPermissions] (UserId, DocumentTypeId, CounterPartyId, CountryCode)
+    VALUES (1005, NULL, NULL, @Country1);
 END
 
 -- NoAccessTest (1006) - Intentionally has NO permissions
@@ -242,20 +241,19 @@ SELECT
     IsSuperUser,
     CreatedOn,
     (SELECT COUNT(*) FROM [dbo].[UserPermissions] WHERE UserId = u.UserId) AS PermissionCount
-FROM [dbo].[DocuScanUsers] u
+FROM [dbo].[DocuScanUser] u
 WHERE UserId IN (1001, 1002, 1003, 1004, 1005, 1006)
 ORDER BY UserId;
 
 PRINT '';
 PRINT 'Test User Permissions:';
 SELECT
-    u.AccountName,
+    u.UserId,
     up.DocumentTypeId,
     up.CounterPartyId,
-    up.CountryCode,
-    up.CreatedOn
+    up.CountryCode
 FROM [dbo].[UserPermissions] up
-INNER JOIN [dbo].[DocuScanUsers] u ON up.UserId = u.UserId
+INNER JOIN [dbo].[DocuScanUser] u ON up.UserId = u.UserId
 WHERE u.UserId IN (1001, 1002, 1003, 1004, 1005, 1006)
 ORDER BY u.UserId, up.Id;
 
