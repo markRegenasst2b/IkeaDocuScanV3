@@ -21,12 +21,14 @@ internal class PersistentAuthenticationStateProvider : AuthenticationStateProvid
             return;
         }
 
-        Console.WriteLine($"PersistentAuthenticationStateProvider: Found user - UserId: {userInfo.UserId}, Name: {userInfo.Name}");
+        Console.WriteLine($"PersistentAuthenticationStateProvider: Found user - UserId: {userInfo.UserId}, Name: {userInfo.Name}, HasAccess: {userInfo.HasAccess}, IsSuperUser: {userInfo.IsSuperUser}");
 
         Claim[] claims = [
             new Claim(ClaimTypes.NameIdentifier, userInfo.UserId),
             new Claim(ClaimTypes.Name, userInfo.Name ?? string.Empty),
-            new Claim(ClaimTypes.Email, userInfo.Email ?? string.Empty)];
+            new Claim(ClaimTypes.Email, userInfo.Email ?? string.Empty),
+            new Claim("HasAccess", userInfo.HasAccess.ToString()),
+            new Claim("IsSuperUser", userInfo.IsSuperUser.ToString())];
 
         _authenticationStateTask = Task.FromResult(
             new AuthenticationState(new ClaimsPrincipal(new ClaimsIdentity(claims,

@@ -79,17 +79,27 @@ internal sealed class PersistingServerAuthenticationStateProvider : Authenticati
             var name = principal.FindFirst(ClaimTypes.Name)?.Value;
             var email = principal.FindFirst(ClaimTypes.Email)?.Value;
 
+            // Get authorization claims
+            var hasAccessClaim = principal.FindFirst("HasAccess");
+            var hasAccess = hasAccessClaim != null && bool.TryParse(hasAccessClaim.Value, out bool access) && access;
+
+            var isSuperUserClaim = principal.FindFirst("IsSuperUser");
+            var isSuperUser = isSuperUserClaim != null && bool.TryParse(isSuperUserClaim.Value, out bool superUser) && superUser;
+
             // Windows Authentication uses Name claim as the primary identifier
             // Use NameIdentifier if available, otherwise fall back to Name
             var effectiveUserId = userId ?? name ?? principal.Identity.Name ?? "Unknown";
 
-            _logger.LogInformation("Persisting user: {UserId}, {Name}, {Email}", effectiveUserId, name, email);
+            _logger.LogInformation("Persisting user: {UserId}, {Name}, {Email}, HasAccess: {HasAccess}, IsSuperUser: {IsSuperUser}",
+                effectiveUserId, name, email, hasAccess, isSuperUser);
 
             _state.PersistAsJson(nameof(UserInfo), new UserInfo
             {
                 UserId = effectiveUserId,
                 Name = name ?? principal.Identity.Name,
-                Email = email
+                Email = email,
+                HasAccess = hasAccess,
+                IsSuperUser = isSuperUser
             });
         }
         else

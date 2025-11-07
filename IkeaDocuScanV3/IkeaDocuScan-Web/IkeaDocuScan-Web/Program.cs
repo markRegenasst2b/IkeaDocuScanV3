@@ -194,6 +194,7 @@ app.MapCounterPartyEndpoints();
 app.MapCountryEndpoints();
 app.MapDocumentTypeEndpoints();
 app.MapUserPermissionEndpoints();
+app.MapUserIdentityEndpoints();
 app.MapScannedFileEndpoints();
 app.MapAuditTrailEndpoints();
 app.MapDocumentNameEndpoints();

@@ -1,8 +1,14 @@
 ﻿@page "/"
 @attribute [Authorize]
+@rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
 @using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.AspNetCore.Authorization
 @using System.Security.Claims
+@using IkeaDocuScan_Web.Client.Services
+@using IkeaDocuScan.Shared.DTOs.UserPermissions
+@using IkeaDocuScan.Shared.Interfaces
+@inject UserIdentityHttpService UserIdentityService
+@inject IUserPermissionService UserPermissionService
 
 <PageTitle>Home - IKEA DocuScan</PageTitle>
 
@@ -32,10 +38,6 @@
                                 <p class="card-text">
                                     You have access to the IKEA DocuScan document management system.
                                 </p>
-                                <ul>
-                                    <li><a href="/documents">Manage Documents</a></li>
-                                    <li><a href="/checkin-scanned">Check-in Scanned Files</a></li>
-                                </ul>
                             </div>
                         </div>
                     }
@@ -55,6 +57,160 @@
                             </div>
                         </div>
                     }
+
+                    <!-- User Identity Section -->
+                    <div class="card mt-4">
+                        <div class="card-header">
+                            <h5 class="mb-0">User Identity</h5>
+                        </div>
+                        <div class="card-body">
+                            @if (isLoadingIdentity)
+                            {
+                                <p><em>Loading user identity...</em></p>
+                            }
+                            else if (userIdentity != null)
+                            {
+                                <table class="table table-sm table-bordered">
+                                    <tbody>
+                                        <tr>
+                                            <th style="width: 200px;">User Name</th>
+                                            <td>@userIdentity.UserName</td>
+                                        </tr>
+                                        <tr>
+                                            <th>Authentication Type</th>
+                                            <td>@userIdentity.AuthenticationType</td>
+                                        </tr>
+                                        <tr>
+                                            <th>Is Authenticated</th>
+                                            <td>@userIdentity.IsAuthenticated</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            }
+                            else if (identityError != null)
+                            {
+                                <div class="alert alert-danger">
+                                    <strong>Error loading user identity:</strong> @identityError
+                                </div>
+                            }
+                        </div>
+                    </div>
+
+                    <!-- User Claims Section -->
+                    <div class="card mt-4">
+                        <div class="card-header">
+                            <h5 class="mb-0">User Claims</h5>
+                        </div>
+                        <div class="card-body">
+                            @if (isLoadingIdentity)
+                            {
+                                <p><em>Loading claims...</em></p>
+                            }
+                            else if (userIdentity?.Claims != null && userIdentity.Claims.Any())
+                            {
+                                <div class="table-responsive">
+                                    <table class="table table-sm table-striped table-bordered">
+                                        <thead>
+                                            <tr>
+                                                <th>Claim Type</th>
+                                                <th>Claim Value</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach (var claim in userIdentity.Claims)
+                                            {
+                                                <tr>
+                                                    <td>@claim.Type</td>
+                                                    <td>@claim.Value</td>
+                                                </tr>
+                                            }
+                                        </tbody>
+                                    </table>
+                                </div>
+                            }
+                            else
+                            {
+                                <p>No claims found.</p>
+                            }
+                        </div>
+                    </div>
+
+                    <!-- User Permissions Section -->
+                    <div class="card mt-4">
+                        <div class="card-header">
+                            <h5 class="mb-0">User Permissions</h5>
+                        </div>
+                        <div class="card-body">
+                            @if (isLoadingPermissions)
+                            {
+                                <p><em>Loading user permissions...</em></p>
+                            }
+                            else if (userPermissions != null && userPermissions.Any())
+                            {
+                                <div class="table-responsive">
+                                    <table class="table table-sm table-striped table-bordered">
+                                        <thead>
+                                            <tr>
+                                                <th>ID</th>
+                                                <th>Document Type</th>
+                                                <th>Counter Party</th>
+                                                <th>Country</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach (var permission in userPermissions)
+                                            {
+                                                <tr>
+                                                    <td>@permission.Id</td>
+                                                    <td>
+                                                        @if (permission.DocumentTypeId.HasValue)
+                                                        {
+                                                            <span>@permission.DocumentTypeName (@permission.DocumentTypeId)</span>
+                                                        }
+                                                        else
+                                                        {
+                                                            <span class="text-muted">All</span>
+                                                        }
+                                                    </td>
+                                                    <td>
+                                                        @if (permission.CounterPartyId.HasValue)
+                                                        {
+                                                            <span>@permission.CounterPartyName (@permission.CounterPartyNoAlpha)</span>
+                                                        }
+                                                        else
+                                                        {
+                                                            <span class="text-muted">All</span>
+                                                        }
+                                                    </td>
+                                                    <td>
+                                                        @if (!string.IsNullOrWhiteSpace(permission.CountryCode))
+                                                        {
+                                                            <span>@permission.CountryName (@permission.CountryCode)</span>
+                                                        }
+                                                        else
+                                                        {
+                                                            <span class="text-muted">All</span>
+                                                        }
+                                                    </td>
+                                                </tr>
+                                            }
+                                        </tbody>
+                                    </table>
+                                    <p class="text-muted mt-2">Total: @userPermissions.Count permission(s)</p>
+                                </div>
+                            }
+                            else if (permissionsError != null)
+                            {
+                                <div class="alert alert-danger">
+                                    <strong>Error loading permissions:</strong> @permissionsError
+                                </div>
+                            }
+                            else
+                            {
+                                <p>No permissions found for your user account.</p>
+                            }
+                        </div>
+                    </div>
                 </Authorized>
                 <NotAuthorized>
                     <div class="alert alert-danger mt-3">
@@ -65,3 +221,65 @@
         </div>
     </div>
 </div>
+
+@code {
+    private UserIdentityDto? userIdentity;
+    private List<UserPermissionDto>? userPermissions;
+    private bool isLoadingIdentity = true;
+    private bool isLoadingPermissions = true;
+    private string? identityError;
+    private string? permissionsError;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadUserIdentityAsync();
+        await LoadUserPermissionsAsync();
+    }
+
+    private async Task LoadUserIdentityAsync()
+    {
+        try
+        {
+            isLoadingIdentity = true;
+            userIdentity = await UserIdentityService.GetUserIdentityAsync();
+        }
+        catch (Exception ex)
+        {
+            identityError = ex.Message;
+        }
+        finally
+        {
+            isLoadingIdentity = false;
+        }
+    }
+
+    private async Task LoadUserPermissionsAsync()
+    {
+        try
+        {
+            isLoadingPermissions = true;
+            // Get all permissions and filter for current user
+            var allPermissions = await UserPermissionService.GetAllAsync();
+
+            // If we have the user identity, filter by account name
+            if (userIdentity != null && !string.IsNullOrWhiteSpace(userIdentity.UserName))
+            {
+                userPermissions = allPermissions
+                    .Where(p => p.AccountName == userIdentity.UserName)
+                    .ToList();
+            }
+            else
+            {
+                userPermissions = new List<UserPermissionDto>();
+            }
+        }
+        catch (Exception ex)
+        {
+            permissionsError = ex.Message;
+        }
+        finally
+        {
+            isLoadingPermissions = false;
+        }
+    }
+}
