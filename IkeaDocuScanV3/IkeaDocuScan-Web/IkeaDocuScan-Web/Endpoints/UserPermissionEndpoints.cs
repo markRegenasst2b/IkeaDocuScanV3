@@ -8,8 +8,12 @@ public static class UserPermissionEndpoints
     public static void MapUserPermissionEndpoints(this IEndpointRouteBuilder routes)
     {
         var group = routes.MapGroup("/api/userpermissions")
-            .RequireAuthorization()
+            .RequireAuthorization("HasAccess")  // Base policy - user must have access to system
             .WithTags("UserPermissions");
+
+        // ========================================
+        // READ OPERATIONS - SuperUser only (viewing user permissions is sensitive)
+        // ========================================
 
         group.MapGet("/", async (string? accountNameFilter, IUserPermissionService service) =>
         {
@@ -17,7 +21,9 @@ public static class UserPermissionEndpoints
             return Results.Ok(permissions);
         })
         .WithName("GetAllUserPermissions")
-        .Produces<List<UserPermissionDto>>(200);
+        .RequireAuthorization(policy => policy.RequireRole("SuperUser"))
+        .Produces<List<UserPermissionDto>>(200)
+        .Produces(403);
 
         group.MapGet("/users", async (string? accountNameFilter, IUserPermissionService service) =>
         {
@@ -25,7 +31,9 @@ public static class UserPermissionEndpoints
             return Results.Ok(users);
         })
         .WithName("GetAllDocuScanUsers")
-        .Produces<List<DocuScanUserDto>>(200);
+        .RequireAuthorization(policy => policy.RequireRole("SuperUser"))
+        .Produces<List<DocuScanUserDto>>(200)
+        .Produces(403);
 
         group.MapGet("/{id}", async (int id, IUserPermissionService service) =>
         {
@@ -36,7 +44,9 @@ public static class UserPermissionEndpoints
             return Results.Ok(permission);
         })
         .WithName("GetUserPermissionById")
+        .RequireAuthorization(policy => policy.RequireRole("SuperUser"))
         .Produces<UserPermissionDto>(200)
+        .Produces(403)
         .Produces(404);
 
         group.MapGet("/user/{userId}", async (int userId, IUserPermissionService service) =>
@@ -45,7 +55,13 @@ public static class UserPermissionEndpoints
             return Results.Ok(permissions);
         })
         .WithName("GetUserPermissionsByUserId")
-        .Produces<List<UserPermissionDto>>(200);
+        .RequireAuthorization(policy => policy.RequireRole("SuperUser"))
+        .Produces<List<UserPermissionDto>>(200)
+        .Produces(403);
+
+        // ========================================
+        // WRITE OPERATIONS - SuperUser only
+        // ========================================
 
         group.MapPost("/", async (CreateUserPermissionDto dto, IUserPermissionService service) =>
         {
@@ -53,8 +69,10 @@ public static class UserPermissionEndpoints
             return Results.Created($"/api/userpermissions/{created.Id}", created);
         })
         .WithName("CreateUserPermission")
+        .RequireAuthorization(policy => policy.RequireRole("SuperUser"))
         .Produces<UserPermissionDto>(201)
-        .Produces(400);
+        .Produces(400)
+        .Produces(403);
 
         group.MapPut("/{id}", async (int id, UpdateUserPermissionDto dto, IUserPermissionService service) =>
         {
@@ -65,8 +83,10 @@ public static class UserPermissionEndpoints
             return Results.Ok(updated);
         })
         .WithName("UpdateUserPermission")
+        .RequireAuthorization(policy => policy.RequireRole("SuperUser"))
         .Produces<UserPermissionDto>(200)
         .Produces(400)
+        .Produces(403)
         .Produces(404);
 
         group.MapDelete("/{id}", async (int id, IUserPermissionService service) =>
@@ -75,7 +95,9 @@ public static class UserPermissionEndpoints
             return Results.NoContent();
         })
         .WithName("DeleteUserPermission")
+        .RequireAuthorization(policy => policy.RequireRole("SuperUser"))
         .Produces(204)
+        .Produces(403)
         .Produces(404);
 
         group.MapDelete("/user/{userId}", async (int userId, IUserPermissionService service) =>
@@ -84,7 +106,9 @@ public static class UserPermissionEndpoints
             return Results.NoContent();
         })
         .WithName("DeleteDocuScanUser")
+        .RequireAuthorization(policy => policy.RequireRole("SuperUser"))
         .Produces(204)
+        .Produces(403)
         .Produces(404);
 
         group.MapPost("/user", async (CreateDocuScanUserDto dto, IUserPermissionService service) =>
@@ -93,8 +117,10 @@ public static class UserPermissionEndpoints
             return Results.Created($"/api/userpermissions/users", created);
         })
         .WithName("CreateDocuScanUser")
+        .RequireAuthorization(policy => policy.RequireRole("SuperUser"))
         .Produces<DocuScanUserDto>(201)
-        .Produces(400);
+        .Produces(400)
+        .Produces(403);
 
         group.MapPut("/user/{userId}", async (int userId, UpdateDocuScanUserDto dto, IUserPermissionService service) =>
         {
@@ -105,8 +131,10 @@ public static class UserPermissionEndpoints
             return Results.Ok(updated);
         })
         .WithName("UpdateDocuScanUser")
+        .RequireAuthorization(policy => policy.RequireRole("SuperUser"))
         .Produces<DocuScanUserDto>(200)
         .Produces(400)
+        .Produces(403)
         .Produces(404);
     }
 }
