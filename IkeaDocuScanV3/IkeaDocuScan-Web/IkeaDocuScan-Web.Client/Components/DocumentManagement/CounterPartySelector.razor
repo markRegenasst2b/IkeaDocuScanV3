@@ -1,7 +1,9 @@
 @using IkeaDocuScan.Shared.DTOs.CounterParties
 @using IkeaDocuScan.Shared.Interfaces
+@using Microsoft.JSInterop
 @inject ICounterPartyService CounterPartyService
 @inject ILogger<CounterPartySelector> Logger
+@inject IJSRuntime JSRuntime
 
 <div class="counterparty-selector">
     @* Search Box with Dropdown *@
@@ -15,8 +17,13 @@
                    @oninput="OnSearchChanged"
                    @onfocus="OnSearchFocus"
                    @onblur="OnSearchBlur"
+                   @onkeydown="OnInputKeyDown"
                    disabled="@Disabled"
-                   autocomplete="off" />
+                   autocomplete="off"
+                   role="combobox"
+                   aria-autocomplete="list"
+                   aria-expanded="@showDropdown"
+                   aria-controls="cp-dropdown-list" />
 
             @if (showDropdown && !Disabled)
             {
@@ -46,11 +53,20 @@
                                 }
                             </small>
                         </div>
-                        <div class="dropdown-list">
-                            @foreach (var cp in visibleCounterParties)
+                        <div class="dropdown-list" id="cp-dropdown-list" role="listbox">
+                            @for (int i = 0; i < visibleCounterParties.Count; i++)
                             {
-                                <div class="dropdown-item @(SelectedCounterPartyId == cp.CounterPartyId.ToString() ? "selected" : "")"
-                                     @onclick="@(() => SelectCounterPartyFromDropdown(cp))">
+                                var cp = visibleCounterParties[i];
+                                var index = i;
+                                var itemId = $"cp-item-{index}";
+                                var isKeyboardSelected = selectedIndex == index;
+                                var isAlreadySelected = SelectedCounterPartyId == cp.CounterPartyId.ToString();
+                                <div class="dropdown-item @(isKeyboardSelected ? "keyboard-selected" : "") @(isAlreadySelected ? "already-selected" : "")"
+                                     @onclick="@(() => SelectCounterPartyFromDropdown(cp))"
+                                     @onmouseenter="@(() => OnMouseEnterItem(index))"
+                                     id="@itemId"
+                                     role="option"
+                                     aria-selected="@isKeyboardSelected">
                                     <div class="dropdown-item-name">
                                         <strong>@HighlightMatch(cp.Name, searchTerm)</strong>
                                         <span class="text-muted ms-2">(@cp.CounterPartyNoAlpha)</span>
@@ -153,7 +169,7 @@
         padding: 10px 12px;
         cursor: pointer;
         border-bottom: 1px solid #f0f0f0;
-        transition: background-color 0.15s ease;
+        transition: all 0.15s ease;
     }
 
         .dropdown-item:last-child {
@@ -161,13 +177,30 @@
         }
 
         .dropdown-item:hover {
-            background-color: #f8f9fa;
+            background-color: #f0f8ff;
         }
 
-        .dropdown-item.selected {
+        .dropdown-item.already-selected {
             background-color: #e7f3ff;
             border-left: 3px solid #0d6efd;
             padding-left: 9px;
+        }
+
+        .dropdown-item.keyboard-selected {
+            background-color: #0d6efd !important;
+            color: white;
+            border-left: 4px solid #0a58ca;
+            padding-left: 8px;
+            font-weight: 500;
+        }
+
+        .dropdown-item.keyboard-selected .text-muted {
+            color: rgba(255, 255, 255, 0.85) !important;
+        }
+
+        .dropdown-item.keyboard-selected mark.highlight {
+            background-color: #ffc107;
+            color: #000;
         }
 
     .dropdown-item-name {
@@ -245,6 +278,7 @@
     private List<CounterPartyDto> visibleCounterParties = new();
     private string searchTerm = string.Empty;
     private bool showDropdown = false;
+    private int selectedIndex = -1;
 
     protected override async Task OnInitializedAsync()
     {
@@ -285,6 +319,7 @@
         searchTerm = e.Value?.ToString() ?? string.Empty;
         ApplyFilter();
         showDropdown = true;
+        selectedIndex = -1; // Reset selection when typing
         StateHasChanged();
     }
 
@@ -299,6 +334,7 @@
         Task.Delay(200).ContinueWith(_ => InvokeAsync(() =>
         {
             showDropdown = false;
+            selectedIndex = -1;
             StateHasChanged();
         }));
     }
@@ -310,6 +346,7 @@
             // Don't show all items when search is empty - show hint instead
             filteredCounterParties = new();
             visibleCounterParties = new();
+            selectedIndex = -1;
         }
         else
         {
@@ -327,7 +364,17 @@
             // PERFORMANCE: Only render first MaxVisibleItems (50) to keep DOM small
             visibleCounterParties = filteredCounterParties.Take(MaxVisibleItems).ToList();
 
-            Logger.LogInformation("🔍 Filtered to {Filtered} results, showing {Visible} in dropdown",
+            // Auto-select first item when results appear
+            if (visibleCounterParties.Any())
+            {
+                selectedIndex = 0;
+            }
+            else
+            {
+                selectedIndex = -1;
+            }
+
+            Logger.LogInformation("🔍 Filtered to {Filtered} results, showing {Visible} in dropdown (first item auto-selected)",
                 filteredCounterParties.Count, visibleCounterParties.Count);
         }
     }
@@ -377,5 +424,115 @@
             System.Text.RegularExpressions.RegexOptions.IgnoreCase);
 
         return new MarkupString(highlighted);
+    }
+
+    private async Task OnInputKeyDown(KeyboardEventArgs e)
+    {
+        // Only log navigation keys to reduce console spam
+        if (e.Key == "ArrowDown" || e.Key == "ArrowUp" || e.Key == "Enter" || e.Key == "Escape")
+        {
+            Logger.LogInformation("🎹 Navigation key: {Key}, Dropdown: {ShowDropdown}, Items: {Count}",
+                e.Key, showDropdown, visibleCounterParties.Count);
+        }
+
+        // If dropdown not visible, show it on arrow down
+        if (!showDropdown && e.Key == "ArrowDown" && !string.IsNullOrWhiteSpace(searchTerm))
+        {
+            showDropdown = true;
+            ApplyFilter();
+            selectedIndex = 0; // Select first item
+            StateHasChanged();
+            Logger.LogInformation("🎹 Dropdown opened with arrow down");
+            return;
+        }
+
+        // Only handle navigation keys if dropdown is visible with items
+        if (!showDropdown || !visibleCounterParties.Any())
+        {
+            return;
+        }
+
+        switch (e.Key)
+        {
+            case "ArrowDown":
+                // Move selection down
+                if (selectedIndex < visibleCounterParties.Count - 1)
+                {
+                    selectedIndex++;
+                    Logger.LogInformation("🎹 Selected index: {Index} / {Total}", selectedIndex + 1, visibleCounterParties.Count);
+                }
+                else
+                {
+                    Logger.LogInformation("🎹 Already at last item");
+                }
+                StateHasChanged();
+                await ScrollToSelectedItem();
+                break;
+
+            case "ArrowUp":
+                // Move selection up
+                if (selectedIndex > 0)
+                {
+                    selectedIndex--;
+                    Logger.LogInformation("🎹 Selected index: {Index} / {Total}", selectedIndex + 1, visibleCounterParties.Count);
+                    StateHasChanged();
+                    await ScrollToSelectedItem();
+                }
+                else if (selectedIndex == 0)
+                {
+                    // Stay at first item (don't go back to input)
+                    Logger.LogInformation("🎹 Already at first item");
+                }
+                break;
+
+            case "Enter":
+                // Select highlighted item if dropdown is visible
+                if (showDropdown && selectedIndex >= 0 && selectedIndex < visibleCounterParties.Count)
+                {
+                    Logger.LogInformation("🎹 Selecting item at index {Index}", selectedIndex);
+                    await SelectCounterPartyFromDropdown(visibleCounterParties[selectedIndex]);
+                }
+                break;
+
+            case "Escape":
+                // Close dropdown
+                Logger.LogInformation("🎹 Closing dropdown with Escape");
+                showDropdown = false;
+                selectedIndex = -1;
+                StateHasChanged();
+                break;
+
+            case "Tab":
+                // Close dropdown and let tab proceed naturally
+                Logger.LogInformation("🎹 Closing dropdown with Tab");
+                showDropdown = false;
+                selectedIndex = -1;
+                StateHasChanged();
+                break;
+        }
+    }
+
+    private void OnMouseEnterItem(int index)
+    {
+        selectedIndex = index;
+        StateHasChanged();
+    }
+
+    private async Task ScrollToSelectedItem()
+    {
+        if (selectedIndex >= 0 && selectedIndex < visibleCounterParties.Count)
+        {
+            try
+            {
+                // Scroll the selected item into view
+                var itemId = $"cp-item-{selectedIndex}";
+                await JSRuntime.InvokeVoidAsync("eval",
+                    $"document.getElementById('{itemId}')?.scrollIntoView({{ block: 'nearest', behavior: 'smooth' }})");
+            }
+            catch (Exception ex)
+            {
+                Logger.LogWarning(ex, "Failed to scroll to selected item");
+            }
+        }
     }
 }
