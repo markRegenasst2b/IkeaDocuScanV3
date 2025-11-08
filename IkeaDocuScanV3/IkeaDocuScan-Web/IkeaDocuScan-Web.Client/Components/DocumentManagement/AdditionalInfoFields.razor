@@ -207,10 +207,9 @@
         }
     </label>
     <div class="col-sm-9">
-        <TriStateDropdown @bind-Value="@Model.BankConfirmation"
-                         @bind-Value:after="OnFieldChanged"
-                         Disabled="@(IsReadOnly || Model.IsFieldDisabled("BankConfirmation"))"
-                         Label="Bank Confirmation" />
+        <BooleanRadioControl @bind-Value="@Model.BankConfirmation"
+                            @bind-Value:after="OnFieldChanged"
+                            Disabled="@(IsReadOnly || Model.IsFieldDisabled("BankConfirmation"))" />
     </div>
 </div>
 

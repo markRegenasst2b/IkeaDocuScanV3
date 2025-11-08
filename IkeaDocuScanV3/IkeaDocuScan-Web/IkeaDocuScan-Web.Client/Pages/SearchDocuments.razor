@@ -172,52 +172,16 @@
                     </h6>
                     <div class="row g-2">
                         <div class="col-md-3">
-                            <div class="d-flex align-items-center gap-2">
-                                <label class="form-label-inline-short">Fax:</label>
-                                <select class="form-select form-select-sm flex-grow-1"
-                                        value="@(searchRequest.Fax?.ToString() ?? "")"
-                                        @onchange="@(e => OnFaxChanged(e.Value?.ToString()))">
-                                    <option value="">Any</option>
-                                    <option value="True">Yes</option>
-                                    <option value="False">No</option>
-                                </select>
-                            </div>
+                            <BooleanRadioControl Label="Fax:" @bind-Value="@searchRequest.Fax" ShowClearButton="true" />
                         </div>
                         <div class="col-md-3">
-                            <div class="d-flex align-items-center gap-2">
-                                <label class="form-label-inline-short">Original:</label>
-                                <select class="form-select form-select-sm flex-grow-1"
-                                        value="@(searchRequest.OriginalReceived?.ToString() ?? "")"
-                                        @onchange="@(e => OnOriginalReceivedChanged(e.Value?.ToString()))">
-                                    <option value="">Any</option>
-                                    <option value="True">Yes</option>
-                                    <option value="False">No</option>
-                                </select>
-                            </div>
+                            <BooleanRadioControl Label="Original:" @bind-Value="@searchRequest.OriginalReceived" ShowClearButton="true" />
                         </div>
                         <div class="col-md-3">
-                            <div class="d-flex align-items-center gap-2">
-                                <label class="form-label-inline-short">Confidential:</label>
-                                <select class="form-select form-select-sm flex-grow-1"
-                                        value="@(searchRequest.Confidential?.ToString() ?? "")"
-                                        @onchange="@(e => OnConfidentialChanged(e.Value?.ToString()))">
-                                    <option value="">Any</option>
-                                    <option value="True">Yes</option>
-                                    <option value="False">No</option>
-                                </select>
-                            </div>
+                            <BooleanRadioControl Label="Confidential:" @bind-Value="@searchRequest.Confidential" ShowClearButton="true" />
                         </div>
                         <div class="col-md-3">
-                            <div class="d-flex align-items-center gap-2">
-                                <label class="form-label-inline-short">Bank Conf:</label>
-                                <select class="form-select form-select-sm flex-grow-1"
-                                        value="@(searchRequest.BankConfirmation?.ToString() ?? "")"
-                                        @onchange="@(e => OnBankConfirmationChanged(e.Value?.ToString()))">
-                                    <option value="">Any</option>
-                                    <option value="True">Yes</option>
-                                    <option value="False">No</option>
-                                </select>
-                            </div>
+                            <BooleanRadioControl Label="Bank Conf:" @bind-Value="@searchRequest.BankConfirmation" ShowClearButton="true" />
                         </div>
                     </div>
                     <div class="row g-2 mt-1">
@@ -728,5 +692,29 @@
 
     .dropdown-item[type="button"]:active {
         background-color: #e9ecef;
+    }
+
+    /* BooleanRadioControl adjustments for search page */
+    .filter-section .boolean-radio-control {
+        gap: 8px;
+    }
+
+    .filter-section .boolean-radio-control .form-label-radio {
+        font-weight: 500;
+        font-size: 0.875rem;
+        min-width: 90px;
+        white-space: nowrap;
+    }
+
+    .filter-section .boolean-radio-control .radio-button-group {
+        gap: 6px;
+    }
+
+    .filter-section .boolean-radio-control .form-check-inline {
+        font-size: 0.875rem;
+    }
+
+    .filter-section .boolean-radio-control .btn-clear {
+        font-size: 0.95rem;
     }
 </style>

@@ -511,57 +511,7 @@ public partial class SearchDocuments : ComponentBase
         }
     }
 
-    // ========== Boolean Filter Change Handlers ==========
-
-    /// <summary>
-    /// Handles Fax filter change
-    /// </summary>
-    private void OnFaxChanged(string? value)
-    {
-        searchRequest.Fax = ParseNullableBool(value);
-        Logger.LogDebug("Fax filter changed to: {Value}", searchRequest.Fax);
-    }
-
-    /// <summary>
-    /// Handles Original Received filter change
-    /// </summary>
-    private void OnOriginalReceivedChanged(string? value)
-    {
-        searchRequest.OriginalReceived = ParseNullableBool(value);
-        Logger.LogDebug("Original Received filter changed to: {Value}", searchRequest.OriginalReceived);
-    }
-
-    /// <summary>
-    /// Handles Confidential filter change
-    /// </summary>
-    private void OnConfidentialChanged(string? value)
-    {
-        searchRequest.Confidential = ParseNullableBool(value);
-        Logger.LogDebug("Confidential filter changed to: {Value}", searchRequest.Confidential);
-    }
-
-    /// <summary>
-    /// Handles Bank Confirmation filter change
-    /// </summary>
-    private void OnBankConfirmationChanged(string? value)
-    {
-        searchRequest.BankConfirmation = ParseNullableBool(value);
-        Logger.LogDebug("Bank Confirmation filter changed to: {Value}", searchRequest.BankConfirmation);
-    }
-
-    /// <summary>
-    /// Parses a string to nullable boolean
-    /// </summary>
-    private bool? ParseNullableBool(string? value)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-            return null;
-
-        if (bool.TryParse(value, out var result))
-            return result;
-
-        return null;
-    }
+    // ========== Filter Change Handlers ==========
 
     /// <summary>
     /// Handles Document Types multi-select change
