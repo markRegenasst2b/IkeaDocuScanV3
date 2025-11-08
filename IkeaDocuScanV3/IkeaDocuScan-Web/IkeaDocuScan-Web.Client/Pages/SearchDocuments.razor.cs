@@ -1261,4 +1261,38 @@ public partial class SearchDocuments : ComponentBase
         errorMessage = "Print Detailed feature is not yet implemented. This will generate a detailed report of selected documents with all properties.";
         StateHasChanged();
     }
+
+    /// <summary>
+    /// Event handler when a counter party is selected from the CP Name autocomplete
+    /// </summary>
+    private void OnCounterPartyNameSelected(CounterPartyDto? counterParty)
+    {
+        if (counterParty != null)
+        {
+            Logger.LogInformation("Counter party selected in name field: {Name} (ID: {Id})",
+                counterParty.Name, counterParty.CounterPartyId);
+
+            // Optionally auto-populate related fields
+            // searchRequest.CounterpartyNo = counterParty.CounterPartyNoAlpha;
+            // searchRequest.CounterpartyCountry = counterParty.Country;
+            // searchRequest.CounterpartyCity = counterParty.City;
+        }
+    }
+
+    /// <summary>
+    /// Event handler when a counter party is selected from the CP No autocomplete
+    /// </summary>
+    private void OnCounterPartyNoSelected(CounterPartyDto? counterParty)
+    {
+        if (counterParty != null)
+        {
+            Logger.LogInformation("Counter party selected in number field: {Name} (ID: {Id})",
+                counterParty.Name, counterParty.CounterPartyId);
+
+            // Optionally auto-populate related fields
+            // searchRequest.CounterpartyName = counterParty.Name;
+            // searchRequest.CounterpartyCountry = counterParty.Country;
+            // searchRequest.CounterpartyCity = counterParty.City;
+        }
+    }
 }

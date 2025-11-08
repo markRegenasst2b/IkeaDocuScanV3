@@ -6,6 +6,8 @@
 @using IkeaDocuScan.Shared.DTOs.Currencies
 @using IkeaDocuScan_Web.Client.Models
 @using IkeaDocuScan_Web.Client.Components
+@using IkeaDocuScan_Web.Client.Components.Shared
+@using static IkeaDocuScan_Web.Client.Components.Shared.CounterPartyAutocomplete
 
 <PageTitle>Search Documents</PageTitle>
 
@@ -120,15 +122,23 @@
                         <div class="col-md-6">
                             <div class="d-flex align-items-center gap-2">
                                 <label class="form-label-inline">CP Name:</label>
-                                <input type="text" class="form-control form-control-sm flex-grow-1" @bind="searchRequest.CounterpartyName"
-                                       placeholder="Counterparty or third party" maxlength="255" />
+                                <CounterPartyAutocomplete @bind-Value="searchRequest.CounterpartyName"
+                                                         SearchField="CounterPartySearchField.Name"
+                                                         Placeholder="Search counterparty by name..."
+                                                         InputClass="form-control form-control-sm flex-grow-1"
+                                                         CounterParties="@counterParties"
+                                                         OnCounterPartySelected="@OnCounterPartyNameSelected" />
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="d-flex align-items-center gap-2">
                                 <label class="form-label-inline">CP No:</label>
-                                <input type="text" class="form-control form-control-sm flex-grow-1" @bind="searchRequest.CounterpartyNo"
-                                       placeholder="Counterparty number" maxlength="32" />
+                                <CounterPartyAutocomplete @bind-Value="searchRequest.CounterpartyNo"
+                                                         SearchField="CounterPartySearchField.Number"
+                                                         Placeholder="Search by counterparty number..."
+                                                         InputClass="form-control form-control-sm flex-grow-1"
+                                                         CounterParties="@counterParties"
+                                                         OnCounterPartySelected="@OnCounterPartyNoSelected" />
                             </div>
                         </div>
                     </div>
