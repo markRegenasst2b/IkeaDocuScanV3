@@ -1,8 +1,8 @@
 # Endpoint Authorization Matrix - Complete API Reference
 
-**Date:** 2025-11-05
-**Version:** 3.0
-**Total Endpoints:** 13 Files, 89 Endpoints
+**Date:** 2025-11-07
+**Version:** 3.1
+**Total Endpoints:** 16 Files, 108 Endpoints
 
 ---
 
@@ -299,10 +299,79 @@
 
 ---
 
+## 14. Report Endpoints (`/api/reports`)
+
+**Base Authorization:** `RequireAuthorization("HasAccess")` (Reader, Publisher, SuperUser)
+
+| HTTP Method | Endpoint | Description | Reader | Publisher | SuperUser |
+|-------------|----------|-------------|---------|-----------|-----------|
+| **Report Data (JSON)** | | | | | |
+| GET | `/api/reports/barcode-gaps` | Get barcode gaps report | access | access | access |
+| GET | `/api/reports/duplicate-documents` | Get duplicate documents report | access | access | access |
+| GET | `/api/reports/unlinked-registrations` | Get unlinked registrations report | access | access | access |
+| GET | `/api/reports/scan-copies` | Get scan copies report | access | access | access |
+| GET | `/api/reports/suppliers` | Get suppliers/counterparty statistics | access | access | access |
+| GET | `/api/reports/all-documents` | Get all documents report | access | access | access |
+| **Excel Exports** | | | | | |
+| GET | `/api/reports/barcode-gaps/excel` | Export barcode gaps to Excel | access | access | access |
+| GET | `/api/reports/duplicate-documents/excel` | Export duplicate documents to Excel | access | access | access |
+| GET | `/api/reports/unlinked-registrations/excel` | Export unlinked registrations to Excel | access | access | access |
+| GET | `/api/reports/scan-copies/excel` | Export scan copies to Excel | access | access | access |
+| GET | `/api/reports/suppliers/excel` | Export suppliers to Excel | access | access | access |
+| GET | `/api/reports/all-documents/excel` | Export all documents to Excel | access | access | access |
+| POST | `/api/reports/documents/search/excel` | Export document search results to Excel | access | access | access |
+| POST | `/api/reports/documents/selected/excel` | Export selected documents to Excel | access | access | access |
+
+**Notes:**
+- All roles can view and export reports
+- Report data is filtered by user permissions (documents)
+- SuperUser sees unfiltered data
+- Excel exports return `.xlsx` files
+- Includes specialized reports: barcode gaps, duplicates, unlinked registrations, scan copies, suppliers
+
+---
+
+## 15. User Identity Endpoints (`/api/user`)
+
+**Base Authorization:** `RequireAuthorization()` (All authenticated users)
+
+| HTTP Method | Endpoint | Description | Reader | Publisher | SuperUser |
+|-------------|----------|-------------|---------|-----------|-----------|
+| GET | `/api/user/identity` | Get current user identity and claims | access | access | access |
+
+**Notes:**
+- Available to all authenticated users
+- Returns user name, authentication type, and all claims
+- Used for debugging authentication and displaying user information
+- No sensitive operations - read-only endpoint
+
+---
+
+## 16. Test Identity Endpoints (`/api/test-identity`) - **DEBUG ONLY**
+
+**Base Authorization:** None (No authorization required)
+
+| HTTP Method | Endpoint | Description | Reader | Publisher | SuperUser |
+|-------------|----------|-------------|---------|-----------|-----------|
+| GET | `/api/test-identity/profiles` | Get available test identity profiles | access | access | access |
+| GET | `/api/test-identity/status` | Get current test identity status | access | access | access |
+| POST | `/api/test-identity/activate/{profileId}` | Activate a test identity profile | access | access | access |
+| POST | `/api/test-identity/reset` | Reset to real identity | access | access | access |
+
+**Notes:**
+- ⚠️ **DEVELOPMENT ONLY** - These endpoints only exist when compiled in DEBUG mode
+- Removed in production builds
+- Used for testing different user roles and permissions
+- Allows switching between test user profiles without AD authentication
+- No authorization required to facilitate testing
+- **DO NOT** deploy to production with DEBUG enabled
+
+---
+
 ## Summary by Role
 
 ### Reader Access Summary
-- **Total Endpoints:** 42 accessible
+- **Total Endpoints:** 60 accessible (excluding DEBUG-only endpoints: 56)
 - **Primary Use Cases:**
   - View documents (filtered by permissions)
   - Search documents
@@ -311,6 +380,8 @@
   - Export to Excel (filtered results)
   - View action reminders
   - View audit trail
+  - View specialized reports (barcode gaps, duplicates, etc.)
+  - Export reports to Excel
 
 - **Cannot Access:**
   - Create/Update/Delete any data
@@ -320,7 +391,7 @@
   - Delete scanned files
 
 ### Publisher Access Summary
-- **Total Endpoints:** 50 accessible
+- **Total Endpoints:** 69 accessible (excluding DEBUG-only endpoints: 65)
 - **Primary Use Cases:**
   - All Reader capabilities
   - Create and update documents
@@ -335,7 +406,7 @@
   - Delete scanned files
 
 ### SuperUser Access Summary
-- **Total Endpoints:** 89 accessible (all endpoints)
+- **Total Endpoints:** 108 accessible (all endpoints, excluding DEBUG-only endpoints: 104)
 - **Primary Use Cases:**
   - All Reader and Publisher capabilities
   - Delete documents
@@ -364,7 +435,11 @@
 | **Action Reminders** | 3 | 3 | 3 | 3 |
 | **Configuration** | 19 | 0 | 0 | 19 (all) |
 | **Email** | 3 | 0 | 3 | 3 |
-| **TOTAL** | **89** | **41** | **50** | **89** |
+| **Reports** | 14 | 14 | 14 | 14 |
+| **User Identity** | 1 | 1 | 1 | 1 |
+| **Test Identity (DEBUG)** | 4 | 4 | 4 | 4 |
+| **TOTAL** | **108** | **60** | **69** | **108** |
+| **TOTAL (Production)** | **104** | **56** | **65** | **104** |
 
 ---
 
@@ -492,6 +567,10 @@ curl -X GET https://localhost:44101/api/userpermissions \
 
 ---
 
-**Status:** ✅ Current as of 2025-11-05
+**Status:** ✅ Current as of 2025-11-07
 **Maintained by:** IkeaDocuScan Development Team
 **Review Frequency:** On API changes or authorization policy updates
+
+**Recent Changes:**
+- **2025-11-07:** Added Report Endpoints (14), User Identity Endpoints (1), Test Identity Endpoints (4 - DEBUG only)
+- Updated total endpoint count from 89 to 108 (104 in production)

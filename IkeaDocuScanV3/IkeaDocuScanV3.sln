@@ -21,19 +21,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IkeaDocuScan.ActionReminder
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{8EC462FD-D22E-90A8-E5CE-7E832BA40C5D}"
 	ProjectSection(SolutionItems) = preProject
-		ActionReminder_Implementation_Plan.md = ActionReminder_Implementation_Plan.md
-		ActionReminder_Specification.md = ActionReminder_Specification.md
 		AD_GROUPS_QUICK_REFERENCE.md = AD_GROUPS_QUICK_REFERENCE.md
 		..\ARCHITECTURE_IMPLEMENTATION_PLAN.md = ..\ARCHITECTURE_IMPLEMENTATION_PLAN.md
-		BLAZORISE_SETUP_INSTRUCTIONS.md = BLAZORISE_SETUP_INSTRUCTIONS.md
-		DEPLOYMENT_GUIDE.md = DEPLOYMENT_GUIDE.md
 		EMAIL_SERVICE_GUIDE.md = EMAIL_SERVICE_GUIDE.md
-		ExcelReportingSpecification.md = ExcelReportingSpecification.md
-		README_CHECKIN_SCANNED.md = README_CHECKIN_SCANNED.md
-		SearchDocumentImplementation.md = SearchDocumentImplementation.md
-		SearchPageSepcification.md = SearchPageSepcification.md
-		USER_PERMISSION_FILTERING_PROPOSAL.md = USER_PERMISSION_FILTERING_PROPOSAL.md
-		user_permission_filter_spec.md = user_permission_filter_spec.md
+		ENDPOINT_AUTHORIZATION_MATRIX.md = ENDPOINT_AUTHORIZATION_MATRIX.md
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Migration", "Migration", "{02EA681E-C7D8-13C7-8484-4AC65E1B71E8}"
