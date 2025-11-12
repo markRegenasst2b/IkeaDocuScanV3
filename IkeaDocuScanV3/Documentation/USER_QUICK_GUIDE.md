@@ -11,10 +11,10 @@
 | Navigation Menu Item | Reader | Publisher | SuperUser |
 |---------------------|---------|-----------|-----------|
 | **DOCUMENT MANAGEMENT** | | | |
-| Register Document | ✅ View | ✅ Create/Edit | ✅ All |
+| Register Document |❌ No Access | ✅ Create/Edit | ✅ All |
 | Search Documents | ✅ View | ✅ View/Email | ✅ All/Delete |
-| Check-in Scanned | ✅ View | ✅ Check-in | ✅ All/Delete |
-| Action Reminders | ✅ View/Export | ✅ View/Export | ✅ All |
+| Check-in Scanned | ❌ No Access | ✅ Check-in | ✅ All/Delete |
+| Action Reminders | ❌ No Access | ✅ View/Export | ✅ All |
 | **SPECIAL REPORTS** | | | |
 | Barcode Gaps | ✅ View/Export | ✅ View/Export | ✅ All |
 | Duplicate Documents | ✅ View/Export | ✅ View/Export | ✅ All |
