@@ -20,7 +20,9 @@
 
             @* ⚠️ DEVELOPER TOOLS - Only visible in DEBUG mode *@
             @if (ISDEBUG) {
-                <DevIdentitySwitcher />
+                <CollapsibleSection Title="⚠️ Testing Mode: Select your actual User Role ⚠️" InitiallyCollapsed="true">
+                    <DevIdentitySwitcher />
+                </CollapsibleSection>
             }
 
             <AuthorizeView>

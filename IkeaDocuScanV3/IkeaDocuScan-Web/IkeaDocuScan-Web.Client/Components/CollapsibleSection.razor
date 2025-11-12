@@ -1,0 +1,60 @@
+@* Reusable collapsible section component with expand/collapse functionality *@
+
+<div class="collapsible-section">
+    <div class="collapsible-header" @onclick="ToggleCollapsed">
+        <i class="bi @IconClass"></i>
+        <strong>@Title</strong>
+    </div>
+
+    @if (!IsCollapsed)
+    {
+        <div class="collapsible-content">
+            @ChildContent
+        </div>
+    }
+</div>
+
+@code {
+    /// <summary>
+    /// Title displayed in the header
+    /// </summary>
+    [Parameter]
+    public string Title { get; set; } = "Section";
+
+    /// <summary>
+    /// Initial collapsed state (default: false = expanded)
+    /// </summary>
+    [Parameter]
+    public bool InitiallyCollapsed { get; set; } = false;
+
+    /// <summary>
+    /// Content to display when expanded
+    /// </summary>
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    /// <summary>
+    /// Optional callback when collapsed state changes
+    /// </summary>
+    [Parameter]
+    public EventCallback<bool> OnCollapsedChanged { get; set; }
+
+    private bool IsCollapsed { get; set; }
+
+    private string IconClass => IsCollapsed ? "bi-chevron-right" : "bi-chevron-down";
+
+    protected override void OnInitialized()
+    {
+        IsCollapsed = InitiallyCollapsed;
+    }
+
+    private async Task ToggleCollapsed()
+    {
+        IsCollapsed = !IsCollapsed;
+
+        if (OnCollapsedChanged.HasDelegate)
+        {
+            await OnCollapsedChanged.InvokeAsync(IsCollapsed);
+        }
+    }
+}
