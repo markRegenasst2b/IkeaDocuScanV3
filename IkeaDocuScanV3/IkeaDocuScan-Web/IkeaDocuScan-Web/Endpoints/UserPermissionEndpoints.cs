@@ -59,6 +59,21 @@ public static class UserPermissionEndpoints
         .Produces<List<UserPermissionDto>>(200)
         .Produces(403);
 
+        // Get current user's own permissions (accessible to all authenticated users)
+        group.MapGet("/me", async (HttpContext httpContext, IUserPermissionService service) =>
+        {
+            var username = httpContext.User.Identity?.Name;
+            if (string.IsNullOrEmpty(username))
+                return Results.Unauthorized();
+
+            var allPermissions = await service.GetAllAsync(username);
+            var userPermissions = allPermissions.Where(p => p.AccountName == username).ToList();
+            return Results.Ok(userPermissions);
+        })
+        .WithName("GetMyPermissions")
+        .Produces<List<UserPermissionDto>>(200)
+        .Produces(401);
+
         // ========================================
         // WRITE OPERATIONS - SuperUser only
         // ========================================

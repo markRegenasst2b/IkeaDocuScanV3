@@ -91,6 +91,24 @@ public class UserPermissionHttpService : IUserPermissionService
         }
     }
 
+    /// <summary>
+    /// Get current user's own permissions (accessible to all authenticated users)
+    /// </summary>
+    public async Task<List<UserPermissionDto>> GetMyPermissionsAsync()
+    {
+        try
+        {
+            _logger.LogInformation("Fetching current user's permissions from API");
+            var result = await _http.GetFromJsonAsync<List<UserPermissionDto>>("/api/userpermissions/me");
+            return result ?? new List<UserPermissionDto>();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error fetching current user's permissions");
+            throw;
+        }
+    }
+
     public async Task<UserPermissionDto> CreateAsync(CreateUserPermissionDto dto)
     {
         try

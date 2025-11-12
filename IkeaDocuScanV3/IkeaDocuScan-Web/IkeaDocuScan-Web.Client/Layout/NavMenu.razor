@@ -1,7 +1,10 @@
-﻿@using Microsoft.AspNetCore.Components.Authorization
+﻿@using IkeaDocuScan_Web.Client.Services
+@using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.AspNetCore.Components.Web
+@using System.Security.Claims
 @namespace IkeaDocuScan_Web.Client.Layout
 @rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
+@inject UserIdentityHttpService UserIdentityHttpService
 
 <div class="top-row ps-3 navbar navbar-dark">
     <div class="container-fluid">
@@ -25,11 +28,15 @@
             <Authorized>
                 <div class="nav-section-header">DOCUMENT MANAGEMENT</div>
 
-                <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="documents/register">
-                        <span class="bi bi-file-earmark-plus" aria-hidden="true"></span> Register Document
-                    </NavLink>
-                </div>
+@* Register Document - Show for Publisher role OR SuperUser *@
+                @if (canCreateEdit)
+                {
+                    <div class="nav-item px-3">
+                        <NavLink class="nav-link" href="documents/register">
+                            <span class="bi bi-file-earmark-plus" aria-hidden="true"></span> Register Document
+                        </NavLink>
+                    </div>
+                }
 
                 <div class="nav-item px-3">
                     <NavLink class="nav-link" href="documents/search">
@@ -37,17 +44,25 @@
                     </NavLink>
                 </div>
 
-                <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="checkin-scanned">
-                        <span class="bi bi-folder-nav-menu" aria-hidden="true"></span> Check-in Scanned
-                    </NavLink>
-                </div>
+@* Check-in Scanned - Show for Publisher role OR SuperUser *@
+                @if (canCreateEdit)
+                {
+                    <div class="nav-item px-3">
+                        <NavLink class="nav-link" href="checkin-scanned">
+                            <span class="bi bi-folder-nav-menu" aria-hidden="true"></span> Check-in Scanned
+                        </NavLink>
+                    </div>
+                }
 
-                <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="action-reminders">
-                        <span class="bi bi-calendar-check" aria-hidden="true"></span> Action Reminders
-                    </NavLink>
-                </div>
+@* Action Reminders - Show for Publisher role OR SuperUser *@
+                @if (canCreateEdit)
+                {
+                    <div class="nav-item px-3">
+                        <NavLink class="nav-link" href="action-reminders">
+                            <span class="bi bi-calendar-check" aria-hidden="true"></span> Action Reminders
+                        </NavLink>
+                    </div>
+                }
 
                 <div class="nav-section-header">SPECIAL REPORTS</div>
 
@@ -157,3 +172,21 @@
     </nav>
 </div>
 
+@code {
+    private bool canCreateEdit = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var user = await UserIdentityHttpService.GetUserIdentityAsync();
+
+        var claims = user.Claims;
+        // Type = 'http://schemas.microsoft.com/ws/2008/06/identity/claims/role' 'SuperUser'
+        //        'IsSuperUser' 'True'
+        // Check if user has Publisher role OR SuperUser policy (IsSuperUser claim)
+        var isPublisher = claims.Any(c => c.Type == "http://schemas.microsoft.com/ws/2008/06/identity/claims/role" && c.Value == "Publisher");
+        var isSuperUser = claims.Any(c => (c.Type == "http://schemas.microsoft.com/ws/2008/06/identity/claims/role" && c.Value == "SuperUser") 
+                                       || (c.Type == "IsSuperUser" && c.Value == "True"));
+
+        canCreateEdit = isPublisher || isSuperUser;
+    }
+}

@@ -272,15 +272,10 @@
         try
         {
             isLoadingPermissions = true;
-            // Get all permissions and filter for current user
-            var allPermissions = await UserPermissionService.GetAllAsync();
-
-            // If we have the user identity, filter by account name
-            if (userIdentity != null && !string.IsNullOrWhiteSpace(userIdentity.UserName))
+            // Get current user's own permissions using the new /me endpoint
+            if (UserPermissionService is UserPermissionHttpService httpService)
             {
-                userPermissions = allPermissions
-                    .Where(p => p.AccountName == userIdentity.UserName)
-                    .ToList();
+                userPermissions = await httpService.GetMyPermissionsAsync();
             }
             else
             {
