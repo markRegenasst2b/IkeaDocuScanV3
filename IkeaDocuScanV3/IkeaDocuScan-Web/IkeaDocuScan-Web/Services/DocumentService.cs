@@ -79,6 +79,7 @@ public class DocumentService : IDocumentService
             .Include(d => d.DocumentName)
             .Include(d => d.Dt)
             .Include(d => d.CounterParty)
+            .Include(d => d.File)
             .Where(d => d.Id == id);
 
         // Apply permission filter
@@ -737,6 +738,7 @@ public class DocumentService : IDocumentService
             DocumentNameId = entity.DocumentNameId,
             DocumentNameText = entity.DocumentName?.Name,
             FileId = entity.FileId,
+            FileName = entity.File?.FileName,
 
             // Dates
             DateOfContract = entity.DateOfContract,

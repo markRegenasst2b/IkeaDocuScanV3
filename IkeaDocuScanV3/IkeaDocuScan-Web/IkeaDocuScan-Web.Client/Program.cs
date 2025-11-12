@@ -11,10 +11,12 @@ builder.Services.AddAuthorizationCore(options =>
     // Register the same authorization policies as the server
     // Note: Client-side policies are for UI only, server enforces actual security
     options.AddPolicy("HasAccess", policy =>
-        policy.RequireAuthenticatedUser());
+        policy.RequireAuthenticatedUser()
+              .RequireClaim("HasAccess", "True"));
 
     options.AddPolicy("SuperUser", policy =>
-        policy.RequireAuthenticatedUser());
+        policy.RequireAuthenticatedUser()
+              .RequireClaim("IsSuperUser", "True"));
 });
 builder.Services.AddCascadingAuthenticationState();
 builder.Services.AddSingleton<AuthenticationStateProvider, PersistentAuthenticationStateProvider>();
@@ -38,6 +40,12 @@ builder.Services.AddScoped<ICurrencyService, CurrencyHttpService>();
 builder.Services.AddScoped<IActionReminderService, ActionReminderHttpService>();
 builder.Services.AddScoped<IReportService, ReportHttpService>();
 builder.Services.AddScoped<EmailHttpService>();
+builder.Services.AddScoped<UserIdentityHttpService>();
+
+#if DEBUG
+// Test Identity Service (DEVELOPMENT ONLY)
+builder.Services.AddScoped<TestIdentityHttpService>();
+#endif
 
 // Configuration Management Service
 builder.Services.AddScoped<ConfigurationHttpService>();

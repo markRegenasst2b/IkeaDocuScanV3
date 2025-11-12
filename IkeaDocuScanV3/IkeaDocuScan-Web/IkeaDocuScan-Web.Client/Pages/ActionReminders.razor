@@ -198,7 +198,11 @@
                             @foreach (var action in actionReminders)
                             {
                                 <tr class="@GetRowClass(action)">
-                                    <td><strong>@action.BarCode</strong></td>
+                                    <td>
+                                        <a href="/documents/properties/@action.DocumentId" class="text-decoration-none">
+                                            <strong>@action.BarCode</strong>
+                                        </a>
+                                    </td>
                                     <td>@action.DocumentType</td>
                                     <td>@action.DocumentName</td>
                                     <td>@action.DocumentNo</td>
@@ -222,6 +226,23 @@
         </div>
     }
 </div>
+
+<style>
+    /* Barcode link styling */
+    td a {
+        color: #0d6efd;
+        transition: color 0.15s ease-in-out;
+    }
+
+    td a:hover {
+        color: #0a58ca;
+        text-decoration: underline !important;
+    }
+
+    td a strong {
+        font-weight: 600;
+    }
+</style>
 
 @code {
     private enum QuickFilterType

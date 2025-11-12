@@ -7,4 +7,6 @@ public class UserInfo
     public required string UserId { get; set; }
     public string? Name { get; set; }
     public string? Email { get; set; }
+    public bool HasAccess { get; set; }
+    public bool IsSuperUser { get; set; }
 }

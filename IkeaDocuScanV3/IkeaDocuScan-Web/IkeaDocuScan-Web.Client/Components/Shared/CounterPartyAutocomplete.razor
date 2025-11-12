@@ -1,0 +1,542 @@
+@using IkeaDocuScan.Shared.DTOs.CounterParties
+@using IkeaDocuScan.Shared.Interfaces
+@using Microsoft.JSInterop
+@inject ICounterPartyService CounterPartyService
+@inject ILogger<CounterPartyAutocomplete> Logger
+@inject IJSRuntime JSRuntime
+
+<div class="counterparty-autocomplete">
+    <input type="text"
+           class="@InputClass"
+           placeholder="@Placeholder"
+           value="@Value"
+           @oninput="OnInputChanged"
+           @onfocus="OnInputFocus"
+           @onblur="OnInputBlur"
+           @onkeydown="OnInputKeyDown"
+           @ref="inputElement"
+           disabled="@Disabled"
+           maxlength="255"
+           autocomplete="off"
+           role="combobox"
+           aria-autocomplete="list"
+           aria-expanded="@showDropdown"
+           aria-controls="autocomplete-list" />
+
+    @if (showDropdown && !Disabled)
+    {
+        <div class="autocomplete-dropdown" @onmousedown:preventDefault @ref="dropdownElement">
+            @if (isLoading)
+            {
+                <div class="autocomplete-loading">
+                    <span class="spinner-border spinner-border-sm me-2"></span>
+                    Loading counter parties...
+                </div>
+            }
+            else if (string.IsNullOrWhiteSpace(searchTerm))
+            {
+                <div class="autocomplete-hint">
+                    <i class="fa fa-info-circle me-2"></i>
+                    Start typing to search through @totalCounterParties counter parties...
+                </div>
+            }
+            else if (!visibleItems.Any())
+            {
+                <div class="autocomplete-no-results">
+                    <i class="fa fa-search me-2"></i>
+                    No counter parties found matching "@searchTerm"
+                </div>
+            }
+            else
+            {
+                <div class="autocomplete-header">
+                    <small class="text-muted">
+                        Showing @visibleItems.Count of @filteredItems.Count matches
+                        @if (filteredItems.Count > MaxVisibleItems)
+                        {
+                            <span>(refine search to see more)</span>
+                        }
+                    </small>
+                </div>
+                <div class="autocomplete-list" @ref="listElement" id="autocomplete-list" role="listbox">
+                    @for (int i = 0; i < visibleItems.Count; i++)
+                    {
+                        var item = visibleItems[i];
+                        var index = i;
+                        var itemId = $"autocomplete-item-{index}";
+                        <div class="autocomplete-item @(selectedIndex == index ? "selected" : "")"
+                             @onclick="@(() => SelectItem(item))"
+                             @onmouseenter="@(() => OnMouseEnterItem(index))"
+                             data-index="@index"
+                             id="@itemId"
+                             role="option"
+                             aria-selected="@(selectedIndex == index)">
+                            <div class="autocomplete-item-name">
+                                <strong>@HighlightMatch(GetDisplayText(item), searchTerm)</strong>
+                            </div>
+                            <div class="autocomplete-item-details">
+                                <small class="text-muted">
+                                    @if (SearchField == CounterPartySearchField.Name && !string.IsNullOrEmpty(item.CounterPartyNoAlpha))
+                                    {
+                                        <span>Code: @item.CounterPartyNoAlpha • </span>
+                                    }
+                                    @if (SearchField == CounterPartySearchField.Number && !string.IsNullOrEmpty(item.Name))
+                                    {
+                                        <span>Name: @item.Name • </span>
+                                    }
+                                    @item.City, @item.Country
+                                </small>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+    }
+</div>
+
+<style>
+    .counterparty-autocomplete {
+        position: relative;
+        width: 100%;
+    }
+
+    .autocomplete-dropdown {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        z-index: 1050;
+        background: white;
+        border: 1px solid #dee2e6;
+        border-radius: 4px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        margin-top: 2px;
+        max-height: 350px;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .autocomplete-loading,
+    .autocomplete-hint,
+    .autocomplete-no-results {
+        padding: 16px;
+        text-align: center;
+        color: #6c757d;
+    }
+
+    .autocomplete-header {
+        padding: 8px 12px;
+        background: #f8f9fa;
+        border-bottom: 1px solid #dee2e6;
+        flex-shrink: 0;
+    }
+
+    .autocomplete-list {
+        overflow-y: auto;
+        max-height: 300px;
+    }
+
+    .autocomplete-item {
+        padding: 10px 12px;
+        cursor: pointer;
+        border-bottom: 1px solid #f0f0f0;
+        transition: all 0.15s ease;
+    }
+
+        .autocomplete-item:last-child {
+            border-bottom: none;
+        }
+
+        .autocomplete-item:hover {
+            background-color: #f0f8ff;
+        }
+
+        .autocomplete-item.selected {
+            background-color: #0d6efd !important;
+            color: white;
+            border-left: 4px solid #0a58ca;
+            padding-left: 8px;
+            font-weight: 500;
+        }
+
+        .autocomplete-item.selected .text-muted {
+            color: rgba(255, 255, 255, 0.85) !important;
+        }
+
+        .autocomplete-item.selected mark.highlight {
+            background-color: #ffc107;
+            color: #000;
+        }
+
+    .autocomplete-item-name {
+        margin-bottom: 4px;
+    }
+
+    .autocomplete-item-details {
+        line-height: 1.3;
+    }
+
+    /* Search term highlighting */
+    mark.highlight {
+        background-color: yellow;
+        font-weight: bold;
+        padding: 0;
+    }
+</style>
+
+@code {
+    // PERFORMANCE: Maximum number of items to render in dropdown
+    private const int MaxVisibleItems = 50;
+
+    /// <summary>
+    /// Current input value
+    /// </summary>
+    [Parameter]
+    public string? Value { get; set; }
+
+    /// <summary>
+    /// Event callback when value changes
+    /// </summary>
+    [Parameter]
+    public EventCallback<string?> ValueChanged { get; set; }
+
+    /// <summary>
+    /// Event callback when counter party is selected
+    /// </summary>
+    [Parameter]
+    public EventCallback<CounterPartyDto?> OnCounterPartySelected { get; set; }
+
+    /// <summary>
+    /// Whether the input is disabled
+    /// </summary>
+    [Parameter]
+    public bool Disabled { get; set; }
+
+    /// <summary>
+    /// Placeholder text
+    /// </summary>
+    [Parameter]
+    public string Placeholder { get; set; } = "Search counter party...";
+
+    /// <summary>
+    /// CSS class for the input element
+    /// </summary>
+    [Parameter]
+    public string InputClass { get; set; } = "form-control form-control-sm";
+
+    /// <summary>
+    /// Which field to search and display
+    /// </summary>
+    [Parameter]
+    public CounterPartySearchField SearchField { get; set; } = CounterPartySearchField.Name;
+
+    /// <summary>
+    /// Pre-loaded counter parties (optional, for performance)
+    /// </summary>
+    [Parameter]
+    public List<CounterPartyDto>? CounterParties { get; set; }
+
+    // Internal state
+    private List<CounterPartyDto> allCounterParties = new();
+    private List<CounterPartyDto> filteredItems = new();
+    private List<CounterPartyDto> visibleItems = new();
+    private string searchTerm = string.Empty;
+    private bool showDropdown = false;
+    private bool isLoading = false;
+    private int selectedIndex = -1;
+    private int totalCounterParties = 0;
+
+    // Element references for keyboard navigation
+    private ElementReference inputElement;
+    private ElementReference? dropdownElement;
+    private ElementReference? listElement;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadCounterParties();
+    }
+
+    protected override void OnParametersSet()
+    {
+        // Sync search term with external value
+        if (Value != searchTerm && !showDropdown)
+        {
+            searchTerm = Value ?? string.Empty;
+        }
+    }
+
+    private async Task LoadCounterParties()
+    {
+        if (CounterParties != null && CounterParties.Any())
+        {
+            allCounterParties = CounterParties;
+            totalCounterParties = allCounterParties.Count;
+            Logger.LogInformation("✅ PERF: Using {Count} pre-loaded counter parties for autocomplete", totalCounterParties);
+            return;
+        }
+
+        try
+        {
+            isLoading = true;
+            allCounterParties = await CounterPartyService.GetAllAsync();
+            totalCounterParties = allCounterParties.Count;
+            Logger.LogInformation("Loaded {Count} counter parties for autocomplete", totalCounterParties);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading counter parties for autocomplete");
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void OnInputChanged(ChangeEventArgs e)
+    {
+        searchTerm = e.Value?.ToString() ?? string.Empty;
+        ApplyFilter();
+        showDropdown = true;
+        selectedIndex = -1; // Reset selection when typing
+        StateHasChanged();
+    }
+
+    private void OnInputFocus()
+    {
+        showDropdown = true;
+        if (!string.IsNullOrWhiteSpace(searchTerm))
+        {
+            ApplyFilter();
+        }
+    }
+
+    private void OnInputBlur()
+    {
+        // Delay hiding dropdown to allow click events to fire
+        Task.Delay(200).ContinueWith(_ => InvokeAsync(() =>
+        {
+            showDropdown = false;
+            selectedIndex = -1;
+            StateHasChanged();
+        }));
+    }
+
+    private async Task OnInputKeyDown(KeyboardEventArgs e)
+    {
+        // Only log navigation keys to reduce console spam
+        if (e.Key == "ArrowDown" || e.Key == "ArrowUp" || e.Key == "Enter" || e.Key == "Escape")
+        {
+            Logger.LogInformation("🎹 Navigation key: {Key}, Dropdown: {ShowDropdown}, Items: {Count}",
+                e.Key, showDropdown, visibleItems.Count);
+        }
+
+        // If dropdown not visible, show it on arrow down
+        if (!showDropdown && e.Key == "ArrowDown" && !string.IsNullOrWhiteSpace(searchTerm))
+        {
+            showDropdown = true;
+            ApplyFilter();
+            selectedIndex = 0; // Select first item
+            StateHasChanged();
+            Logger.LogInformation("🎹 Dropdown opened with arrow down");
+            return;
+        }
+
+        // Only handle navigation keys if dropdown is visible with items
+        if (!showDropdown || !visibleItems.Any())
+        {
+            return;
+        }
+
+        switch (e.Key)
+        {
+            case "ArrowDown":
+                // Move selection down
+                if (selectedIndex < visibleItems.Count - 1)
+                {
+                    selectedIndex++;
+                    Logger.LogInformation("🎹 Selected index: {Index} / {Total}", selectedIndex + 1, visibleItems.Count);
+                }
+                else
+                {
+                    Logger.LogInformation("🎹 Already at last item");
+                }
+                StateHasChanged();
+                await ScrollToSelectedItem();
+                break;
+
+            case "ArrowUp":
+                // Move selection up
+                if (selectedIndex > 0)
+                {
+                    selectedIndex--;
+                    Logger.LogInformation("🎹 Selected index: {Index} / {Total}", selectedIndex + 1, visibleItems.Count);
+                    StateHasChanged();
+                    await ScrollToSelectedItem();
+                }
+                else if (selectedIndex == 0)
+                {
+                    // Stay at first item (don't go back to input)
+                    Logger.LogInformation("🎹 Already at first item");
+                }
+                break;
+
+            case "Enter":
+                // Select highlighted item if dropdown is visible
+                if (showDropdown && selectedIndex >= 0 && selectedIndex < visibleItems.Count)
+                {
+                    Logger.LogInformation("🎹 Selecting item at index {Index}", selectedIndex);
+                    await SelectItem(visibleItems[selectedIndex]);
+                }
+                break;
+
+            case "Escape":
+                // Close dropdown
+                Logger.LogInformation("🎹 Closing dropdown with Escape");
+                showDropdown = false;
+                selectedIndex = -1;
+                StateHasChanged();
+                break;
+
+            case "Tab":
+                // Close dropdown and let tab proceed naturally
+                Logger.LogInformation("🎹 Closing dropdown with Tab");
+                showDropdown = false;
+                selectedIndex = -1;
+                StateHasChanged();
+                break;
+        }
+    }
+
+    private void OnMouseEnterItem(int index)
+    {
+        selectedIndex = index;
+        StateHasChanged();
+    }
+
+    private async Task ScrollToSelectedItem()
+    {
+        if (selectedIndex >= 0 && selectedIndex < visibleItems.Count)
+        {
+            try
+            {
+                // Scroll the selected item into view
+                var itemId = $"autocomplete-item-{selectedIndex}";
+                await JSRuntime.InvokeVoidAsync("eval",
+                    $"document.getElementById('{itemId}')?.scrollIntoView({{ block: 'nearest', behavior: 'smooth' }})");
+            }
+            catch (Exception ex)
+            {
+                Logger.LogWarning(ex, "Failed to scroll to selected item");
+            }
+        }
+    }
+
+    private void ApplyFilter()
+    {
+        if (string.IsNullOrWhiteSpace(searchTerm))
+        {
+            filteredItems = new();
+            visibleItems = new();
+            selectedIndex = -1;
+            return;
+        }
+
+        var term = searchTerm.ToLower().Trim();
+
+        // Filter based on search field
+        filteredItems = allCounterParties
+            .Where(cp => MatchesSearchCriteria(cp, term))
+            .OrderBy(cp => GetDisplayText(cp))
+            .ToList();
+
+        // PERFORMANCE: Only render first MaxVisibleItems (50) to keep DOM small
+        visibleItems = filteredItems.Take(MaxVisibleItems).ToList();
+
+        // Auto-select first item when results appear
+        if (visibleItems.Any())
+        {
+            selectedIndex = 0;
+        }
+        else
+        {
+            selectedIndex = -1;
+        }
+
+        Logger.LogInformation("🔍 Filtered to {Filtered} counter parties, showing {Visible} in dropdown (first item auto-selected)",
+            filteredItems.Count, visibleItems.Count);
+    }
+
+    private bool MatchesSearchCriteria(CounterPartyDto cp, string term)
+    {
+        return SearchField switch
+        {
+            CounterPartySearchField.Name =>
+                (cp.Name != null && cp.Name.ToLower().Contains(term)) ||
+                (cp.CounterPartyNoAlpha != null && cp.CounterPartyNoAlpha.ToLower().Contains(term)) ||
+                cp.City.ToLower().Contains(term) ||
+                cp.Country.ToLower().Contains(term),
+
+            CounterPartySearchField.Number =>
+                (cp.CounterPartyNoAlpha != null && cp.CounterPartyNoAlpha.ToLower().Contains(term)) ||
+                (cp.Name != null && cp.Name.ToLower().Contains(term)),
+
+            CounterPartySearchField.City =>
+                cp.City.ToLower().Contains(term) ||
+                (cp.Name != null && cp.Name.ToLower().Contains(term)),
+
+            _ => false
+        };
+    }
+
+    private string GetDisplayText(CounterPartyDto cp)
+    {
+        return SearchField switch
+        {
+            CounterPartySearchField.Name => cp.Name ?? string.Empty,
+            CounterPartySearchField.Number => cp.CounterPartyNoAlpha ?? string.Empty,
+            CounterPartySearchField.City => cp.City,
+            _ => cp.Name ?? string.Empty
+        };
+    }
+
+    private async Task SelectItem(CounterPartyDto item)
+    {
+        var displayText = GetDisplayText(item);
+        searchTerm = displayText;
+        showDropdown = false;
+        selectedIndex = -1;
+
+        await ValueChanged.InvokeAsync(displayText);
+        await OnCounterPartySelected.InvokeAsync(item);
+
+        Logger.LogInformation("Counter party selected: {Name} (ID: {Id})", item.Name, item.CounterPartyId);
+    }
+
+    private MarkupString HighlightMatch(string? text, string searchTerm)
+    {
+        if (string.IsNullOrEmpty(text) || string.IsNullOrWhiteSpace(searchTerm))
+            return new MarkupString(text ?? string.Empty);
+
+        // Simple highlighting - wrap matching text in mark with highlight class
+        var pattern = System.Text.RegularExpressions.Regex.Escape(searchTerm);
+        var highlighted = System.Text.RegularExpressions.Regex.Replace(
+            text,
+            pattern,
+            match => $"<mark class=\"highlight\">{match.Value}</mark>",
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+
+        return new MarkupString(highlighted);
+    }
+
+    /// <summary>
+    /// Search field options
+    /// </summary>
+    public enum CounterPartySearchField
+    {
+        Name,
+        Number,
+        City
+    }
+}

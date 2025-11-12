@@ -424,7 +424,13 @@ public class DocumentPropertiesViewModel
         if (FieldConfig.TryGetValue(fieldName, out var visibility)) {
             return visibility;
         }
-        Logger?.LogWarning($"Field visibility for '{fieldName}' not found in configuration. Defaulting to Optional.");
+
+        // Suppress warning if DocumentTypeId is not set yet (common during initial page load)
+        if (DocumentTypeId.HasValue)
+        {
+            Logger?.LogWarning($"Field visibility for '{fieldName}' not found in configuration. Defaulting to Optional.");
+        }
+
         return FieldVisibility.Optional; // Default to Optional if not configured
     }
 

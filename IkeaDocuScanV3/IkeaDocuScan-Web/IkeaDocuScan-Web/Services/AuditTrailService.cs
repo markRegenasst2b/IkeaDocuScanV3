@@ -146,8 +146,9 @@ public class AuditTrailService : IAuditTrailService
     /// <inheritdoc />
     public async Task<List<AuditTrailDto>> GetByUserAsync(string username, int limit = 100)
     {
+        // Support partial, case-insensitive username search (e.g., 'markr' finds 'TALLINN\markr')
         var entries = await _context.AuditTrails
-            .Where(a => a.User == username)
+            .Where(a => EF.Functions.Like(a.User, $"%{username}%"))
             .OrderByDescending(a => a.Timestamp)
             .Take(limit)
             .Select(a => new AuditTrailDto

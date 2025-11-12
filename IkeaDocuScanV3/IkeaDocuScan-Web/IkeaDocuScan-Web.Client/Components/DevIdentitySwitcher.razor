@@ -1,0 +1,285 @@
+@* ⚠️ WARNING: THIS COMPONENT ONLY RENDERS IN DEBUG MODE ⚠️ *@
+@using IkeaDocuScan.Shared.DTOs.Testing
+@using IkeaDocuScan_Web.Client.Services
+@inject TestIdentityHttpService TestIdentityService
+@inject NavigationManager Navigation
+@if (ISDEBUG) {
+
+<div class="card border-danger mt-4" style="background-color: #fff3cd;">
+    <div class="card-header bg-danger text-white">
+        <h5 class="mb-0">
+            ⚠️ DEVELOPER TOOLS - Test Identity Switcher
+        </h5>
+    </div>
+    <div class="card-body">
+        <div class="alert alert-warning mb-3">
+            <strong>⚠️ DEVELOPMENT MODE ACTIVE</strong><br />
+            This panel allows you to test the application with different user identities and permissions.
+            Test identities persist across browser sessions until reset.
+        </div>
+
+        @if (isLoading)
+        {
+            <p><em>Loading test identity profiles...</em></p>
+        }
+        else if (errorMessage != null)
+        {
+            <div class="alert alert-danger">
+                <strong>Error:</strong> @errorMessage
+            </div>
+        }
+        else
+        {
+            <!-- Current Status -->
+            @if (currentStatus?.IsActive == true && currentStatus.CurrentProfile != null)
+            {
+                <div class="alert alert-danger mb-3">
+                    <h6 class="alert-heading">🎭 TEST IDENTITY ACTIVE</h6>
+                    <hr />
+                    <p class="mb-1"><strong>Profile:</strong> @currentStatus.CurrentProfile.DisplayName</p>
+                    <p class="mb-1"><strong>Username:</strong> @currentStatus.CurrentProfile.Username</p>
+                    <p class="mb-1"><strong>SuperUser:</strong> @currentStatus.CurrentProfile.IsSuperUser</p>
+                    <p class="mb-1"><strong>HasAccess:</strong> @currentStatus.CurrentProfile.HasAccess</p>
+                    <p class="mb-0"><strong>AD Groups:</strong> @(currentStatus.CurrentProfile.ADGroups.Any() ? string.Join(", ", currentStatus.CurrentProfile.ADGroups) : "None")</p>
+                </div>
+            }
+            else
+            {
+                <div class="alert alert-success mb-3">
+                    <strong>✅ Using Real Windows Identity</strong><br />
+                    No test identity is currently active.
+                </div>
+            }
+
+            <!-- Profile Selection -->
+            <div class="mb-3">
+                <label class="form-label"><strong>Select Test Identity:</strong></label>
+                <select class="form-select" @bind="selectedProfileId">
+                    <option value="">-- Select a test profile --</option>
+                    @foreach (var profile in availableProfiles.Where(p => p.ProfileId != "reset"))
+                    {
+                        <option value="@profile.ProfileId">@profile.DisplayName</option>
+                    }
+                </select>
+                @if (!string.IsNullOrEmpty(selectedProfileId))
+                {
+                    var profile = availableProfiles.FirstOrDefault(p => p.ProfileId == selectedProfileId);
+                    if (profile != null)
+                    {
+                        <small class="form-text text-muted">@profile.Description</small>
+                    }
+                }
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="d-flex gap-2">
+                <button class="btn btn-warning"
+                        @onclick="ApplyTestIdentity"
+                        disabled="@(string.IsNullOrEmpty(selectedProfileId) || isApplying)">
+                    @if (isApplying)
+                    {
+                        <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                        <span>Applying...</span>
+                    }
+                    else
+                    {
+                        <span>🎭 Apply Test Identity</span>
+                    }
+                </button>
+
+                @if (currentStatus?.IsActive == true)
+                {
+                    <button class="btn btn-success"
+                            @onclick="ResetToRealIdentity"
+                            disabled="@isApplying">
+                        @if (isApplying)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                            <span>Resetting...</span>
+                        }
+                        else
+                        {
+                            <span>🔄 Reset to Real Identity</span>
+                        }
+                    </button>
+                }
+
+                <button class="btn btn-secondary" @onclick="ToggleClaimsView">
+                    @(showClaims ? "Hide" : "Show") Current Claims
+                </button>
+            </div>
+
+            <!-- Claims Display -->
+            @if (showClaims && currentStatus != null)
+            {
+                <div class="mt-3">
+                    <h6>Current Claims (@currentStatus.ActiveClaims.Count):</h6>
+                    <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                        <table class="table table-sm table-bordered">
+                            <thead class="table-light sticky-top">
+                                <tr>
+                                    <th>Claim</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @if (currentStatus.ActiveClaims.Any())
+                                {
+                                    @foreach (var claim in currentStatus.ActiveClaims)
+                                    {
+                                        <tr>
+                                            <td><code>@claim</code></td>
+                                        </tr>
+                                    }
+                                }
+                                else
+                                {
+                                    <tr>
+                                        <td class="text-muted">No claims available (no test identity active)</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            }
+
+            <!-- Usage Instructions -->
+            <div class="mt-3">
+                <button class="btn btn-sm btn-info" type="button" data-bs-toggle="collapse" data-bs-target="#usageInstructions">
+                    📖 Usage Instructions
+                </button>
+                <div class="collapse mt-2" id="usageInstructions">
+                    <div class="card card-body bg-light">
+                        <h6>How to use:</h6>
+                        <ol class="mb-2">
+                            <li><strong>Select a test profile</strong> from the dropdown</li>
+                            <li><strong>Click "Apply Test Identity"</strong> - The page will reload with the new identity</li>
+                            <li><strong>Test your application</strong> with the selected identity and permissions</li>
+                            <li><strong>Click "Reset to Real Identity"</strong> when done testing</li>
+                        </ol>
+                        <h6 class="mt-2">URL-based activation:</h6>
+                        <p class="mb-2">You can also activate a test identity via URL parameter:</p>
+                        <code>/?testUser=superuser</code><br />
+                        <code>/?testUser=reader</code><br />
+                        <code>/?testUser=no_access</code>
+                        <p class="mt-2 mb-0">
+                            <strong>Note:</strong> Test identities persist across sessions until explicitly reset.
+                            Make sure to reset before testing with your real identity!
+                        </p>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+}
+@code {
+    private List<TestIdentityProfile> availableProfiles = new();
+    private TestIdentityStatus? currentStatus;
+    private string selectedProfileId = "";
+    private bool isLoading = true;
+    private bool isApplying = false;
+    private bool showClaims = false;
+    private string? errorMessage;
+
+#if DEBUG
+    private bool ISDEBUG = true;
+#endif
+#if !DEBUG
+    private bool ISDEBUG = false;
+#endif
+
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDataAsync();
+    }
+
+    private async Task LoadDataAsync()
+    {
+#if DEBUG
+        try
+        {
+            isLoading = true;
+            errorMessage = null;
+
+            availableProfiles = await TestIdentityService.GetProfilesAsync();
+            currentStatus = await TestIdentityService.GetStatusAsync();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Failed to load test identity data: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+#endif
+    }
+
+    private async Task ApplyTestIdentity()
+    {
+#if DEBUG
+        if (string.IsNullOrEmpty(selectedProfileId))
+            return;
+
+        try
+        {
+            isApplying = true;
+            var success = await TestIdentityService.ActivateProfileAsync(selectedProfileId);
+
+            if (success)
+            {
+                // Reload the page to apply the new identity
+                Navigation.NavigateTo(Navigation.Uri, forceLoad: true);
+            }
+            else
+            {
+                errorMessage = "Failed to activate test identity";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error activating test identity: {ex.Message}";
+        }
+        finally
+        {
+            isApplying = false;
+        }
+#endif
+    }
+
+    private async Task ResetToRealIdentity()
+    {
+#if DEBUG
+        try
+        {
+            isApplying = true;
+            var success = await TestIdentityService.ResetToRealIdentityAsync();
+
+            if (success)
+            {
+                // Reload the page to apply real identity
+                Navigation.NavigateTo(Navigation.Uri, forceLoad: true);
+            }
+            else
+            {
+                errorMessage = "Failed to reset to real identity";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error resetting identity: {ex.Message}";
+        }
+        finally
+        {
+            isApplying = false;
+        }
+#endif
+    }
+
+    private void ToggleClaimsView()
+    {
+        showClaims = !showClaims;
+    }
+}

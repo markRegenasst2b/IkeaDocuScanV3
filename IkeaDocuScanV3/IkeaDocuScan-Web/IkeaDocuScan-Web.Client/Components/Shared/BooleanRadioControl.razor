@@ -1,0 +1,175 @@
+@* Boolean Radio Control - Two inline radio buttons (True/False) with support for nullable bool *@
+
+<div class="boolean-radio-control">
+    @if (!string.IsNullOrEmpty(Label))
+    {
+        <label class="form-label-radio">@Label</label>
+    }
+    <div class="radio-button-group">
+        <div class="form-check form-check-inline">
+            <input class="form-check-input"
+                   type="radio"
+                   id="@GetRadioId("true")"
+                   name="@GetRadioName()"
+                   checked="@(Value == true)"
+                   disabled="@Disabled"
+                   @onchange="@(() => OnRadioChanged(true))" />
+            <label class="form-check-label" for="@GetRadioId("true")">
+                True
+            </label>
+        </div>
+        <div class="form-check form-check-inline">
+            <input class="form-check-input"
+                   type="radio"
+                   id="@GetRadioId("false")"
+                   name="@GetRadioName()"
+                   checked="@(Value == false)"
+                   disabled="@Disabled"
+                   @onchange="@(() => OnRadioChanged(false))" />
+            <label class="form-check-label" for="@GetRadioId("false")">
+                False
+            </label>
+        </div>
+        @if (ShowClearButton && Value.HasValue && !Disabled)
+        {
+            <button type="button"
+                    class="btn btn-link btn-sm btn-clear"
+                    @onclick="ClearSelection"
+                    title="Clear selection">
+                ✕
+            </button>
+        }
+    </div>
+</div>
+
+<style>
+    .boolean-radio-control {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .form-label-radio {
+        margin-bottom: 0;
+        font-weight: 500;
+        min-width: 120px;
+    }
+
+    .radio-button-group {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .form-check-inline {
+        margin-right: 0;
+    }
+
+    .form-check-input:disabled ~ .form-check-label {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+
+    .btn-clear {
+        padding: 0 4px;
+        line-height: 1;
+        color: #6c757d;
+        text-decoration: none;
+        font-size: 1.1rem;
+    }
+
+        .btn-clear:hover {
+            color: #dc3545;
+        }
+
+    /* Highlight selected state */
+    .form-check-input:checked ~ .form-check-label {
+        font-weight: 600;
+        color: #0d6efd;
+    }
+
+    /* Match compact form control sizing */
+    .form-check-input {
+        cursor: pointer;
+    }
+
+        .form-check-input:disabled {
+            cursor: not-allowed;
+        }
+
+    .form-check-label {
+        cursor: pointer;
+        user-select: none;
+    }
+
+        .form-check-label:has(~ .form-check-input:disabled),
+        .form-check-input:disabled ~ .form-check-label {
+            cursor: not-allowed;
+        }
+</style>
+
+@code {
+    private static int _instanceCounter = 0;
+    private readonly string _instanceId = $"radio-{++_instanceCounter}";
+
+    /// <summary>
+    /// The bound nullable boolean value.
+    /// null = not selected, true = True, false = False
+    /// </summary>
+    [Parameter]
+    public bool? Value { get; set; }
+
+    /// <summary>
+    /// Event callback when value changes
+    /// </summary>
+    [Parameter]
+    public EventCallback<bool?> ValueChanged { get; set; }
+
+    /// <summary>
+    /// Whether the control is disabled
+    /// </summary>
+    [Parameter]
+    public bool Disabled { get; set; } = false;
+
+    /// <summary>
+    /// Label text (optional)
+    /// </summary>
+    [Parameter]
+    public string? Label { get; set; }
+
+    /// <summary>
+    /// Whether to show the clear button when a value is selected
+    /// </summary>
+    [Parameter]
+    public bool ShowClearButton { get; set; } = false;
+
+    private string GetRadioName()
+    {
+        return $"boolean-radio-{_instanceId}";
+    }
+
+    private string GetRadioId(string value)
+    {
+        return $"boolean-radio-{_instanceId}-{value}";
+    }
+
+    private async Task OnRadioChanged(bool newValue)
+    {
+        if (Disabled)
+            return;
+
+        Value = newValue;
+        await ValueChanged.InvokeAsync(newValue);
+        StateHasChanged();
+    }
+
+    private async Task ClearSelection()
+    {
+        if (Disabled)
+            return;
+
+        Value = null;
+        await ValueChanged.InvokeAsync(null);
+        StateHasChanged();
+    }
+}

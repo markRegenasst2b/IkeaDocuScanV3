@@ -22,3 +22,11 @@
 /IkeaDocuScanV3/IkeaDocuScan.ActionReminderService/obj
 /IkeaDocuScanV3/ConfigEncryptionTool/.vs/ConfigEncryptionTool
 /IkeaDocuScanV3/ConfigEncryptionTool/obj
+/IkeaDocuScanV3/ExcelReporting/bin/Release/net9.0
+/IkeaDocuScanV3/IkeaDocuScan.ActionReminderService/bin/Release/net9.0
+/IkeaDocuScanV3/IkeaDocuScan.Infrastructure/bin/Release/net9.0
+/IkeaDocuScanV3/IkeaDocuScan.Shared/bin/Release/net9.0
+/IkeaDocuScanV3/IkeaDocuScanV3.AppHost/bin/Release/net9.0
+/IkeaDocuScanV3/IkeaDocuScanV3.ServiceDefaults/bin/Release/net9.0
+/IkeaDocuScanV3/IkeaDocuScan-Web/IkeaDocuScan-Web/bin/Release/net9.0
+/IkeaDocuScanV3/IkeaDocuScan-Web/IkeaDocuScan-Web.Client/bin/Release/net9.0
