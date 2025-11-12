@@ -7,7 +7,7 @@
 @inject ILogger<PdfViewer> Logger
 @inject IJSRuntime JS
 
-<PageTitle>PDF Viewer - Document @DocumentId</PageTitle>
+<PageTitle>📄 PDF Viewer - Document @DocumentId</PageTitle>
 
 <style>
     body, html {
@@ -235,6 +235,23 @@
         finally
         {
             isLoading = false;
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            // Change favicon to PDF icon with protection against overwriting
+            try
+            {
+                await JS.InvokeVoidAsync("setPdfFavicon");
+                Logger.LogInformation("PDF favicon set for document {DocumentId}", DocumentId);
+            }
+            catch (Exception ex)
+            {
+                Logger.LogWarning(ex, "Failed to set PDF favicon");
+            }
         }
     }
 
