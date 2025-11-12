@@ -991,8 +991,9 @@ public partial class DocumentPropertiesPage : ComponentBase, IDisposable
     {
         if (Model.Id.HasValue)
         {
+            // Open PDF viewer in new window to allow side-by-side viewing
             await JSRuntime.InvokeVoidAsync("window.open",
-                $"/api/documents/{Model.Id}/file", "_blank");
+                $"/pdf-viewer/{Model.Id}", "_blank");
         }
     }
 

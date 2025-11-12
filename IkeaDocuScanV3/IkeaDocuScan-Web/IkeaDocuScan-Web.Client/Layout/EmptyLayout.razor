@@ -1,0 +1,24 @@
+@inherits LayoutComponentBase
+
+@*
+    Empty Layout - No navigation menu, no sidebar, no header
+    Used for pages that need full-screen display (PDF viewer, print views, etc.)
+*@
+
+<div class="empty-layout">
+    @Body
+</div>
+
+<style>
+    .empty-layout {
+        width: 100%;
+        height: 100vh;
+        margin: 0;
+        padding: 0;
+    }
+
+    /* Hide Blazor error UI in full-screen layouts */
+    #blazor-error-ui {
+        z-index: 10000;
+    }
+</style>
