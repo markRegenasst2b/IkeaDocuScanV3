@@ -44,6 +44,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Documentation", "Documentat
 	ProjectSection(SolutionItems) = preProject
 		Documentation\DEPLOYMENT_CHECKLIST.md = Documentation\DEPLOYMENT_CHECKLIST.md
 		Documentation\DEPLOYMENT_PLAN.md = Documentation\DEPLOYMENT_PLAN.md
+		Documentation\USER_QUICK_GUIDE.md = Documentation\USER_QUICK_GUIDE.md
 	EndProjectSection
 EndProject
 Global
