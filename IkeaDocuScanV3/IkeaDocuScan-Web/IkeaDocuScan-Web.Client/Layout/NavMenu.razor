@@ -87,51 +87,62 @@
                 </div>
 
  *@
-                <div class="nav-section-header">ADMINISTRATION</div>
+                @* ADMINISTRATION - Show section header only if user has access to any admin item *@
+                <AuthorizeView Policy="SuperUser">
+                    <Authorized Context="superUserContext">
+                        <div class="nav-section-header">ADMINISTRATION</div>
 
-                <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="edit-userpermissions">
-                        <span class="bi bi-people-nav-menu" aria-hidden="true"></span> User Permissions
-                    </NavLink>
-                </div>
-@* *@                
-                <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="currency-administration">
-                        <span class="bi bi-currency-dollar" aria-hidden="true"></span> Currency
-                    </NavLink>
-                </div>
+                        <div class="nav-item px-3">
+                            <NavLink class="nav-link" href="edit-userpermissions">
+                                <span class="bi bi-people-nav-menu" aria-hidden="true"></span> User Permissions
+                            </NavLink>
+                        </div>
 
-                <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="country-administration">
-                        <span class="bi bi-globe" aria-hidden="true"></span> Country
-                    </NavLink>
-                </div>
+                        <div class="nav-item px-3">
+                            <NavLink class="nav-link" href="currency-administration">
+                                <span class="bi bi-currency-dollar" aria-hidden="true"></span> Currency
+                            </NavLink>
+                        </div>
 
-                <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="documenttype-administration">
-                        <span class="bi bi-file-earmark-text" aria-hidden="true"></span> Document Type
-                    </NavLink>
-                </div>
+                        <div class="nav-item px-3">
+                            <NavLink class="nav-link" href="country-administration">
+                                <span class="bi bi-globe" aria-hidden="true"></span> Country
+                            </NavLink>
+                        </div>
 
-                <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="counterparty-administration">
-                        <span class="bi bi-building" aria-hidden="true"></span> Counter Party
-                    </NavLink>
-                </div>
-                
-                <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="manage-document-names">
-                        <span class="bi bi-building" aria-hidden="true"></span> Document Names
-                    </NavLink>
-                </div>
- @* *@                
-                <div class="nav-section-header">SETTINGS</div>
+                        <div class="nav-item px-3">
+                            <NavLink class="nav-link" href="documenttype-administration">
+                                <span class="bi bi-file-earmark-text" aria-hidden="true"></span> Document Type
+                            </NavLink>
+                        </div>
 
-                <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="configuration-management">
-                        <span class="bi bi-search-nav-menu" aria-hidden="true"></span> Configurations
-                    </NavLink>
-                </div>
+                        <div class="nav-item px-3">
+                            <NavLink class="nav-link" href="counterparty-administration">
+                                <span class="bi bi-building" aria-hidden="true"></span> Counter Party
+                            </NavLink>
+                        </div>
+
+                        <div class="nav-item px-3">
+                            <NavLink class="nav-link" href="manage-document-names">
+                                <span class="bi bi-building" aria-hidden="true"></span> Document Names
+                            </NavLink>
+                        </div>
+
+                        <div class="nav-section-header">SETTINGS</div>
+
+                        <div class="nav-item px-3">
+                            <NavLink class="nav-link" href="configuration-management">
+                                <span class="bi bi-gear" aria-hidden="true"></span> Configuration
+                            </NavLink>
+                        </div>
+
+                        <div class="nav-item px-3">
+                            <NavLink class="nav-link" href="audit-trail">
+                                <span class="bi bi-shield-check" aria-hidden="true"></span> Audit Trail
+                            </NavLink>
+                        </div>
+                    </Authorized>
+                </AuthorizeView>
 
              </Authorized>
         </AuthorizeView>

@@ -4,6 +4,71 @@
 
 ---
 
+## 🔐 USER ROLES & ACCESS MATRIX
+
+### Role-Based Navigation Menu Access
+
+| Navigation Menu Item | Reader | Publisher | SuperUser |
+|---------------------|---------|-----------|-----------|
+| **DOCUMENT MANAGEMENT** | | | |
+| Register Document | ✅ View | ✅ Create/Edit | ✅ All |
+| Search Documents | ✅ View | ✅ View/Email | ✅ All/Delete |
+| Check-in Scanned | ✅ View | ✅ Check-in | ✅ All/Delete |
+| Action Reminders | ✅ View/Export | ✅ View/Export | ✅ All |
+| **SPECIAL REPORTS** | | | |
+| Barcode Gaps | ✅ View/Export | ✅ View/Export | ✅ All |
+| Duplicate Documents | ✅ View/Export | ✅ View/Export | ✅ All |
+| Unlinked Registrations | ✅ View/Export | ✅ View/Export | ✅ All |
+| Scan Copies | ✅ View/Export | ✅ View/Export | ✅ All |
+| Suppliers | ✅ View/Export | ✅ View/Export | ✅ All |
+| **ADMINISTRATION** | | | |
+| User Permissions | ❌ No Access | ❌ No Access | ✅ Full Access |
+| Currency | ❌ No Access | ❌ No Access | ✅ Create/Edit/Delete |
+| Country | ❌ No Access | ❌ No Access | ✅ Create/Edit/Delete |
+| Document Type | ❌ No Access | ❌ No Access | ✅ Create/Edit/Delete |
+| Counter Party | ❌ No Access | ❌ No Access | ✅ Create/Edit/Delete |
+| Document Names |❌ No Access | ❌ No Access | ✅ Create/Edit/Delete |
+| **SETTINGS** | | | |
+| Configuration | ❌ No Access | ❌ No Access | ✅ Full Access |
+| Audit Trail | ❌ No Access | ❌ No Access | ✅ Full Access |
+
+### Role Capabilities Summary
+
+**Reader (View-Only):**
+- Search and view documents (filtered by permissions)
+- View all reference data
+- Export reports to Excel
+- View action reminders
+- View audit trail
+- **Cannot:** Create, edit, delete, or send emails
+
+**Publisher (Content Manager):**
+- All Reader capabilities
+- Create and edit documents
+- Check-in scanned files
+- Send emails with document attachments
+- **Cannot:** Delete documents, manage users, modify reference data
+
+**SuperUser (Administrator):**
+- All Reader and Publisher capabilities
+- Delete documents and scanned files
+- Manage all reference data (currencies, countries, document types, counter parties)
+- Manage user permissions
+- Configure system settings
+- View all data without permission filters
+
+### Permission Filtering
+
+**Document Access:**
+- Reader & Publisher: See only documents matching their assigned permissions (Document Type, Country, Counter Party)
+- SuperUser: See all documents regardless of permissions
+
+**Reference Data:**
+- All roles can view currencies, countries, document types, counter parties
+- Only SuperUser can create, edit, or delete reference data
+
+---
+
 ## 📄 DOCUMENT MANAGEMENT
 
 ### Document Properties Page (`/documents/register`, `/documents/edit/{barcode}`, `/documents/checkin/{filename}`)
