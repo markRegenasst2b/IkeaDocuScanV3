@@ -1,6 +1,9 @@
     remove issuperuser from gui, keep it hidden.
 
 
+Question
+    Is document registering and check-in constraint to the users permissions? can a user register a document type she/he is not permitted to?
+    
 Propositions
     in search restrict the document types to the permissions of the user (show all if the user has no permissions or a permission with null document type)
     

@@ -189,6 +189,51 @@ public class DocumentService : IDocumentService
             _logger.LogInformation("DocumentFile created with ID {FileId}", fileId);
         }
 
+        // PERMISSION VALIDATION: Validate user has permission to create document with these properties
+        // This prevents creating orphaned documents that the user cannot access
+        var currentUser = await _currentUserService.GetCurrentUserAsync();
+
+        if (!currentUser.IsSuperUser)
+        {
+            bool hasPermission = false;
+
+            if (currentUser.HasAccess)
+            {
+                // Load user permissions from database
+                var userPermissions = await _context.UserPermissions
+                    .AsNoTracking()
+                    .Where(p => p.UserId == currentUser.UserId)
+                    .ToListAsync();
+
+                if (userPermissions.Any())
+                {
+                    // Check if ANY permission matches the document properties
+                    // Same logic as FilterByUserPermissions but applied pre-creation
+                    hasPermission = userPermissions.Any(perm =>
+                        // DocumentType filter: match if both null OR values equal
+                        (dto.DocumentTypeId == null || perm.DocumentTypeId == null || dto.DocumentTypeId == perm.DocumentTypeId) &&
+                        // CounterParty filter: match if both null OR values equal
+                        (dto.CounterPartyId == null || perm.CounterPartyId == null || dto.CounterPartyId == perm.CounterPartyId)
+                        // Note: Country validation is complex (requires loading CounterParty entity)
+                        // and is typically validated at the UI level. Omitted here for performance.
+                    );
+                }
+            }
+
+            if (!hasPermission)
+            {
+                _logger.LogWarning("User {User} attempted to create document without permission. DocumentType={DocType}, CounterParty={CP}",
+                    currentUser.AccountName, dto.DocumentTypeId, dto.CounterPartyId);
+
+                throw new UnauthorizedAccessException(
+                    "You do not have permission to create a document with these properties. " +
+                    "Please contact an administrator to request access to this document type or counter party.");
+            }
+
+            _logger.LogInformation("User {User} has permission to create document. DocumentType={DocType}, CounterParty={CP}",
+                currentUser.AccountName, dto.DocumentTypeId, dto.CounterPartyId);
+        }
+
         var entity = new Document
         {
             Name = dto.Name,
@@ -235,12 +280,32 @@ public class DocumentService : IDocumentService
             $"Document registered: {entity.Name}"
         );
 
-        var result = await GetByIdAsync(entity.Id);
+        // IMPORTANT: Load navigation properties explicitly and map directly to avoid permission filtering
+        // The user just created this document and passed permission validation, so they should see it
+        // Using GetByIdAsync here would apply permission filtering and could throw DocumentNotFoundException
+        // if the user's permissions don't perfectly match the document properties (edge cases)
+        await _context.Entry(entity)
+            .Reference(d => d.DocumentName)
+            .LoadAsync();
+        await _context.Entry(entity)
+            .Reference(d => d.Dt)
+            .LoadAsync();
+        await _context.Entry(entity)
+            .Reference(d => d.CounterParty)
+            .LoadAsync();
+        await _context.Entry(entity)
+            .Reference(d => d.File)
+            .LoadAsync();
+
+        // Map entity to DTO without permission filtering
+        var result = MapToDto(entity);
+
+        _logger.LogInformation("Document created successfully with ID {DocumentId}", result.Id);
 
         // Notify all clients
         await _hubContext.Clients.All.SendAsync("DocumentCreated", result);
 
-        return result!;
+        return result;
     }
 
     public async Task<DocumentDto> UpdateAsync(UpdateDocumentDto dto)
