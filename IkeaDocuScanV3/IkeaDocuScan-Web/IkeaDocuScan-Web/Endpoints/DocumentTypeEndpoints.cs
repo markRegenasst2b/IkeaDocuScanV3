@@ -12,6 +12,10 @@ public static class DocumentTypeEndpoints
             .RequireAuthorization("HasAccess")
             .WithTags("DocumentTypes");
 
+        // ========================================
+        // READ OPERATIONS - All authenticated users with HasAccess
+        // ========================================
+
         group.MapGet("/", async (IDocumentTypeService service) =>
         {
             var documentTypes = await service.GetAllAsync();
@@ -40,6 +44,10 @@ public static class DocumentTypeEndpoints
         .Produces<DocumentTypeDto>(200)
         .Produces(404);
 
+        // ========================================
+        // WRITE OPERATIONS - SuperUser only (system configuration)
+        // ========================================
+
         group.MapPost("/", async (CreateDocumentTypeDto dto, IDocumentTypeService service) =>
         {
             try
@@ -53,8 +61,10 @@ public static class DocumentTypeEndpoints
             }
         })
         .WithName("CreateDocumentType")
+        .RequireAuthorization(policy => policy.RequireRole("SuperUser"))
         .Produces<DocumentTypeDto>(201)
-        .Produces(400);
+        .Produces(400)
+        .Produces(403);
 
         group.MapPut("/{id}", async (int id, UpdateDocumentTypeDto dto, IDocumentTypeService service) =>
         {
@@ -69,8 +79,10 @@ public static class DocumentTypeEndpoints
             }
         })
         .WithName("UpdateDocumentType")
+        .RequireAuthorization(policy => policy.RequireRole("SuperUser"))
         .Produces<DocumentTypeDto>(200)
-        .Produces(400);
+        .Produces(400)
+        .Produces(403);
 
         group.MapDelete("/{id}", async (int id, IDocumentTypeService service) =>
         {
@@ -85,8 +97,10 @@ public static class DocumentTypeEndpoints
             }
         })
         .WithName("DeleteDocumentType")
+        .RequireAuthorization(policy => policy.RequireRole("SuperUser"))
         .Produces(204)
-        .Produces(400);
+        .Produces(400)
+        .Produces(403);
 
         group.MapGet("/{id}/usage", async (int id, IDocumentTypeService service) =>
         {

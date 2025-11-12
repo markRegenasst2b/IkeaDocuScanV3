@@ -12,6 +12,10 @@ public static class CounterPartyEndpoints
             .RequireAuthorization("HasAccess")
             .WithTags("CounterParties");
 
+        // ========================================
+        // READ OPERATIONS - All authenticated users with HasAccess
+        // ========================================
+
         group.MapGet("/", async (ICounterPartyService service) =>
         {
             var counterParties = await service.GetAllAsync();
@@ -40,6 +44,10 @@ public static class CounterPartyEndpoints
         .Produces<CounterPartyDto>(200)
         .Produces(404);
 
+        // ========================================
+        // WRITE OPERATIONS - Require Publisher or SuperUser role
+        // ========================================
+
         group.MapPost("/", async (CreateCounterPartyDto dto, ICounterPartyService service) =>
         {
             try
@@ -53,8 +61,10 @@ public static class CounterPartyEndpoints
             }
         })
         .WithName("CreateCounterParty")
+        .RequireAuthorization(policy => policy.RequireRole("Publisher", "SuperUser"))
         .Produces<CounterPartyDto>(201)
-        .Produces(400);
+        .Produces(400)
+        .Produces(403);
 
         group.MapPut("/{id}", async (int id, UpdateCounterPartyDto dto, ICounterPartyService service) =>
         {
@@ -69,8 +79,10 @@ public static class CounterPartyEndpoints
             }
         })
         .WithName("UpdateCounterParty")
+        .RequireAuthorization(policy => policy.RequireRole("Publisher", "SuperUser"))
         .Produces<CounterPartyDto>(200)
-        .Produces(400);
+        .Produces(400)
+        .Produces(403);
 
         group.MapDelete("/{id}", async (int id, ICounterPartyService service) =>
         {
@@ -85,8 +97,10 @@ public static class CounterPartyEndpoints
             }
         })
         .WithName("DeleteCounterParty")
+        .RequireAuthorization(policy => policy.RequireRole("SuperUser"))
         .Produces(204)
-        .Produces(400);
+        .Produces(400)
+        .Produces(403);
 
         group.MapGet("/{id}/usage", async (int id, ICounterPartyService service) =>
         {

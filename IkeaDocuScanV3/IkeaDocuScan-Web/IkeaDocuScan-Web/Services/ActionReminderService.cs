@@ -35,6 +35,7 @@ public class ActionReminderService : IActionReminderService
                 .Where(d => d.ActionDate != null && d.ActionDate >= d.ReceivingDate)
                 .Select(d => new
                 {
+                    DocumentId = d.Id,
                     BarCode = d.BarCode.ToString(),
                     DocumentType = d.Dt != null ? d.Dt.DtName : "",
                     DocumentName = d.DocumentName != null ? d.DocumentName.Name : "",
@@ -115,6 +116,7 @@ public class ActionReminderService : IActionReminderService
             // Project to DTO
             var results = await query.Select(d => new ActionReminderDto
             {
+                DocumentId = d.DocumentId,
                 BarCode = d.BarCode,
                 DocumentType = d.DocumentType,
                 DocumentName = d.DocumentName,

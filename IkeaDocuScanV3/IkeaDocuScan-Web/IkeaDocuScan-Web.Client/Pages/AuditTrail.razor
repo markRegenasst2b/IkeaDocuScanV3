@@ -1,0 +1,446 @@
+@page "/audit-trail"
+@rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
+@attribute [Authorize(Policy = "SuperUser")]
+@using IkeaDocuScan.Shared.Interfaces
+@using IkeaDocuScan.Shared.Enums
+@inject HttpClient Http
+@inject ILogger<AuditTrail> Logger
+@inject IJSRuntime JSRuntime
+
+<PageTitle>Audit Trail - IkeaDocuScan</PageTitle>
+
+<div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <h1 class="mb-0">
+                <i class="bi bi-shield-check text-primary"></i> Audit Trail
+            </h1>
+            <p class="text-muted mb-0">View system audit log and activity history</p>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <strong><i class="bi bi-exclamation-triangle"></i> Error:</strong> @errorMessage
+            <button type="button" class="btn-close" @onclick="() => errorMessage = null"></button>
+        </div>
+    }
+
+    @if (!string.IsNullOrEmpty(successMessage))
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <strong><i class="bi bi-check-circle"></i> Success:</strong> @successMessage
+            <button type="button" class="btn-close" @onclick="() => successMessage = null"></button>
+        </div>
+    }
+
+    <!-- Filter Section -->
+    <div class="card mb-3">
+        <div class="card-header">
+            <button class="btn btn-link text-decoration-none w-100 text-start" type="button" @onclick="ToggleFilters">
+                <i class="bi @(showFilters ? "bi-chevron-up" : "bi-chevron-down")"></i>
+                <strong>Filters</strong>
+            </button>
+        </div>
+        @if (showFilters)
+        {
+            <div class="card-body">
+                <div class="row g-3">
+                    <!-- Barcode Filter -->
+                    <div class="col-md-3">
+                        <label class="form-label">Barcode</label>
+                        <input type="number" class="form-control" placeholder="Enter barcode..." @bind="barcodeFilter" />
+                        <small class="text-muted">Filter by document barcode</small>
+                    </div>
+
+                    <!-- User Filter -->
+                    <div class="col-md-3">
+                        <label class="form-label">User</label>
+                        <input type="text" class="form-control" placeholder="Enter username..." @bind="userFilter" />
+                        <small class="text-muted">Enter part of the username</small>
+                    </div>
+
+                    <!-- Action Filter -->
+                    <div class="col-md-3">
+                        <label class="form-label">Action</label>
+                        <select class="form-select" @bind="actionFilter">
+                            <option value="">-- All Actions --</option>
+                            @foreach (var action in Enum.GetValues<AuditAction>())
+                            {
+                                <option value="@action">@action</option>
+                            }
+                        </select>
+                        <small class="text-muted">Filter by action type</small>
+                    </div>
+
+                    <!-- Limit -->
+                    <div class="col-md-3">
+                        <label class="form-label">Result Limit</label>
+                        <select class="form-select" @bind="limitFilter">
+                            <option value="50">50</option>
+                            <option value="100">100</option>
+                            <option value="250">250</option>
+                            <option value="500">500</option>
+                            <option value="1000">1000</option>
+                        </select>
+                        <small class="text-muted">Maximum results to show</small>
+                    </div>
+
+                    <!-- Date From -->
+                    <div class="col-md-6">
+                        <label class="form-label">From Date/Time</label>
+                        <input type="datetime-local" class="form-control" @bind="dateFromFilter" />
+                        <small class="text-muted">Start of date range</small>
+                    </div>
+
+                    <!-- Date To -->
+                    <div class="col-md-6">
+                        <label class="form-label">To Date/Time</label>
+                        <input type="datetime-local" class="form-control" @bind="dateToFilter" />
+                        <small class="text-muted">End of date range</small>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="col-12">
+                        <button class="btn btn-primary" @onclick="SearchAsync" disabled="@isLoading">
+                            <i class="bi bi-search"></i> Search
+                        </button>
+                        <button class="btn btn-secondary ms-2" @onclick="ClearFiltersAsync" disabled="@isLoading">
+                            <i class="bi bi-x-circle"></i> Clear Filters
+                        </button>
+                        <button class="btn btn-outline-secondary ms-2" @onclick="LoadRecentAsync" disabled="@isLoading">
+                            <i class="bi bi-arrow-clockwise"></i> Load Recent (Last 100)
+                        </button>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+
+    @if (isLoading)
+    {
+        <div class="text-center p-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-2">Loading audit trail...</p>
+        </div>
+    }
+    else if (auditEntries == null || !auditEntries.Any())
+    {
+        <div class="alert alert-info" role="alert">
+            <i class="bi bi-info-circle"></i> No audit entries found.
+            @if (HasActiveFilters())
+            {
+                <text>Try adjusting your filters or click "Load Recent" to see the latest entries.</text>
+            }
+            else
+            {
+                <text>Click "Load Recent" to see the latest audit entries.</text>
+            }
+        </div>
+    }
+    else
+    {
+        <!-- Results Summary -->
+        <div class="card mb-3">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <strong>Total Entries:</strong> <span class="badge bg-primary">@auditEntries.Count</span>
+                        <span class="text-muted ms-3">Last updated: @lastUpdated.ToString("HH:mm:ss")</span>
+                    </div>
+                    <div>
+                        @if (HasActiveFilters())
+                        {
+                            <span class="badge bg-info me-2">
+                                <i class="bi bi-funnel"></i> Filters Active
+                            </span>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Data Grid -->
+        <div class="card">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Timestamp</th>
+                                <th>User</th>
+                                <th>Action</th>
+                                <th>Barcode</th>
+                                <th>Details</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var entry in auditEntries)
+                            {
+                                <tr>
+                                    <td>
+                                        <small>
+                                            @entry.Timestamp.ToString("yyyy-MM-dd")<br/>
+                                            <strong>@entry.Timestamp.ToString("HH:mm:ss")</strong>
+                                        </small>
+                                    </td>
+                                    <td>
+                                        <i class="bi bi-person"></i> @entry.User
+                                    </td>
+                                    <td>
+                                        <span class="badge @GetActionBadgeClass(entry.Action)">
+                                            @entry.Action
+                                        </span>
+                                    </td>
+                                    <td>
+                                        @if (!string.IsNullOrEmpty(entry.BarCode))
+                                        {
+                                            <strong>@entry.BarCode</strong>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">-</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        @if (!string.IsNullOrEmpty(entry.Details))
+                                        {
+                                            <small>@entry.Details</small>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">-</span>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    // Filter state
+    private int? barcodeFilter;
+    private string? userFilter;
+    private string? actionFilter;
+    private DateTime? dateFromFilter;
+    private DateTime? dateToFilter;
+    private int limitFilter = 100;
+
+    // UI state
+    private bool showFilters = true;
+    private bool isLoading = false;
+    private string? errorMessage;
+    private string? successMessage;
+
+    // Data
+    private List<AuditTrailDto>? auditEntries;
+    private DateTime lastUpdated = DateTime.Now;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Load recent entries by default
+        await LoadRecentAsync();
+    }
+
+    private async Task LoadRecentAsync()
+    {
+        try
+        {
+            isLoading = true;
+            errorMessage = null;
+            successMessage = null;
+            StateHasChanged();
+
+            // Cap the limit at 1000 for recent entries
+            var effectiveLimit = Math.Min(limitFilter, 1000);
+
+            Logger.LogInformation("Loading recent audit entries (limit: {Limit})", effectiveLimit);
+
+            var response = await Http.GetAsync($"/api/audittrail/recent?limit={effectiveLimit}");
+
+            if (response.IsSuccessStatusCode)
+            {
+                auditEntries = await response.Content.ReadFromJsonAsync<List<AuditTrailDto>>();
+                lastUpdated = DateTime.Now;
+                Logger.LogInformation("Loaded {Count} recent audit entries", auditEntries?.Count ?? 0);
+
+                // Apply client-side action filter if specified
+                if (!string.IsNullOrWhiteSpace(actionFilter) && auditEntries != null)
+                {
+                    var countBeforeFilter = auditEntries.Count;
+                    auditEntries = auditEntries.Where(e => e.Action == actionFilter).ToList();
+                    Logger.LogInformation("Client-side action filter applied: {Before} -> {After} entries", countBeforeFilter, auditEntries.Count);
+                }
+
+                // Warn if we hit the limit - there might be more records
+                if (auditEntries?.Count == 1000)
+                {
+                    successMessage = "Showing maximum 1000 records. There may be more records available. Please use filters (barcode, user, or date range) to narrow down the results.";
+                }
+            }
+            else
+            {
+                errorMessage = $"Failed to load audit entries: {response.ReasonPhrase}";
+                Logger.LogError("Failed to load recent audit entries: {StatusCode}", response.StatusCode);
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading recent audit entries");
+            errorMessage = $"Error loading audit entries: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task SearchAsync()
+    {
+        try
+        {
+            isLoading = true;
+            errorMessage = null;
+            StateHasChanged();
+
+            Logger.LogInformation("Searching audit trail with filters: Barcode={Barcode}, User={User}, Action={Action}, DateFrom={DateFrom}, DateTo={DateTo}",
+                barcodeFilter, userFilter, actionFilter, dateFromFilter, dateToFilter);
+
+            // Determine which API endpoint to use based on filters
+            string? url = null;
+
+            if (barcodeFilter.HasValue)
+            {
+                // Search by barcode
+                url = $"/api/audittrail/barcode/{barcodeFilter}?limit={limitFilter}";
+            }
+            else if (!string.IsNullOrWhiteSpace(userFilter))
+            {
+                // Search by user
+                url = $"/api/audittrail/user/{Uri.EscapeDataString(userFilter)}?limit={limitFilter}";
+            }
+            else if (dateFromFilter.HasValue || dateToFilter.HasValue)
+            {
+                // Search by date range (allow open-ended ranges)
+                var queryParams = new List<string>();
+
+                // If only "from" date is provided, use it as start and use far future as end
+                // If only "to" date is provided, use far past as start and it as end
+                // If both provided, use both
+                var startDate = dateFromFilter ?? DateTime.MinValue;
+                var endDate = dateToFilter ?? DateTime.MaxValue;
+
+                queryParams.Add($"startDate={Uri.EscapeDataString(startDate.ToString("o"))}");
+                queryParams.Add($"endDate={Uri.EscapeDataString(endDate.ToString("o"))}");
+
+                if (!string.IsNullOrWhiteSpace(actionFilter))
+                    queryParams.Add($"action={Uri.EscapeDataString(actionFilter)}");
+
+                url = $"/api/audittrail/daterange?{string.Join("&", queryParams)}";
+            }
+            else
+            {
+                // No specific filters, load recent with max limit of 1000
+                await LoadRecentAsync();
+                return;
+            }
+
+            var response = await Http.GetAsync(url);
+
+            if (response.IsSuccessStatusCode)
+            {
+                auditEntries = await response.Content.ReadFromJsonAsync<List<AuditTrailDto>>();
+                lastUpdated = DateTime.Now;
+                Logger.LogInformation("Search returned {Count} audit entries", auditEntries?.Count ?? 0);
+
+                // Apply client-side action filter if action is specified but date range is used
+                if (!string.IsNullOrWhiteSpace(actionFilter) && auditEntries != null)
+                {
+                    var countBeforeFilter = auditEntries.Count;
+                    auditEntries = auditEntries.Where(e => e.Action == actionFilter).ToList();
+
+                    if (countBeforeFilter != auditEntries.Count)
+                    {
+                        Logger.LogInformation("Client-side action filter applied: {Before} -> {After} entries", countBeforeFilter, auditEntries.Count);
+                    }
+                }
+
+                if (auditEntries == null || !auditEntries.Any())
+                {
+                    successMessage = "Search completed successfully, but no matching entries were found.";
+                }
+            }
+            else
+            {
+                errorMessage = $"Failed to search audit entries: {response.ReasonPhrase}";
+                Logger.LogError("Failed to search audit entries: {StatusCode}", response.StatusCode);
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error searching audit trail");
+            errorMessage = $"Error searching audit entries: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task ClearFiltersAsync()
+    {
+        barcodeFilter = null;
+        userFilter = null;
+        actionFilter = null;
+        dateFromFilter = null;
+        dateToFilter = null;
+        limitFilter = 100;
+
+        successMessage = "Filters cleared. Click 'Load Recent' to refresh.";
+        auditEntries = null;
+
+        StateHasChanged();
+        await Task.CompletedTask;
+    }
+
+    private void ToggleFilters()
+    {
+        showFilters = !showFilters;
+    }
+
+    private bool HasActiveFilters()
+    {
+        return barcodeFilter.HasValue ||
+               !string.IsNullOrWhiteSpace(userFilter) ||
+               !string.IsNullOrWhiteSpace(actionFilter) ||
+               dateFromFilter.HasValue ||
+               dateToFilter.HasValue;
+    }
+
+    private string GetActionBadgeClass(string action)
+    {
+        return action switch
+        {
+            "Register" => "bg-success",
+            "Edit" => "bg-info",
+            "Delete" => "bg-danger",
+            "CheckIn" => "bg-primary",
+            "SendLink" => "bg-warning text-dark",
+            "SendAttachment" => "bg-warning text-dark",
+            "SendLinks" => "bg-warning text-dark",
+            "SendAttachments" => "bg-warning text-dark",
+            "ExportExcel" => "bg-secondary",
+            _ => "bg-light text-dark"
+        };
+    }
+}

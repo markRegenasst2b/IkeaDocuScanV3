@@ -8,6 +8,11 @@ namespace IkeaDocuScan.Shared.DTOs.ActionReminders;
 /// </summary>
 public class ActionReminderDto : ExportableBase
 {
+    /// <summary>
+    /// Document ID (not exported to Excel, used for navigation)
+    /// </summary>
+    public int DocumentId { get; set; }
+
     [ExcelExport("Barcode", ExcelDataType.String, Order = 1)]
     public string BarCode { get; set; } = string.Empty;
 

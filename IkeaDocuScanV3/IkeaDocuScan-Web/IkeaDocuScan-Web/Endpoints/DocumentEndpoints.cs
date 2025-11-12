@@ -8,8 +8,12 @@ public static class DocumentEndpoints
     public static void MapDocumentEndpoints(this IEndpointRouteBuilder routes)
     {
         var group = routes.MapGroup("/api/documents")
-            .RequireAuthorization()
+            .RequireAuthorization("HasAccess")  // Base policy - user must have access to system
             .WithTags("Documents");
+
+        // ========================================
+        // READ OPERATIONS - All authenticated users with HasAccess policy
+        // ========================================
 
         group.MapGet("/", async (IDocumentService service) =>
         {
@@ -40,14 +44,20 @@ public static class DocumentEndpoints
         .Produces<DocumentDto>(200)
         .Produces(404);
 
+        // ========================================
+        // WRITE OPERATIONS - Require Publisher or SuperUser role
+        // ========================================
+
         group.MapPost("/", async (CreateDocumentDto dto, IDocumentService service) =>
         {
             var created = await service.CreateAsync(dto);
             return Results.Created($"/api/documents/{created.Id}", created);
         })
         .WithName("CreateDocument")
+        .RequireAuthorization(policy => policy.RequireRole("Publisher", "SuperUser"))
         .Produces<DocumentDto>(201)
-        .Produces(400);
+        .Produces(400)
+        .Produces(403);
 
         group.MapPut("/{id}", async (int id, UpdateDocumentDto dto, IDocumentService service) =>
         {
@@ -58,9 +68,15 @@ public static class DocumentEndpoints
             return Results.Ok(updated);
         })
         .WithName("UpdateDocument")
+        .RequireAuthorization(policy => policy.RequireRole("Publisher", "SuperUser"))
         .Produces<DocumentDto>(200)
         .Produces(400)
+        .Produces(403)
         .Produces(404);
+
+        // ========================================
+        // DELETE OPERATIONS - Require SuperUser role only
+        // ========================================
 
         group.MapDelete("/{id}", async (int id, IDocumentService service) =>
         {
@@ -68,7 +84,9 @@ public static class DocumentEndpoints
             return Results.NoContent();
         })
         .WithName("DeleteDocument")
+        .RequireAuthorization(policy => policy.RequireRole("SuperUser"))
         .Produces(204)
+        .Produces(403)
         .Produces(404);
 
         group.MapPost("/search", async (DocumentSearchRequestDto request, IDocumentService service) =>

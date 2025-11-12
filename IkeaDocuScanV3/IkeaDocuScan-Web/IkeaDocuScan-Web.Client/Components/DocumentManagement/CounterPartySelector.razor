@@ -1,82 +1,123 @@
 @using IkeaDocuScan.Shared.DTOs.CounterParties
 @using IkeaDocuScan.Shared.Interfaces
+@using Microsoft.JSInterop
 @inject ICounterPartyService CounterPartyService
 @inject ILogger<CounterPartySelector> Logger
+@inject IJSRuntime JSRuntime
 
 <div class="counterparty-selector">
-    <div class="row">
-        @* Search Box *@
-        <div class="col-12 mb-2">
+    @* Search Box with Dropdown *@
+    <div class="mb-3">
+        <label class="form-label">Search Counterparty<span class="required">*</span></label>
+        <div class="search-container">
             <input type="text"
                    class="form-control"
-                   placeholder="Search counterparty by name, code, city, or country..."
+                   placeholder="Type to search by name, code, city, or country..."
                    value="@searchTerm"
                    @oninput="OnSearchChanged"
-                   disabled="@Disabled" />
-        </div>
+                   @onfocus="OnSearchFocus"
+                   @onblur="OnSearchBlur"
+                   @onkeydown="OnInputKeyDown"
+                   disabled="@Disabled"
+                   autocomplete="off"
+                   role="combobox"
+                   aria-autocomplete="list"
+                   aria-expanded="@showDropdown"
+                   aria-controls="cp-dropdown-list" />
 
-        @* Available Counterparties (Left) *@
-        <div class="col-6">
-            <label class="form-label">Available Counterparties</label>
-            <select size="10"
-                    class="form-select counterparty-listbox"
-                    @ondblclick="SelectCounterParty"
-                    disabled="@Disabled">
-                @foreach (var cp in filteredCounterParties)
-                {
-                    <option value="@cp.CounterPartyId"
-                            selected="@(selectedCounterPartyId == cp.CounterPartyId.ToString())"
-                            @onclick="@(() => OnCounterPartyClick(cp))">
-                        @cp.Name (@cp.CounterPartyNoAlpha)
-                    </option>
-                }
-            </select>
-            <small class="text-muted">
-                @filteredCounterParties.Count available | Double-click to select
-            </small>
-        </div>
-
-        @* Selected Counterparty (Right) *@
-        <div class="col-6">
-            <label class="form-label">Selected Counterparty<span class="required">*</span></label>
-            <div class="selected-counterparty-box">
-                @if (!string.IsNullOrEmpty(SelectedCounterPartyId))
-                {
-                    var selected = allCounterParties.FirstOrDefault(cp => cp.CounterPartyId.ToString() == SelectedCounterPartyId);
-                    if (selected != null)
+            @if (showDropdown && !Disabled)
+            {
+                <div class="dropdown-results" @onmousedown:preventDefault>
+                    @if (string.IsNullOrWhiteSpace(searchTerm))
                     {
-                        <div class="selected-item">
-                            <div class="selected-item-header">
-                                <strong>@selected.Name</strong>
-                                <button class="btn btn-sm btn-link text-danger"
-                                        @onclick="ClearSelection"
-                                        disabled="@Disabled"
-                                        title="Clear selection">
-                                    <i class="fa fa-times"></i>
-                                </button>
-                            </div>
-                            <div class="selected-item-details">
-                                <small class="text-muted">
-                                    Code: @selected.CounterPartyNoAlpha<br />
-                                    Location: @selected.City, @selected.Country<br />
-                                    @if (!string.IsNullOrEmpty(selected.AffiliatedTo))
-                                    {
-                                        <span>Affiliated: @selected.AffiliatedTo</span>
-                                    }
-                                </small>
-                            </div>
+                        <div class="dropdown-hint">
+                            <i class="fa fa-info-circle me-2"></i>
+                            Start typing to search through @allCounterParties.Count counterparties...
                         </div>
                     }
-                }
-                else
-                {
-                    <div class="no-selection">
-                        <small class="text-muted">No counterparty selected</small>
-                    </div>
-                }
-            </div>
+                    else if (!visibleCounterParties.Any())
+                    {
+                        <div class="dropdown-no-results">
+                            <i class="fa fa-search me-2"></i>
+                            No counterparties found matching "@searchTerm"
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="dropdown-header">
+                            <small class="text-muted">
+                                Showing @visibleCounterParties.Count of @filteredCounterParties.Count matches
+                                @if (filteredCounterParties.Count > MaxVisibleItems)
+                                {
+                                    <span>(refine search to see more)</span>
+                                }
+                            </small>
+                        </div>
+                        <div class="dropdown-list" id="cp-dropdown-list" role="listbox">
+                            @for (int i = 0; i < visibleCounterParties.Count; i++)
+                            {
+                                var cp = visibleCounterParties[i];
+                                var index = i;
+                                var itemId = $"cp-item-{index}";
+                                var isKeyboardSelected = selectedIndex == index;
+                                var isAlreadySelected = SelectedCounterPartyId == cp.CounterPartyId.ToString();
+                                <div class="dropdown-item @(isKeyboardSelected ? "keyboard-selected" : "") @(isAlreadySelected ? "already-selected" : "")"
+                                     @onclick="@(() => SelectCounterPartyFromDropdown(cp))"
+                                     @onmouseenter="@(() => OnMouseEnterItem(index))"
+                                     id="@itemId"
+                                     role="option"
+                                     aria-selected="@isKeyboardSelected">
+                                    <div class="dropdown-item-name">
+                                        <strong>@HighlightMatch(cp.Name, searchTerm)</strong>
+                                        <span class="text-muted ms-2">(@cp.CounterPartyNoAlpha)</span>
+                                    </div>
+                                    <div class="dropdown-item-details">
+                                        <small class="text-muted">
+                                            @cp.City, @cp.Country
+                                            @if (!string.IsNullOrEmpty(cp.AffiliatedTo))
+                                            {
+                                                <span class="ms-2">• @cp.AffiliatedTo</span>
+                                            }
+                                        </small>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+            }
         </div>
     </div>
+
+    @* Selected Counterparty Display *@
+    @if (!string.IsNullOrEmpty(SelectedCounterPartyId))
+    {
+        var selected = allCounterParties.FirstOrDefault(cp => cp.CounterPartyId.ToString() == SelectedCounterPartyId);
+        if (selected != null)
+        {
+            <div class="selected-counterparty-display">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div class="flex-grow-1">
+                        <strong class="d-block">@selected.Name</strong>
+                        <small class="text-muted">
+                            Code: @selected.CounterPartyNoAlpha<br />
+                            Location: @selected.City, @selected.Country
+                            @if (!string.IsNullOrEmpty(selected.AffiliatedTo))
+                            {
+                                <br /><span>Affiliated: @selected.AffiliatedTo</span>
+                            }
+                        </small>
+                    </div>
+                    <button class="btn btn-sm btn-link text-danger"
+                            @onclick="ClearSelection"
+                            disabled="@Disabled"
+                            title="Clear selection">
+                        <i class="fa fa-times"></i>
+                    </button>
+                </div>
+            </div>
+        }
+    }
 </div>
 
 <style>
@@ -84,63 +125,117 @@
         width: 100%;
     }
 
-    .counterparty-listbox {
-        width: 100%;
-        font-family: Tahoma, sans-serif;
-        font-size: 11px;
-        border: solid 1px gray;
-        min-height: 250px;
+    .search-container {
+        position: relative;
     }
 
-    .counterparty-listbox option {
-        padding: 4px 6px;
+    .dropdown-results {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        z-index: 1050;
+        background: white;
+        border: 1px solid #dee2e6;
+        border-radius: 4px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        margin-top: 2px;
+        max-height: 400px;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .dropdown-hint,
+    .dropdown-no-results {
+        padding: 20px;
+        text-align: center;
+        color: #6c757d;
+    }
+
+    .dropdown-header {
+        padding: 8px 12px;
+        background: #f8f9fa;
+        border-bottom: 1px solid #dee2e6;
+        flex-shrink: 0;
+    }
+
+    .dropdown-list {
+        overflow-y: auto;
+        max-height: 350px;
+    }
+
+    .dropdown-item {
+        padding: 10px 12px;
         cursor: pointer;
+        border-bottom: 1px solid #f0f0f0;
+        transition: all 0.15s ease;
     }
 
-    .counterparty-listbox option:hover {
-        background-color: #f0f0f0;
+        .dropdown-item:last-child {
+            border-bottom: none;
+        }
+
+        .dropdown-item:hover {
+            background-color: #f0f8ff;
+        }
+
+        .dropdown-item.already-selected {
+            background-color: #e7f3ff;
+            border-left: 3px solid #0d6efd;
+            padding-left: 9px;
+        }
+
+        .dropdown-item.keyboard-selected {
+            background-color: #0d6efd !important;
+            color: white;
+            border-left: 4px solid #0a58ca;
+            padding-left: 8px;
+            font-weight: 500;
+        }
+
+        .dropdown-item.keyboard-selected .text-muted {
+            color: rgba(255, 255, 255, 0.85) !important;
+        }
+
+        .dropdown-item.keyboard-selected mark.highlight {
+            background-color: #ffc107;
+            color: #000;
+        }
+
+    .dropdown-item-name {
+        margin-bottom: 4px;
     }
 
-    .selected-counterparty-box {
-        border: solid 1px #dee2e6;
-        border-radius: 4px;
+    .dropdown-item-details {
+        line-height: 1.3;
+    }
+
+    .selected-counterparty-display {
         padding: 12px;
-        min-height: 250px;
-        background-color: #f8f9fa;
-    }
-
-    .selected-item {
-        background-color: white;
-        border: solid 1px #0d6efd;
+        background: #e7f3ff;
+        border: 1px solid #0d6efd;
         border-radius: 4px;
-        padding: 10px;
-    }
-
-    .selected-item-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 8px;
-    }
-
-    .selected-item-details {
-        padding-left: 4px;
-    }
-
-    .no-selection {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        height: 200px;
+        margin-top: 12px;
     }
 
     .required {
         color: red;
         margin-left: 2px;
     }
+
+    /* Search term highlighting */
+    .highlight {
+        background-color: yellow;
+        font-weight: bold;
+    }
 </style>
 
 @code {
+    // PERFORMANCE: Maximum number of items to render in dropdown
+    // This prevents rendering 9,688 DOM elements and causing multi-second delays
+    private const int MaxVisibleItems = 50;
+
     /// <summary>
     /// The selected counterparty ID
     /// </summary>
@@ -180,8 +275,10 @@
     // Internal state
     private List<CounterPartyDto> allCounterParties = new();
     private List<CounterPartyDto> filteredCounterParties = new();
+    private List<CounterPartyDto> visibleCounterParties = new();
     private string searchTerm = string.Empty;
-    private string? selectedCounterPartyId = null;
+    private bool showDropdown = false;
+    private int selectedIndex = -1;
 
     protected override async Task OnInitializedAsync()
     {
@@ -189,22 +286,19 @@
         if (CounterParties != null && CounterParties.Any())
         {
             allCounterParties = CounterParties;
-            Logger.LogInformation("Using {Count} pre-loaded counterparties for selector", allCounterParties.Count);
+            Logger.LogInformation("✅ PERF: Using {Count} pre-loaded counterparties (no async load needed)", allCounterParties.Count);
         }
         else
         {
             await LoadCounterParties();
         }
 
-        ApplyFilter();
+        // Don't apply filter initially - only when user starts typing
+        filteredCounterParties = new();
+        visibleCounterParties = new();
 
         // Signal parent that this component has completed initialization
         await OnLoadComplete.InvokeAsync();
-    }
-
-    protected override void OnParametersSet()
-    {
-        selectedCounterPartyId = SelectedCounterPartyId;
     }
 
     private async Task LoadCounterParties()
@@ -224,17 +318,41 @@
     {
         searchTerm = e.Value?.ToString() ?? string.Empty;
         ApplyFilter();
+        showDropdown = true;
+        selectedIndex = -1; // Reset selection when typing
+        StateHasChanged();
+    }
+
+    private void OnSearchFocus()
+    {
+        showDropdown = true;
+    }
+
+    private void OnSearchBlur()
+    {
+        // Delay hiding dropdown to allow click events to fire
+        Task.Delay(200).ContinueWith(_ => InvokeAsync(() =>
+        {
+            showDropdown = false;
+            selectedIndex = -1;
+            StateHasChanged();
+        }));
     }
 
     private void ApplyFilter()
     {
         if (string.IsNullOrWhiteSpace(searchTerm))
         {
-            filteredCounterParties = allCounterParties;
+            // Don't show all items when search is empty - show hint instead
+            filteredCounterParties = new();
+            visibleCounterParties = new();
+            selectedIndex = -1;
         }
         else
         {
             var term = searchTerm.ToLower().Trim();
+
+            // Filter matching counter parties
             filteredCounterParties = allCounterParties
                 .Where(cp =>
                     (cp.Name != null && cp.Name.ToLower().Contains(term)) ||
@@ -242,28 +360,38 @@
                     cp.City.ToLower().Contains(term) ||
                     cp.Country.ToLower().Contains(term))
                 .ToList();
+
+            // PERFORMANCE: Only render first MaxVisibleItems (50) to keep DOM small
+            visibleCounterParties = filteredCounterParties.Take(MaxVisibleItems).ToList();
+
+            // Auto-select first item when results appear
+            if (visibleCounterParties.Any())
+            {
+                selectedIndex = 0;
+            }
+            else
+            {
+                selectedIndex = -1;
+            }
+
+            Logger.LogInformation("🔍 Filtered to {Filtered} results, showing {Visible} in dropdown (first item auto-selected)",
+                filteredCounterParties.Count, visibleCounterParties.Count);
         }
     }
 
-    private void OnCounterPartyClick(CounterPartyDto counterParty)
+    private async Task SelectCounterPartyFromDropdown(CounterPartyDto counterParty)
     {
-        selectedCounterPartyId = counterParty.CounterPartyId.ToString();
-    }
-
-    private async Task SelectCounterParty()
-    {
-        if (Disabled || selectedCounterPartyId == null)
+        if (Disabled)
             return;
 
-        var selected = allCounterParties.FirstOrDefault(cp => cp.CounterPartyId.ToString() == selectedCounterPartyId);
-        if (selected != null)
-        {
-            SelectedCounterPartyId = selected.CounterPartyId.ToString();
-            await SelectedCounterPartyIdChanged.InvokeAsync(SelectedCounterPartyId);
-            await OnCounterPartySelected.InvokeAsync(selected);
+        SelectedCounterPartyId = counterParty.CounterPartyId.ToString();
+        searchTerm = counterParty.Name ?? string.Empty;
+        showDropdown = false;
 
-            Logger.LogInformation("Counterparty selected: {Name} (ID: {Id})", selected.Name, selected.CounterPartyId);
-        }
+        await SelectedCounterPartyIdChanged.InvokeAsync(SelectedCounterPartyId);
+        await OnCounterPartySelected.InvokeAsync(counterParty);
+
+        Logger.LogInformation("Counterparty selected: {Name} (ID: {Id})", counterParty.Name, counterParty.CounterPartyId);
     }
 
     private async Task ClearSelection()
@@ -272,10 +400,139 @@
             return;
 
         SelectedCounterPartyId = null;
-        selectedCounterPartyId = null;
+        searchTerm = string.Empty;
+        filteredCounterParties.Clear();
+        visibleCounterParties.Clear();
+
         await SelectedCounterPartyIdChanged.InvokeAsync(null);
         await OnCounterPartySelected.InvokeAsync(null);
 
         Logger.LogInformation("Counterparty selection cleared");
+    }
+
+    private MarkupString HighlightMatch(string? text, string searchTerm)
+    {
+        if (string.IsNullOrEmpty(text) || string.IsNullOrWhiteSpace(searchTerm))
+            return new MarkupString(text ?? string.Empty);
+
+        // Simple highlighting - wrap matching text in span with highlight class
+        var pattern = System.Text.RegularExpressions.Regex.Escape(searchTerm);
+        var highlighted = System.Text.RegularExpressions.Regex.Replace(
+            text,
+            pattern,
+            match => $"<mark class=\"highlight\">{match.Value}</mark>",
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+
+        return new MarkupString(highlighted);
+    }
+
+    private async Task OnInputKeyDown(KeyboardEventArgs e)
+    {
+        // Only log navigation keys to reduce console spam
+        if (e.Key == "ArrowDown" || e.Key == "ArrowUp" || e.Key == "Enter" || e.Key == "Escape")
+        {
+            Logger.LogInformation("🎹 Navigation key: {Key}, Dropdown: {ShowDropdown}, Items: {Count}",
+                e.Key, showDropdown, visibleCounterParties.Count);
+        }
+
+        // If dropdown not visible, show it on arrow down
+        if (!showDropdown && e.Key == "ArrowDown" && !string.IsNullOrWhiteSpace(searchTerm))
+        {
+            showDropdown = true;
+            ApplyFilter();
+            selectedIndex = 0; // Select first item
+            StateHasChanged();
+            Logger.LogInformation("🎹 Dropdown opened with arrow down");
+            return;
+        }
+
+        // Only handle navigation keys if dropdown is visible with items
+        if (!showDropdown || !visibleCounterParties.Any())
+        {
+            return;
+        }
+
+        switch (e.Key)
+        {
+            case "ArrowDown":
+                // Move selection down
+                if (selectedIndex < visibleCounterParties.Count - 1)
+                {
+                    selectedIndex++;
+                    Logger.LogInformation("🎹 Selected index: {Index} / {Total}", selectedIndex + 1, visibleCounterParties.Count);
+                }
+                else
+                {
+                    Logger.LogInformation("🎹 Already at last item");
+                }
+                StateHasChanged();
+                await ScrollToSelectedItem();
+                break;
+
+            case "ArrowUp":
+                // Move selection up
+                if (selectedIndex > 0)
+                {
+                    selectedIndex--;
+                    Logger.LogInformation("🎹 Selected index: {Index} / {Total}", selectedIndex + 1, visibleCounterParties.Count);
+                    StateHasChanged();
+                    await ScrollToSelectedItem();
+                }
+                else if (selectedIndex == 0)
+                {
+                    // Stay at first item (don't go back to input)
+                    Logger.LogInformation("🎹 Already at first item");
+                }
+                break;
+
+            case "Enter":
+                // Select highlighted item if dropdown is visible
+                if (showDropdown && selectedIndex >= 0 && selectedIndex < visibleCounterParties.Count)
+                {
+                    Logger.LogInformation("🎹 Selecting item at index {Index}", selectedIndex);
+                    await SelectCounterPartyFromDropdown(visibleCounterParties[selectedIndex]);
+                }
+                break;
+
+            case "Escape":
+                // Close dropdown
+                Logger.LogInformation("🎹 Closing dropdown with Escape");
+                showDropdown = false;
+                selectedIndex = -1;
+                StateHasChanged();
+                break;
+
+            case "Tab":
+                // Close dropdown and let tab proceed naturally
+                Logger.LogInformation("🎹 Closing dropdown with Tab");
+                showDropdown = false;
+                selectedIndex = -1;
+                StateHasChanged();
+                break;
+        }
+    }
+
+    private void OnMouseEnterItem(int index)
+    {
+        selectedIndex = index;
+        StateHasChanged();
+    }
+
+    private async Task ScrollToSelectedItem()
+    {
+        if (selectedIndex >= 0 && selectedIndex < visibleCounterParties.Count)
+        {
+            try
+            {
+                // Scroll the selected item into view
+                var itemId = $"cp-item-{selectedIndex}";
+                await JSRuntime.InvokeVoidAsync("eval",
+                    $"document.getElementById('{itemId}')?.scrollIntoView({{ block: 'nearest', behavior: 'smooth' }})");
+            }
+            catch (Exception ex)
+            {
+                Logger.LogWarning(ex, "Failed to scroll to selected item");
+            }
+        }
     }
 }

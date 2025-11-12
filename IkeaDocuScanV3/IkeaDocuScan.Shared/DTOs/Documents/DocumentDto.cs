@@ -14,6 +14,7 @@ public class DocumentDto
     public int? DocumentNameId { get; set; }
     public string? DocumentNameText { get; set; }
     public int? FileId { get; set; }
+    public string? FileName { get; set; }
 
     // Dates
     public DateTime? DateOfContract { get; set; }

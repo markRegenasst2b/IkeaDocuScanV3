@@ -1,6 +1,7 @@
 ﻿@page "/"
 @attribute [Authorize]
 @rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
+@using IkeaDocuScan_Web.Client.Components
 @using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.AspNetCore.Authorization
 @using System.Security.Claims
@@ -16,6 +17,11 @@
     <div class="row">
         <div class="col-md-12">
             <h1>Welcome to IKEA DocuScan</h1>
+
+            @* ⚠️ DEVELOPER TOOLS - Only visible in DEBUG mode *@
+            @if (ISDEBUG) {
+                <DevIdentitySwitcher />
+            }
 
             <AuthorizeView>
                 <Authorized>
@@ -229,6 +235,12 @@
     private bool isLoadingPermissions = true;
     private string? identityError;
     private string? permissionsError;
+#if DEBUG
+    private bool ISDEBUG = true;
+#endif
+#if !DEBUG
+    private bool ISDEBUG = false;
+#endif
 
     protected override async Task OnInitializedAsync()
     {

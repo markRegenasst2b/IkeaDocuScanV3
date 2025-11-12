@@ -29,14 +29,17 @@
 </div>
 
 @* Third Parties Selector *@
-<ThirdPartySelector @bind-SelectedThirdPartyIds="@Model.SelectedThirdPartyIds"
-                   @bind-SelectedThirdPartyIds:after="OnThirdPartiesChanged"
-                   @bind-SelectedThirdPartyNames="@Model.SelectedThirdPartyNames"
-                   Disabled="@IsReadOnly"
-                   FilterByCounterPartyId="@Model.CounterPartyId"
-                   CounterParties="@CounterParties"
-                   OnLoadComplete="@OnLoadComplete" />
-
+<p>&nbsp;</p>
+<div class="mb-4">
+    <ThirdPartySelector @bind-SelectedThirdPartyIds="@Model.SelectedThirdPartyIds"
+                       @bind-SelectedThirdPartyIds:after="OnThirdPartiesChanged"
+                       @bind-SelectedThirdPartyNames="@Model.SelectedThirdPartyNames"
+                       Disabled="@IsReadOnly"
+                       FilterByCounterPartyId="@Model.CounterPartyId"
+                       CounterParties="@CounterParties"
+                       OnLoadComplete="@OnLoadComplete" />
+</div>
+<p>&nbsp;</p>
 @* Date of Contract *@
 <div class="row mb-3 field-horizontal">
     <label class="col-sm-3 col-form-label text-end">

@@ -42,6 +42,11 @@ builder.Services.AddScoped<IReportService, ReportHttpService>();
 builder.Services.AddScoped<EmailHttpService>();
 builder.Services.AddScoped<UserIdentityHttpService>();
 
+#if DEBUG
+// Test Identity Service (DEVELOPMENT ONLY)
+builder.Services.AddScoped<TestIdentityHttpService>();
+#endif
+
 // Configuration Management Service
 builder.Services.AddScoped<ConfigurationHttpService>();
 

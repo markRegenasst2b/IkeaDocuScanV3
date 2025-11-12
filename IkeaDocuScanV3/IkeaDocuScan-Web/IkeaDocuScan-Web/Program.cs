@@ -115,6 +115,16 @@ emailSearchOptions?.Validate();
 // Memory cache for file list caching
 builder.Services.AddMemoryCache();
 
+// Session support (required for test identity persistence in DEBUG mode)
+builder.Services.AddDistributedMemoryCache();
+builder.Services.AddSession(options =>
+{
+    options.IdleTimeout = TimeSpan.FromDays(7); // Test identity persists for 7 days
+    options.Cookie.HttpOnly = true;
+    options.Cookie.IsEssential = true;
+    options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+});
+
 // Data access services
 builder.Services.AddScoped<IDocumentService, DocumentService>();
 builder.Services.AddScoped<IAuditTrailService, AuditTrailService>();
@@ -129,6 +139,11 @@ builder.Services.AddScoped<IDocumentNameService, DocumentNameService>();
 builder.Services.AddScoped<ICurrencyService, CurrencyService>();
 builder.Services.AddScoped<IActionReminderService, ActionReminderService>();
 builder.Services.AddScoped<IReportService, ReportService>();
+
+#if DEBUG
+// Test Identity Service (DEVELOPMENT ONLY)
+builder.Services.AddScoped<TestIdentityService>();
+#endif
 
 // Configuration management services
 builder.Services.AddScoped<ISystemConfigurationManager, IkeaDocuScan.Infrastructure.Services.ConfigurationManagerService>();
@@ -170,7 +185,16 @@ app.UseExceptionHandler();
 
 app.UseHttpsRedirection();
 
+// Session middleware (required for test identity)
+app.UseSession();
+
 app.UseAuthentication();
+
+#if DEBUG
+// Test Identity Middleware - MUST run before WindowsIdentityMiddleware
+app.UseTestIdentity();
+#endif
+
 app.UseMiddleware<WindowsIdentityMiddleware>();
 app.UseAuthorization();
 
@@ -202,5 +226,10 @@ app.MapCurrencyEndpoints();
 app.MapEmailEndpoints();
 app.MapExcelExportEndpoints();
 app.MapConfigurationEndpoints();
+
+#if DEBUG
+// Test Identity Endpoints (DEVELOPMENT ONLY)
+app.MapTestIdentityEndpoints();
+#endif
 
 app.Run();

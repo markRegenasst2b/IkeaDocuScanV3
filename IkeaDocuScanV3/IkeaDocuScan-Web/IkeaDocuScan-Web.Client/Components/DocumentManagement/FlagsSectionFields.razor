@@ -11,10 +11,9 @@
         }
     </label>
     <div class="col-sm-9">
-        <TriStateDropdown @bind-Value="@Model.Fax"
-                         @bind-Value:after="OnFieldChanged"
-                         Disabled="@(IsReadOnly || Model.IsFieldDisabled("Fax"))"
-                         Label="Fax" />
+        <BooleanRadioControl @bind-Value="@Model.Fax"
+                            @bind-Value:after="OnFieldChanged"
+                            Disabled="@(IsReadOnly || Model.IsFieldDisabled("Fax"))" />
     </div>
 </div>
 
@@ -28,10 +27,9 @@
         }
     </label>
     <div class="col-sm-9">
-        <TriStateDropdown @bind-Value="@Model.OriginalReceived"
-                         @bind-Value:after="OnFieldChanged"
-                         Disabled="@(IsReadOnly || Model.IsFieldDisabled("OriginalReceived"))"
-                         Label="Original Received" />
+        <BooleanRadioControl @bind-Value="@Model.OriginalReceived"
+                            @bind-Value:after="OnFieldChanged"
+                            Disabled="@(IsReadOnly || Model.IsFieldDisabled("OriginalReceived"))" />
     </div>
 </div>
 
@@ -45,10 +43,9 @@
         }
     </label>
     <div class="col-sm-9">
-        <TriStateDropdown @bind-Value="@Model.TranslationReceived"
-                         @bind-Value:after="OnFieldChanged"
-                         Disabled="@(IsReadOnly || Model.IsFieldDisabled("TranslatedVersionReceived"))"
-                         Label="Translation Received" />
+        <BooleanRadioControl @bind-Value="@Model.TranslationReceived"
+                            @bind-Value:after="OnFieldChanged"
+                            Disabled="@(IsReadOnly || Model.IsFieldDisabled("TranslatedVersionReceived"))" />
     </div>
 </div>
 
@@ -62,10 +59,9 @@
         }
     </label>
     <div class="col-sm-9">
-        <TriStateDropdown @bind-Value="@Model.Confidential"
-                         @bind-Value:after="OnFieldChanged"
-                         Disabled="@(IsReadOnly || Model.IsFieldDisabled("Confidential"))"
-                         Label="Confidential" />
+        <BooleanRadioControl @bind-Value="@Model.Confidential"
+                            @bind-Value:after="OnFieldChanged"
+                            Disabled="@(IsReadOnly || Model.IsFieldDisabled("Confidential"))" />
     </div>
 </div>
 

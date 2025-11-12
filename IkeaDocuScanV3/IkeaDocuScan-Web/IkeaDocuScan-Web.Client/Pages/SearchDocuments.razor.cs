@@ -511,57 +511,7 @@ public partial class SearchDocuments : ComponentBase
         }
     }
 
-    // ========== Boolean Filter Change Handlers ==========
-
-    /// <summary>
-    /// Handles Fax filter change
-    /// </summary>
-    private void OnFaxChanged(string? value)
-    {
-        searchRequest.Fax = ParseNullableBool(value);
-        Logger.LogDebug("Fax filter changed to: {Value}", searchRequest.Fax);
-    }
-
-    /// <summary>
-    /// Handles Original Received filter change
-    /// </summary>
-    private void OnOriginalReceivedChanged(string? value)
-    {
-        searchRequest.OriginalReceived = ParseNullableBool(value);
-        Logger.LogDebug("Original Received filter changed to: {Value}", searchRequest.OriginalReceived);
-    }
-
-    /// <summary>
-    /// Handles Confidential filter change
-    /// </summary>
-    private void OnConfidentialChanged(string? value)
-    {
-        searchRequest.Confidential = ParseNullableBool(value);
-        Logger.LogDebug("Confidential filter changed to: {Value}", searchRequest.Confidential);
-    }
-
-    /// <summary>
-    /// Handles Bank Confirmation filter change
-    /// </summary>
-    private void OnBankConfirmationChanged(string? value)
-    {
-        searchRequest.BankConfirmation = ParseNullableBool(value);
-        Logger.LogDebug("Bank Confirmation filter changed to: {Value}", searchRequest.BankConfirmation);
-    }
-
-    /// <summary>
-    /// Parses a string to nullable boolean
-    /// </summary>
-    private bool? ParseNullableBool(string? value)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-            return null;
-
-        if (bool.TryParse(value, out var result))
-            return result;
-
-        return null;
-    }
+    // ========== Filter Change Handlers ==========
 
     /// <summary>
     /// Handles Document Types multi-select change
@@ -1260,5 +1210,39 @@ public partial class SearchDocuments : ComponentBase
         Logger.LogWarning("Print detailed not yet implemented");
         errorMessage = "Print Detailed feature is not yet implemented. This will generate a detailed report of selected documents with all properties.";
         StateHasChanged();
+    }
+
+    /// <summary>
+    /// Event handler when a counter party is selected from the CP Name autocomplete
+    /// </summary>
+    private void OnCounterPartyNameSelected(CounterPartyDto? counterParty)
+    {
+        if (counterParty != null)
+        {
+            Logger.LogInformation("Counter party selected in name field: {Name} (ID: {Id})",
+                counterParty.Name, counterParty.CounterPartyId);
+
+            // Optionally auto-populate related fields
+            // searchRequest.CounterpartyNo = counterParty.CounterPartyNoAlpha;
+            // searchRequest.CounterpartyCountry = counterParty.Country;
+            // searchRequest.CounterpartyCity = counterParty.City;
+        }
+    }
+
+    /// <summary>
+    /// Event handler when a counter party is selected from the CP No autocomplete
+    /// </summary>
+    private void OnCounterPartyNoSelected(CounterPartyDto? counterParty)
+    {
+        if (counterParty != null)
+        {
+            Logger.LogInformation("Counter party selected in number field: {Name} (ID: {Id})",
+                counterParty.Name, counterParty.CounterPartyId);
+
+            // Optionally auto-populate related fields
+            // searchRequest.CounterpartyName = counterParty.Name;
+            // searchRequest.CounterpartyCountry = counterParty.Country;
+            // searchRequest.CounterpartyCity = counterParty.City;
+        }
     }
 }
