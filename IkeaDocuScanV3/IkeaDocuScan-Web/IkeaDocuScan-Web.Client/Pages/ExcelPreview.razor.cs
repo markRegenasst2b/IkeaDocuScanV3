@@ -1,9 +1,11 @@
 using ExcelReporting.Models;
 using ExcelReporting.Services;
 using IkeaDocuScan.Shared.Interfaces;
+using IkeaDocuScan.Shared.DTOs.Excel;
 using IkeaDocuScan_Web.Client.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
+using System.Net.Http.Json;
 
 namespace IkeaDocuScan_Web.Client.Pages;
 
@@ -19,6 +21,7 @@ public partial class ExcelPreview : ComponentBase
     [Inject] private IReportService ReportService { get; set; } = null!;
     [Inject] private IJSRuntime JSRuntime { get; set; } = null!;
     [Inject] private NavigationManager NavigationManager { get; set; } = null!;
+    [Inject] private HttpClient HttpClient { get; set; } = null!;
 
     [SupplyParameterFromQuery(Name = "source")]
     public string? Source { get; set; }
@@ -40,10 +43,12 @@ public partial class ExcelPreview : ComponentBase
 
     // UI State
     private bool isLoading = true;
+    private bool isDownloading = false;
     private string? errorMessage;
     private string? lastSource; // Track last source to detect navigation changes
     private string? lastReportType; // Track last report type to detect navigation changes
-    private string? excelDownloadUrl; // URL for Excel download
+    private string? excelDownloadUrl; // URL for Excel download (for reports)
+    private List<int>? documentIds; // Document IDs for export by IDs (for search/selection)
 
     protected override void OnParametersSet()
     {
@@ -90,9 +95,23 @@ public partial class ExcelPreview : ComponentBase
                 // Get data from service (for search results, etc.)
                 (retrievedData, title, context) = PreviewDataService.GetData();
 
-                // For search/selection, Excel download needs to be handled differently
-                // We can't use a simple URL since we need to post the data
-                excelDownloadUrl = null;
+                // For search/selection, extract document IDs for POST-based download
+                // This allows us to download without resending full DTOs (security + efficiency)
+                excelDownloadUrl = null; // No GET URL for search results
+
+                // Extract document IDs from the data for the download endpoint
+                if (retrievedData != null && retrievedData.Any())
+                {
+                    documentIds = retrievedData
+                        .Select(d => d.GetType().GetProperty("Id")?.GetValue(d))
+                        .Where(id => id != null)
+                        .Cast<int>()
+                        .ToList();
+                }
+                else
+                {
+                    documentIds = null;
+                }
             }
 
             pageTitle = title ?? "Data Preview";
@@ -245,6 +264,64 @@ public partial class ExcelPreview : ComponentBase
     private string GetCellValue(ExportableBase item, ExcelExportMetadata column)
     {
         return column.GetFormattedValue(item);
+    }
+
+    /// <summary>
+    /// Downloads Excel file by POSTing document IDs to the server
+    /// Used for search results and selected documents where GET URLs don't work
+    /// </summary>
+    private async Task DownloadExcelByIds()
+    {
+        if (documentIds == null || !documentIds.Any())
+        {
+            errorMessage = "No document IDs available for export";
+            return;
+        }
+
+        try
+        {
+            isDownloading = true;
+            errorMessage = null;
+            StateHasChanged();
+
+            // Create request with document IDs
+            var request = new ExcelExportByIdsRequestDto
+            {
+                DocumentIds = documentIds,
+                Title = pageTitle,
+                Context = contextInfo
+            };
+
+            // POST to the export by IDs endpoint
+            var response = await HttpClient.PostAsJsonAsync("/api/excel/export/by-ids", request);
+
+            if (response.IsSuccessStatusCode)
+            {
+                // Get the file bytes
+                var fileBytes = await response.Content.ReadAsByteArrayAsync();
+
+                // Generate filename
+                var title = pageTitle?.Replace(" ", "_") ?? "Documents";
+                var fileName = $"{title}_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx";
+
+                // Trigger download using JavaScript
+                await JSRuntime.InvokeVoidAsync("downloadFileFromBytes", fileName, fileBytes);
+            }
+            else
+            {
+                var errorContent = await response.Content.ReadAsStringAsync();
+                errorMessage = $"Export failed: {response.StatusCode} - {errorContent}";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Failed to download Excel: {ex.Message}";
+        }
+        finally
+        {
+            isDownloading = false;
+            StateHasChanged();
+        }
     }
 
     private async Task Cancel()

@@ -72,6 +72,31 @@ public class DocumentHttpService : IDocumentService
         }
     }
 
+    public async Task<List<DocumentDto>> GetByIdsAsync(IEnumerable<int> ids)
+    {
+        try
+        {
+            var idList = ids.ToList();
+            _logger.LogInformation("Fetching {Count} documents by IDs from API", idList.Count);
+
+            if (!idList.Any())
+            {
+                _logger.LogWarning("GetByIdsAsync called with empty ID list");
+                return new List<DocumentDto>();
+            }
+
+            var response = await _http.PostAsJsonAsync("/api/documents/by-ids", idList);
+            response.EnsureSuccessStatusCode();
+            var result = await response.Content.ReadFromJsonAsync<List<DocumentDto>>();
+            return result ?? new List<DocumentDto>();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error fetching documents by IDs");
+            throw;
+        }
+    }
+
     public async Task<DocumentDto> CreateAsync(CreateDocumentDto dto)
     {
         try

@@ -6,6 +6,7 @@ public interface IDocumentService
 {
     Task<List<DocumentDto>> GetAllAsync();
     Task<DocumentDto?> GetByIdAsync(int id);
+    Task<List<DocumentDto>> GetByIdsAsync(IEnumerable<int> ids);
     Task<DocumentDto?> GetByBarCodeAsync(string barCode);
     Task<DocumentDto> CreateAsync(CreateDocumentDto dto);
     Task<DocumentDto> UpdateAsync(UpdateDocumentDto dto);

@@ -44,6 +44,18 @@ public static class DocumentEndpoints
         .Produces<DocumentDto>(200)
         .Produces(404);
 
+        group.MapPost("/by-ids", async (List<int> ids, IDocumentService service) =>
+        {
+            if (ids == null || !ids.Any())
+                return Results.BadRequest(new { error = "No document IDs provided" });
+
+            var documents = await service.GetByIdsAsync(ids);
+            return Results.Ok(documents);
+        })
+        .WithName("GetDocumentsByIds")
+        .Produces<List<DocumentDto>>(200)
+        .Produces(400);
+
         // ========================================
         // WRITE OPERATIONS - Require Publisher or SuperUser role
         // ========================================

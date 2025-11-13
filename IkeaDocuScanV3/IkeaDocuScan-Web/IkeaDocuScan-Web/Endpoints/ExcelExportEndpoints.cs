@@ -129,6 +129,82 @@ public static class ExcelExportEndpoints
         })
         .WithName("GetDocumentExportMetadata")
         .Produces<List<ExcelColumnMetadataDto>>(200);
+
+        // Export documents by IDs to Excel (for search results and selections)
+        group.MapPost("/export/by-ids", async (
+            [FromBody] ExcelExportByIdsRequestDto request,
+            [FromServices] IDocumentService documentService,
+            [FromServices] IExcelExportService excelService,
+            [FromServices] IAuditTrailService auditService,
+            [FromServices] ICurrentUserService currentUserService,
+            [FromServices] IOptions<ExcelExportOptions> options) =>
+        {
+            try
+            {
+                if (request.DocumentIds == null || !request.DocumentIds.Any())
+                {
+                    return Results.BadRequest(new { error = "No document IDs provided" });
+                }
+
+                // Get documents by IDs (includes permission filtering)
+                var documents = await documentService.GetByIdsAsync(request.DocumentIds);
+
+                if (!documents.Any())
+                {
+                    return Results.NotFound(new { error = "No documents found or access denied for the provided IDs" });
+                }
+
+                // Convert to export DTOs
+                var exportData = documents
+                    .Select(DocumentExportDto.FromDocumentDto)
+                    .ToList();
+
+                // Validate data size
+                var exportOptions = options.Value;
+                if (!string.IsNullOrEmpty(request.Title))
+                {
+                    exportOptions.SheetName = request.Title;
+                }
+
+                var validation = excelService.ValidateDataSize(exportData, exportOptions);
+
+                if (!validation.IsValid)
+                {
+                    return Results.BadRequest(new { error = validation.Message, rowCount = validation.RowCount });
+                }
+
+                // Generate Excel file
+                var stream = await excelService.GenerateExcelAsync(exportData, exportOptions);
+
+                // Log export to audit trail
+                var currentUser = await currentUserService.GetCurrentUserAsync();
+                await auditService.LogAsync(
+                    AuditAction.ExportExcel,
+                    "BULKEXPORT",
+                    $"Exported {exportData.Count} documents to Excel by IDs (User: {currentUser.AccountName})");
+
+                // Return file with descriptive name
+                var title = request.Title ?? "Documents";
+                var fileName = $"{title.Replace(" ", "_")}_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx";
+
+                return Results.File(
+                    stream,
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    fileName);
+            }
+            catch (Exception ex)
+            {
+                return Results.Problem(
+                    detail: ex.Message,
+                    statusCode: 500,
+                    title: "Excel Export by IDs Failed");
+            }
+        })
+        .WithName("ExportDocumentsByIdsToExcel")
+        .Produces(200, contentType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+        .Produces(400)
+        .Produces(404)
+        .Produces(500);
     }
 }
 

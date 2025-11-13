@@ -97,6 +97,37 @@ public class DocumentService : IDocumentService
         return MapToDto(entity);
     }
 
+    public async Task<List<DocumentDto>> GetByIdsAsync(IEnumerable<int> ids)
+    {
+        var idList = ids.ToList();
+        _logger.LogInformation("Fetching {Count} documents by IDs", idList.Count);
+
+        if (!idList.Any())
+        {
+            _logger.LogWarning("GetByIdsAsync called with empty ID list");
+            return new List<DocumentDto>();
+        }
+
+        var currentUser = await _currentUserService.GetCurrentUserAsync();
+
+        var query = _context.Documents
+            .Include(d => d.DocumentName)
+            .Include(d => d.Dt)
+            .Include(d => d.CounterParty)
+            .Include(d => d.File)
+            .Where(d => idList.Contains(d.Id));
+
+        // Apply permission filter
+        query = query.FilterByUserPermissions(currentUser, _context);
+
+        var entities = await query.ToListAsync();
+
+        _logger.LogInformation("Retrieved {Count} documents for user {User} (requested {Requested})",
+            entities.Count, currentUser.AccountName, idList.Count);
+
+        return entities.Select(d => MapToDto(d)).ToList();
+    }
+
     public async Task<DocumentDto?> GetByBarCodeAsync(string barCode)
     {
         _logger.LogInformation("Fetching document by BarCode {BarCode}", barCode);
