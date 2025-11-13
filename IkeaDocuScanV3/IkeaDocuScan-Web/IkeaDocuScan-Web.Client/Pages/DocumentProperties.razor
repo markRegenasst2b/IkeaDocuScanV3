@@ -48,7 +48,7 @@
     {
         <div class="alert alert-warning">
             <h4><i class="bi bi-exclamation-triangle"></i> Document Not Found</h4>
-            <p>The requested document could not be found.</p>
+            <p>The requested document could not be found. This could be due to missing permissions.</p>
             <button class="btn btn-primary" @onclick="GoBack">
                 <i class="bi bi-arrow-left"></i> Back to Search
             </button>
@@ -244,9 +244,18 @@
                     </div>
                     <div class="card-body">
                         <div class="d-grid gap-2">
-                            <button class="btn btn-primary" @onclick="OpenPreview">
-                                <i class="bi bi-eye"></i> Open PDF
-                            </button>
+                            @if (document.FileId.HasValue && !string.IsNullOrEmpty(document.FileName))
+                            {
+                                <button class="btn btn-primary" @onclick="OpenPreview">
+                                    <i class="bi bi-file-pdf"></i> Open PDF
+                                </button>
+                            }
+                            else
+                            {
+                                <div class="alert alert-info mb-2">
+                                    <i class="bi bi-info-circle"></i> PDF not checked in yet
+                                </div>
+                            }
 
                             <button class="btn btn-outline-primary" @onclick="EditDocument">
                                 <i class="bi bi-pencil"></i> Edit Properties

@@ -92,6 +92,16 @@ VALUES (
     GETDATE(),
     NULL
 );
+INSERT INTO [dbo].[DocuScanUser] (
+    UserId, AccountName, IsSuperUser, CreatedOn, LastLogon
+)
+VALUES (
+    1007,
+    'TEST\PublisherTest2',
+    0,
+    GETDATE(),
+    NULL
+);
 
 -- 4. Reader (Has limited database permissions + AD groups)
 INSERT INTO [dbo].[DocuScanUser] (
@@ -104,7 +114,16 @@ VALUES (
     GETDATE(),
     NULL
 );
-
+INSERT INTO [dbo].[DocuScanUser] (
+    UserId, AccountName, IsSuperUser, CreatedOn, LastLogon
+)
+VALUES (
+    1008,
+    'TEST\ReaderTest2',
+    0,
+    GETDATE(),
+    NULL
+);
 -- 5. Database Permissions Only (No AD groups)
 INSERT INTO [dbo].[DocuScanUser] (
     UserId, AccountName, IsSuperUser, CreatedOn, LastLogon
@@ -213,6 +232,11 @@ BEGIN
     VALUES (1005, NULL, NULL, @Country1);
 END
 
+INSERT INTO [dbo].[UserPermissions] (UserId, DocumentTypeId, CounterPartyId, CountryCode)
+VALUES (1007, NULL, NULL, NULL);
+INSERT INTO [dbo].[UserPermissions] (UserId, DocumentTypeId, CounterPartyId, CountryCode)
+VALUES (1008, NULL, NULL, NULL);
+
 -- NoAccessTest (1006) - Intentionally has NO permissions
 
 PRINT 'UserPermissions seeded successfully.';
@@ -242,7 +266,7 @@ SELECT
     CreatedOn,
     (SELECT COUNT(*) FROM [dbo].[UserPermissions] WHERE UserId = u.UserId) AS PermissionCount
 FROM [dbo].[DocuScanUser] u
-WHERE UserId IN (1001, 1002, 1003, 1004, 1005, 1006)
+WHERE UserId IN (1001, 1002, 1003, 1004, 1005, 1006, 1007, 1008)
 ORDER BY UserId;
 
 PRINT '';
@@ -254,7 +278,7 @@ SELECT
     up.CountryCode
 FROM [dbo].[UserPermissions] up
 INNER JOIN [dbo].[DocuScanUser] u ON up.UserId = u.UserId
-WHERE u.UserId IN (1001, 1002, 1003, 1004, 1005, 1006)
+WHERE u.UserId IN (1001, 1002, 1003, 1004, 1005, 1006,1007,1008)
 ORDER BY u.UserId, up.Id;
 
 PRINT '';
@@ -270,6 +294,8 @@ PRINT '1003 - PublisherTest        (AD Publisher + Reader groups + DB permission
 PRINT '1004 - ReaderTest           (AD Reader group + limited DB permissions)';
 PRINT '1005 - DatabaseOnlyTest     (DB permissions only, no AD groups)';
 PRINT '1006 - NoAccessTest         (No permissions at all)';
+PRINT '1007 - PublsherTest2        (Full permissions)';
+PRINT '1008 - ReaderTest2          (Full permissions)';
 PRINT '';
 PRINT 'Next Steps:';
 PRINT '-----------';

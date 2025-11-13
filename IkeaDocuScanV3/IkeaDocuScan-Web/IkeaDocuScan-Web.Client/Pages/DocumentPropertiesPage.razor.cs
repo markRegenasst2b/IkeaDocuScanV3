@@ -1168,7 +1168,8 @@ public partial class DocumentPropertiesPage : ComponentBase, IDisposable
         model.Id = dto.Id;
         model.BarCode = dto.BarCode.ToString();
         model.Name = dto.Name;
-        model.FileName = dto.BarCode + ".pdf"; // TODO: Get actual filename from DocumentFile
+        model.FileName = dto.BarCode + ".pdf"; 
+        model.FileId = dto.FileId;
         model.DocumentTypeId = dto.DocumentTypeId;
         model.CounterPartyId = dto.CounterPartyId?.ToString();
         model.DateOfContract = dto.DateOfContract;

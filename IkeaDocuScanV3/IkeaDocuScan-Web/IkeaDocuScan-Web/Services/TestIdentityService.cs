@@ -44,7 +44,7 @@ public class TestIdentityService
             new TestIdentityProfile
             {
                 ProfileId = "superuser",
-                DisplayName = "👑 Super User (Full Access)",
+                DisplayName = "👑 Super User (DB Flag)",
                 Username = "TEST\\SuperUserTest",
                 Email = "superuser@test.local",
                 Description = "Full system access via database SuperUser flag",
@@ -68,7 +68,7 @@ public class TestIdentityService
             new TestIdentityProfile
             {
                 ProfileId = "publisher",
-                DisplayName = "📝 Publisher (Create/Edit)",
+                DisplayName = "📝 Publisher 1",
                 Username = "TEST\\PublisherTest",
                 Email = "publisher@test.local",
                 Description = "Can create and edit documents (AD Publisher group + database permissions)",
@@ -79,8 +79,20 @@ public class TestIdentityService
             },
             new TestIdentityProfile
             {
+                ProfileId = "publisher2",
+                DisplayName = "📝 Publisher 2",
+                Username = "TEST\\PublisherTest2",
+                Email = "publisher@test.local",
+                Description = "Can create and edit documents (AD Publisher group + database permissions)",
+                ADGroups = new() { "Reader", "Publisher" },
+                IsSuperUser = false,
+                HasAccess = true,
+                DatabaseUserId = 1003
+            },
+            new TestIdentityProfile
+            {
                 ProfileId = "reader",
-                DisplayName = "👁️ Reader (View Only)",
+                DisplayName = "👁️ Reader 1",
                 Username = "TEST\\ReaderTest",
                 Email = "reader@test.local",
                 Description = "Can only view documents (AD Reader group + database permissions)",
@@ -89,6 +101,19 @@ public class TestIdentityService
                 HasAccess = true,
                 DatabaseUserId = 1004
             },
+            new TestIdentityProfile
+            {
+                ProfileId = "reader2",
+                DisplayName = "👁️ Reader 2",
+                Username = "TEST\\ReaderTest2",
+                Email = "reader@test.local",
+                Description = "Can only view documents (AD Reader group + database permissions)",
+                ADGroups = new() { "Reader" },
+                IsSuperUser = false,
+                HasAccess = true,
+                DatabaseUserId = 1004
+            },
+            /*
             new TestIdentityProfile
             {
                 ProfileId = "db_only",
@@ -113,6 +138,7 @@ public class TestIdentityService
                 HasAccess = false,
                 DatabaseUserId = null
             },
+            */
             new TestIdentityProfile
             {
                 ProfileId = "no_access",
@@ -124,7 +150,20 @@ public class TestIdentityService
                 IsSuperUser = false,
                 HasAccess = false,
                 DatabaseUserId = 1006
+            },
+            new TestIdentityProfile
+            {
+                ProfileId = "no_access2",
+                DisplayName = "🚫 No Access2",
+                Username = "TEST\\NoAccessTest2",
+                Email = "noaccess@test.local",
+                Description = "User exists in database but has no permissions or AD groups",
+                ADGroups = new(),
+                IsSuperUser = false,
+                HasAccess = false,
+                DatabaseUserId = 1006
             }
+
         };
     }
 

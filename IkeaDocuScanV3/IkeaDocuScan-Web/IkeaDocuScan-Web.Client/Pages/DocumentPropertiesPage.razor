@@ -82,17 +82,21 @@
                                 </div>
                                 <div class="col-12 col-md-6">
                                     <div class="row mb-3">
-                                        <label class="col-sm-4 col-form-label">File Name:</label>
+                                        <label class="col-sm-4 col-form-label">File Name:-</label>
                                         <div class="col-sm-8">
                                             @if (Model.HasFile)
                                             {
-                                                <button class="btn btn-link p-0" @onclick="ViewDocument">
-                                                    @Model.FileName
+                                                <button class="btn btn-link p-0 text-start" @onclick="ViewDocument">
+                                                    <i class="fa fa-file-pdf-o me-1"></i>@Model.FileName
                                                 </button>
                                             }
                                             else
                                             {
-                                                <input type="text" readonly class="form-control-plaintext text-muted" value="(none)" />
+                                                <div class="pt-2">
+                                                    <span class="text-muted fst-italic">
+                                                        <i class="fa fa-info-circle me-1"></i>PDF not checked in yet
+                                                    </span>
+                                                </div>
                                             }
                                         </div>
                                     </div>

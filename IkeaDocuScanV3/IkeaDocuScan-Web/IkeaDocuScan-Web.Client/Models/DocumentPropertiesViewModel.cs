@@ -347,7 +347,7 @@ public class DocumentPropertiesViewModel
     /// <summary>
     /// Indicates if a file is attached to this document
     /// </summary>
-    public bool HasFile => !string.IsNullOrEmpty(FileName) || FileBytes != null;
+    public bool HasFile => FileId != null;
 
     /// <summary>
     /// Indicates if this is a new document (no ID assigned yet)
@@ -369,6 +369,8 @@ public class DocumentPropertiesViewModel
     /// Indicates if DispatchDate field should be enabled
     /// </summary>
     public bool IsDispatchDateEnabled => PropertySetNumber == 2;
+
+    public int? FileId { get; internal set; }
 
     /// <summary>
     /// Converts selected third party IDs to semicolon-separated string for database

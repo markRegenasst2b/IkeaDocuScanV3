@@ -72,8 +72,13 @@
         try
         {
             Logger.LogInformation("Loading document types for dropdown");
-            documentTypes = await DocumentTypeService.GetAllAsync();
-            Logger.LogInformation("Loaded {Count} document types", documentTypes?.Count ?? 0);
+            var allDocumentTypes = await DocumentTypeService.GetAllAsync();
+
+            // Filter to only show enabled document types
+            documentTypes = allDocumentTypes?.Where(dt => dt.IsEnabled).ToList();
+
+            Logger.LogInformation("Loaded {Count} enabled document types (out of {Total} total)",
+                documentTypes?.Count ?? 0, allDocumentTypes?.Count ?? 0);
         }
         catch (Exception ex)
         {
