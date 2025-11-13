@@ -200,19 +200,15 @@ public static class ReportEndpoints
             IDocumentService documentService,
             IExcelExportService excelService) =>
         {
-            // Load documents by IDs
-            var documents = new List<DocumentExportDto>();
-            foreach (var id in documentIds)
-            {
-                var doc = await documentService.GetByIdAsync(id);
-                if (doc != null)
-                {
-                    documents.Add(DocumentExportDto.FromDocumentDto(doc));
-                }
-            }
+            // Load all documents in a single efficient query (fixes N+1 problem)
+            var documents = await documentService.GetByIdsAsync(documentIds);
+
+            var exportData = documents
+                .Select(DocumentExportDto.FromDocumentDto)
+                .ToList();
 
             var options = new ExcelExportOptions { SheetName = "Selected Documents" };
-            var stream = await excelService.GenerateExcelAsync(documents, options);
+            var stream = await excelService.GenerateExcelAsync(exportData, options);
             var fileName = $"SelectedDocuments_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx";
             return Results.File(stream, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
         })

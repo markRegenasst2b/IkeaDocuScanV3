@@ -7,3 +7,6 @@ Question
 Propositions
     in search restrict the document types to the permissions of the user (show all if the user has no permissions or a permission with null document type)
     
+    
+Issues
+    When adding a new document type and then looking this new document type up in manage document names, adding document names is not possible.
