@@ -99,8 +99,11 @@ public class DocumentTypeService : IDocumentTypeService
             throw new ValidationException($"Document type with name '{dto.DtName}' already exists");
         }
 
+        int newDocumentId = context.DocumentTypes.Max(dt=> dt.DtId) + 1;
+
         var entity = new DocumentType
         {
+            DtId = newDocumentId,
             DtName = dto.DtName,
             IsEnabled = dto.IsEnabled,
             BarCode = dto.BarCode,

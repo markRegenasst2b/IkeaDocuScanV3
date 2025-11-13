@@ -1,4 +1,5 @@
 using IkeaDocuScan_Web.Client;
+using IkeaDocuScan_Web.Shared;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.Web;

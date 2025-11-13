@@ -2,7 +2,7 @@
 
 
 Question
-    Is document registering and check-in constraint to the users permissions? can a user register a document type she/he is not permitted to?
+    Is document registering and check-in constraint by users permissions? can a user register a document type she/he is not permitted to?
     
 Propositions
     in search restrict the document types to the permissions of the user (show all if the user has no permissions or a permission with null document type)
