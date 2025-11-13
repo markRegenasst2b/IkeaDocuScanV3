@@ -227,9 +227,19 @@ public class TestIdentityService
             claims.Add(new Claim("UserId", profile.DatabaseUserId.Value.ToString()));
         }
 
+        // Add SuperUser role claim if IsSuperUser flag is set (consistent with WindowsIdentityMiddleware)
+        if (profile.IsSuperUser)
+        {
+            claims.Add(new Claim(ClaimTypes.Role, "SuperUser"));
+        }
+
         // Add AD group role claims
         foreach (var group in profile.ADGroups)
         {
+            // Don't duplicate SuperUser role if already added from IsSuperUser flag
+            if (group == "SuperUser" && profile.IsSuperUser)
+                continue;
+
             claims.Add(new Claim(ClaimTypes.Role, group));
         }
 

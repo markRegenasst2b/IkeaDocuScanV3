@@ -1,3 +1,4 @@
+using IkeaDocuScan_Web.Shared;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Authorization;
 using System.Security.Claims;

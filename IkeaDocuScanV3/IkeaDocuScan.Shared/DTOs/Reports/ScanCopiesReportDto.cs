@@ -8,7 +8,7 @@ namespace IkeaDocuScan.Shared.DTOs.Reports;
 /// </summary>
 public class ScanCopiesReportDto : ExportableBase
 {
-    [ExcelExport("Bar Code", ExcelDataType.Number, "#,##0", Order = 1)]
+    [ExcelExport("Bar Code", ExcelDataType.Number, "0", Order = 1)]
     public int BarCode { get; set; }
 
     [ExcelExport("Document Type", ExcelDataType.String, Order = 2)]

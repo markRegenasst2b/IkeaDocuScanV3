@@ -235,8 +235,8 @@ public partial class ExcelPreview : ComponentBase
     {
         return dataType switch
         {
-            ExcelDataType.Number => "text-end",
-            ExcelDataType.Currency => "text-end",
+            ExcelDataType.Number => "text-nowrap",
+            ExcelDataType.Currency => "text-nowrap",
             ExcelDataType.Date => "text-nowrap",
             _ => ""
         };
