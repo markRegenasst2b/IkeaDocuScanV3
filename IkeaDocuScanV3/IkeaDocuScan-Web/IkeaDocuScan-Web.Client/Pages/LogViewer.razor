@@ -387,7 +387,7 @@
                 queryParams.Add($"fromDate={fromDate:yyyy-MM-dd}");
 
             if (toDate != default)
-                queryParams.Add($"toDate={toDate.AddDays(1).AddSeconds(-1):yyyy-MM-dd}");
+                queryParams.Add($"toDate={toDate:yyyy-MM-dd}");  // Server handles end-of-day adjustment
 
             if (!string.IsNullOrEmpty(selectedLevel))
                 queryParams.Add($"level={Uri.EscapeDataString(selectedLevel)}");
@@ -399,6 +399,8 @@
                 queryParams.Add($"searchText={Uri.EscapeDataString(searchText)}");
 
             var url = $"/api/logs/export?{string.Join("&", queryParams)}";
+
+            Console.WriteLine($"Exporting logs with URL: {url}");
 
             // Open in new tab to trigger download
             await JS.InvokeVoidAsync("open", url, "_blank");

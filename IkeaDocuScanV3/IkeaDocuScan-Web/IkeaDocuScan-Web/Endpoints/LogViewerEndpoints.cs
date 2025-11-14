@@ -60,18 +60,31 @@ public static class LogViewerEndpoints
             ILogViewerService logService,
             IAuditTrailService auditService,
             ICurrentUserService currentUserService,
+            ILogger<ILogViewerService> logger,
             CancellationToken cancellationToken) =>
         {
             try
             {
+                logger.LogInformation("Export endpoint called - Raw parameters: fromDate={FromDate}, toDate={ToDate}, level={Level}, source={Source}, searchText={SearchText}, format={Format}",
+                    fromDate, toDate, level, source, searchText, format);
+
+                // Adjust toDate to end of day if provided
+                var adjustedToDate = toDate.HasValue ? toDate.Value.Date.AddDays(1).AddSeconds(-1) : (DateTime?)null;
+
+                logger.LogInformation("Export endpoint - After adjustment: fromDate={FromDate}, adjustedToDate={AdjustedToDate}",
+                    fromDate, adjustedToDate);
+
                 var request = new LogSearchRequest
                 {
                     FromDate = fromDate,
-                    ToDate = toDate,
+                    ToDate = adjustedToDate,
                     Level = level,
                     Source = source,
                     SearchText = searchText
                 };
+
+                logger.LogInformation("Export request object - From: {FromDate}, To: {ToDate}, Level: {Level}, Source: {Source}, Search: {SearchText}",
+                    request.FromDate, request.ToDate, request.Level, request.Source, request.SearchText);
 
                 // Audit log export
                 var user = await currentUserService.GetCurrentUserAsync();
@@ -82,6 +95,9 @@ public static class LogViewerEndpoints
                 );
 
                 var data = await logService.ExportLogsAsync(request, format, cancellationToken);
+
+                logger.LogInformation("Export completed - {ByteCount} bytes exported", data.Length);
+
                 var contentType = format.ToLower() == "csv" ? "text/csv" : "application/json";
                 var fileName = $"logs-{DateTime.Now:yyyyMMddHHmmss}.{format}";
 

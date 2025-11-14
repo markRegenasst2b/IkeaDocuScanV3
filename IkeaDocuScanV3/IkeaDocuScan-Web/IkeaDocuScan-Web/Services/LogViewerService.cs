@@ -35,7 +35,7 @@ public class LogViewerService : ILogViewerService
             try
             {
                 Directory.CreateDirectory(_logDirectory);
-                _logger.LogInformation("Created log directory: {LogDirectory}", _logDirectory);
+                _logger.LogDebug("Created log directory: {LogDirectory}", _logDirectory);
             }
             catch (Exception ex)
             {
@@ -53,34 +53,55 @@ public class LogViewerService : ILogViewerService
             // Determine which log files to read based on date range
             var logFiles = GetLogFilesForDateRange(request.FromDate, request.ToDate);
 
+            _logger.LogDebug("SearchLogsAsync - Found {FileCount} log files for date range {FromDate} to {ToDate}: {Files}",
+                logFiles.Count, request.FromDate, request.ToDate, string.Join(", ", logFiles.Select(Path.GetFileName)));
+
             foreach (var logFile in logFiles)
             {
                 if (cancellationToken.IsCancellationRequested) break;
 
                 var logs = await ReadAndParseLogFileAsync(logFile, cancellationToken);
+                _logger.LogDebug("Read {Count} log entries from {File}", logs.Count, Path.GetFileName(logFile));
                 allLogs.AddRange(logs);
             }
+
+            _logger.LogDebug("SearchLogsAsync - Total logs read from files: {Count}", allLogs.Count);
 
             // Apply filters
             var filteredLogs = allLogs.AsEnumerable();
 
             if (!string.IsNullOrEmpty(request.Level))
+            {
                 filteredLogs = filteredLogs.Where(l => l.Level.Equals(request.Level, StringComparison.OrdinalIgnoreCase));
+                _logger.LogDebug("After Level filter ({Level}): {Count} logs", request.Level, filteredLogs.Count());
+            }
 
             if (!string.IsNullOrEmpty(request.Source))
+            {
                 filteredLogs = filteredLogs.Where(l => l.Source?.Contains(request.Source, StringComparison.OrdinalIgnoreCase) == true);
+                _logger.LogDebug("After Source filter ({Source}): {Count} logs", request.Source, filteredLogs.Count());
+            }
 
             if (!string.IsNullOrEmpty(request.SearchText))
+            {
                 filteredLogs = filteredLogs.Where(l =>
                     l.Message.Contains(request.SearchText, StringComparison.OrdinalIgnoreCase) ||
                     l.Exception?.Contains(request.SearchText, StringComparison.OrdinalIgnoreCase) == true);
+                _logger.LogDebug("After SearchText filter ({SearchText}): {Count} logs", request.SearchText, filteredLogs.Count());
+            }
 
             // Apply date filters
             if (request.FromDate.HasValue)
+            {
                 filteredLogs = filteredLogs.Where(l => l.Timestamp >= request.FromDate.Value);
+                _logger.LogDebug("After FromDate filter ({FromDate}): {Count} logs", request.FromDate.Value, filteredLogs.Count());
+            }
 
             if (request.ToDate.HasValue)
+            {
                 filteredLogs = filteredLogs.Where(l => l.Timestamp <= request.ToDate.Value);
+                _logger.LogDebug("After ToDate filter ({ToDate}): {Count} logs", request.ToDate.Value, filteredLogs.Count());
+            }
 
             // Sort
             filteredLogs = request.SortOrder.ToLower() == "asc"
@@ -89,6 +110,8 @@ public class LogViewerService : ILogViewerService
 
             var filteredList = filteredLogs.ToList();
             var totalCount = filteredList.Count;
+
+            _logger.LogDebug("SearchLogsAsync - After all filters: {Count} logs", totalCount);
 
             // Paginate
             var pagedLogs = filteredList
@@ -119,6 +142,9 @@ public class LogViewerService : ILogViewerService
 
     public async Task<byte[]> ExportLogsAsync(LogSearchRequest request, string format = "json", CancellationToken cancellationToken = default)
     {
+        _logger.LogDebug("ExportLogsAsync called - FromDate: {FromDate}, ToDate: {ToDate}, Level: {Level}, Source: {Source}, SearchText: {SearchText}",
+            request.FromDate, request.ToDate, request.Level, request.Source, request.SearchText);
+
         var result = await SearchLogsAsync(new LogSearchRequest
         {
             FromDate = request.FromDate,
@@ -129,6 +155,8 @@ public class LogViewerService : ILogViewerService
             PageNumber = 1,
             PageSize = 10000 // Export max 10k records
         }, cancellationToken);
+
+        _logger.LogDebug("ExportLogsAsync - Found {Count} logs after filtering", result.Logs.Count);
 
         if (format.ToLower() == "csv")
             return ExportToCsv(result.Logs);
@@ -332,12 +360,29 @@ public class LogViewerService : ILogViewerService
             using var doc = JsonDocument.Parse(jsonLine);
             var root = doc.RootElement;
 
+            // Get message: prefer @m (rendered), fallback to @mt (template), then try to render manually
+            string message;
+            if (root.TryGetProperty("@m", out var m))
+            {
+                // Rendered message available (new format)
+                message = m.GetString() ?? "";
+            }
+            else if (root.TryGetProperty("@mt", out var mt))
+            {
+                // Only template available (old format) - try to render it manually
+                var template = mt.GetString() ?? "";
+                message = RenderMessageTemplate(template, root);
+            }
+            else
+            {
+                message = "";
+            }
+
             return new LogEntryDto
             {
                 Timestamp = root.TryGetProperty("@t", out var t) ? t.GetDateTime() : DateTime.MinValue,
                 Level = root.TryGetProperty("@l", out var level) ? level.GetString() ?? "Information" : "Information",
-                Message = root.TryGetProperty("@mt", out var msg) ? msg.GetString() ?? "" :
-                         root.TryGetProperty("@m", out var m) ? m.GetString() ?? "" : "",
+                Message = message,
                 Exception = root.TryGetProperty("@x", out var ex) ? ex.GetString() : null,
                 Source = root.TryGetProperty("SourceContext", out var src) ? src.GetString() : null,
                 User = root.TryGetProperty("User", out var user) ? user.GetString() : null,
@@ -350,6 +395,31 @@ public class LogViewerService : ILogViewerService
             _logger.LogWarning(ex, "Failed to parse log entry");
             return null;
         }
+    }
+
+    private string RenderMessageTemplate(string template, JsonElement root)
+    {
+        // Simple template rendering: replace {PropertyName} with actual values
+        var result = template;
+
+        foreach (var property in root.EnumerateObject())
+        {
+            // Skip Serilog control properties
+            if (property.Name.StartsWith("@"))
+                continue;
+
+            var placeholder = "{" + property.Name + "}";
+            if (result.Contains(placeholder))
+            {
+                var value = property.Value.ValueKind == JsonValueKind.String
+                    ? property.Value.GetString() ?? ""
+                    : property.Value.ToString();
+
+                result = result.Replace(placeholder, value);
+            }
+        }
+
+        return result;
     }
 
     private Dictionary<string, object>? ExtractProperties(JsonElement root)
@@ -382,11 +452,13 @@ public class LogViewerService : ILogViewerService
     private byte[] ExportToCsv(List<LogEntryDto> logs)
     {
         var csv = new StringBuilder();
-        csv.AppendLine("Timestamp,Level,Source,User,Message,Exception");
+        // Add UTF-8 BOM for Excel compatibility
+        csv.Append('\ufeff');
+        csv.AppendLine("Timestamp,Level,Source,User,RequestId,Message,Exception");
 
         foreach (var log in logs)
         {
-            csv.AppendLine($"\"{log.Timestamp:yyyy-MM-dd HH:mm:ss}\",\"{log.Level}\",\"{log.Source}\",\"{log.User}\",\"{EscapeCsv(log.Message)}\",\"{EscapeCsv(log.Exception)}\"");
+            csv.AppendLine($"\"{log.Timestamp:yyyy-MM-dd HH:mm:ss}\",\"{EscapeCsv(log.Level)}\",\"{EscapeCsv(log.Source)}\",\"{EscapeCsv(log.User)}\",\"{EscapeCsv(log.RequestId)}\",\"{EscapeCsv(log.Message)}\",\"{EscapeCsv(log.Exception)}\"");
         }
 
         return Encoding.UTF8.GetBytes(csv.ToString());
@@ -395,7 +467,19 @@ public class LogViewerService : ILogViewerService
     private string EscapeCsv(string? value)
     {
         if (string.IsNullOrEmpty(value)) return "";
-        return value.Replace("\"", "\"\"");
+
+        // Replace newlines with space to prevent multi-line cells
+        var result = value
+            .Replace("\r\n", " ") // Windows newlines
+            .Replace("\n", " ")   // Unix newlines
+            .Replace("\r", " ")   // Old Mac newlines
+            .Replace("\"", "\"\""); // Escape quotes
+
+        // Remove excessive whitespace
+        while (result.Contains("  "))
+            result = result.Replace("  ", " ");
+
+        return result.Trim();
     }
 
     #endregion
