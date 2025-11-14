@@ -48,5 +48,15 @@ public enum AuditAction
     /// <summary>
     /// User exported data to Excel
     /// </summary>
-    ExportExcel
+    ExportExcel,
+
+    /// <summary>
+    /// User viewed system logs
+    /// </summary>
+    ViewLogs,
+
+    /// <summary>
+    /// User exported system logs
+    /// </summary>
+    ExportLogs
 }

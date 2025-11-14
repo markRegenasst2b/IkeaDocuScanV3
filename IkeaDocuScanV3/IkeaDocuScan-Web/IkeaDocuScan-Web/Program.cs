@@ -13,6 +13,8 @@ using Microsoft.AspNetCore.Authentication.Negotiate;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.EntityFrameworkCore;
+using Serilog;
+using Serilog.Events;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -23,6 +25,20 @@ builder.Configuration
     .AddJsonFile("appsettings.Local.json", optional: true, reloadOnChange: true)
     .AddEncryptedJsonFile("secrets.encrypted.json", optional: true, reloadOnChange: false, "ConnectionStrings:DefaultConnection")
     .AddEnvironmentVariables();
+
+// Configure Serilog for structured logging
+Log.Logger = new LoggerConfiguration()
+    .ReadFrom.Configuration(builder.Configuration)
+    .Enrich.FromLogContext()
+    .Enrich.WithMachineName()
+    .Enrich.WithThreadId()
+    .CreateLogger();
+
+builder.Host.UseSerilog();
+
+try
+{
+    Log.Information("Starting IkeaDocuScan application");
 
 builder.AddServiceDefaults();
 
@@ -139,6 +155,7 @@ builder.Services.AddScoped<IDocumentNameService, DocumentNameService>();
 builder.Services.AddScoped<ICurrencyService, CurrencyService>();
 builder.Services.AddScoped<IActionReminderService, ActionReminderService>();
 builder.Services.AddScoped<IReportService, ReportService>();
+builder.Services.AddScoped<ILogViewerService, LogViewerService>();
 
 #if DEBUG
 // Test Identity Service (DEVELOPMENT ONLY)
@@ -226,10 +243,21 @@ app.MapCurrencyEndpoints();
 app.MapEmailEndpoints();
 app.MapExcelExportEndpoints();
 app.MapConfigurationEndpoints();
+app.MapLogViewerEndpoints();
 
 #if DEBUG
 // Test Identity Endpoints (DEVELOPMENT ONLY)
 app.MapTestIdentityEndpoints();
 #endif
 
-app.Run();
+    app.Run();
+}
+catch (Exception ex)
+{
+    Log.Fatal(ex, "Application terminated unexpectedly");
+}
+finally
+{
+    Log.Information("Application shutting down");
+    Log.CloseAndFlush();
+}

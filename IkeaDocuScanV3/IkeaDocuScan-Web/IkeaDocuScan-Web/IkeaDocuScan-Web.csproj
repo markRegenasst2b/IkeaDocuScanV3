@@ -21,6 +21,13 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="Serilog.AspNetCore" Version="9.0.0" />
+    <PackageReference Include="Serilog.Enrichers.Environment" Version="3.0.1" />
+    <PackageReference Include="Serilog.Enrichers.Thread" Version="4.0.0" />
+    <PackageReference Include="Serilog.Formatting.Compact" Version="3.0.0" />
+    <PackageReference Include="Serilog.Settings.Configuration" Version="9.0.0" />
+    <PackageReference Include="Serilog.Sinks.Console" Version="6.1.1" />
+    <PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
     <ProjectReference Include="..\..\IkeaDocuScanV3.ServiceDefaults\IkeaDocuScanV3.ServiceDefaults.csproj" />
     <ProjectReference Include="..\IkeaDocuScan-Web.Client\IkeaDocuScan-Web.Client.csproj" />
     <ProjectReference Include="..\..\IkeaDocuScan.Infrastructure\IkeaDocuScan.Infrastructure.csproj" />

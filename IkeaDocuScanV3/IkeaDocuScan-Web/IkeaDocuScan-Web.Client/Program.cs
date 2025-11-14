@@ -39,6 +39,7 @@ builder.Services.AddScoped<IDocumentNameService, DocumentNameHttpService>();
 builder.Services.AddScoped<ICurrencyService, CurrencyHttpService>();
 builder.Services.AddScoped<IActionReminderService, ActionReminderHttpService>();
 builder.Services.AddScoped<IReportService, ReportHttpService>();
+builder.Services.AddScoped<ILogViewerService, LogViewerHttpService>();
 builder.Services.AddScoped<EmailHttpService>();
 builder.Services.AddScoped<UserIdentityHttpService>();
 

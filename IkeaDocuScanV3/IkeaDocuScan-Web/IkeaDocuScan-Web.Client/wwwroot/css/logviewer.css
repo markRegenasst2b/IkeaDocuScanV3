@@ -1,0 +1,326 @@
+/* Log Viewer Styles */
+
+.log-viewer-container {
+    padding: 20px;
+    max-width: 1600px;
+    margin: 0 auto;
+}
+
+/* Statistics Cards */
+.stats-cards {
+    margin-bottom: 2rem;
+}
+
+.stat-card {
+    background: white;
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.stat-icon {
+    font-size: 2.5rem;
+    width: 60px;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+}
+
+.stat-error .stat-icon {
+    background-color: #fee;
+    color: #dc3545;
+}
+
+.stat-warning .stat-icon {
+    background-color: #fff3cd;
+    color: #ffc107;
+}
+
+.stat-info .stat-icon {
+    background-color: #d1ecf1;
+    color: #0dcaf0;
+}
+
+.stat-total .stat-icon {
+    background-color: #d1e7dd;
+    color: #198754;
+}
+
+.stat-content {
+    flex: 1;
+}
+
+.stat-number {
+    font-size: 2rem;
+    font-weight: bold;
+    line-height: 1;
+    margin-bottom: 5px;
+}
+
+.stat-label {
+    color: #6c757d;
+    font-size: 0.9rem;
+}
+
+/* Filter Panel */
+.filters-panel {
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    margin-bottom: 20px;
+}
+
+.filters-panel .card-body {
+    padding: 1.5rem;
+}
+
+/* Results Summary */
+.results-summary {
+    padding: 15px;
+    background: #e9ecef;
+    border-radius: 4px;
+}
+
+/* Log Entry Cards */
+.logs-list {
+    margin-top: 1rem;
+}
+
+.log-entry {
+    border-left: 4px solid #6c757d;
+    transition: box-shadow 0.2s, transform 0.1s;
+    margin-bottom: 0.75rem;
+}
+
+.log-entry:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    transform: translateX(2px);
+}
+
+/* Log Level Colors */
+.log-level-verbose {
+    border-left-color: #adb5bd;
+}
+
+.log-level-debug {
+    border-left-color: #0dcaf0;
+}
+
+.log-level-information {
+    border-left-color: #198754;
+}
+
+.log-level-warning {
+    border-left-color: #ffc107;
+    background-color: #fffbf0;
+}
+
+.log-level-error {
+    border-left-color: #dc3545;
+    background-color: #fff5f5;
+}
+
+.log-level-fatal {
+    border-left-color: #721c24;
+    background-color: #f8d7da;
+}
+
+/* Log Entry Content */
+.log-header {
+    margin-bottom: 8px;
+}
+
+.log-timestamp {
+    font-family: 'Courier New', 'Consolas', monospace;
+    font-size: 0.85rem;
+    color: #495057;
+    font-weight: 500;
+}
+
+.log-level {
+    font-size: 0.75rem;
+    margin-left: 8px;
+    padding: 3px 8px;
+    font-weight: 600;
+}
+
+.log-source {
+    font-size: 0.8rem;
+    margin-left: 8px;
+    font-family: 'Courier New', 'Consolas', monospace;
+}
+
+.log-user {
+    font-size: 0.8rem;
+    margin-left: 8px;
+}
+
+.log-request-id {
+    font-size: 0.75rem;
+    margin-left: 8px;
+    font-family: 'Courier New', 'Consolas', monospace;
+}
+
+.log-message {
+    font-size: 0.95rem;
+    line-height: 1.6;
+    color: #212529;
+    word-wrap: break-word;
+}
+
+/* Exception Display */
+.log-exception pre {
+    font-size: 0.8rem;
+    max-height: 400px;
+    overflow-y: auto;
+    background-color: #f8f9fa !important;
+    border: 1px solid #dee2e6 !important;
+    padding: 12px !important;
+    margin: 0;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    font-family: 'Courier New', 'Consolas', monospace;
+}
+
+/* Properties Display */
+.log-properties {
+    border-top: 1px solid #dee2e6;
+    padding-top: 10px;
+    margin-top: 10px;
+}
+
+.log-properties .badge {
+    font-size: 0.75rem;
+    font-weight: normal;
+    padding: 4px 8px;
+}
+
+/* Pagination */
+.pagination {
+    margin-top: 2rem;
+}
+
+.pagination .page-link {
+    border-color: #dee2e6;
+    color: #0051ba;
+}
+
+.pagination .page-item.active .page-link {
+    background-color: #0051ba;
+    border-color: #0051ba;
+}
+
+.pagination .page-link:hover:not(.active) {
+    background-color: #e9ecef;
+}
+
+/* Loading Spinner */
+.spinner-border {
+    border-width: 0.3rem;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+    .log-viewer-container {
+        padding: 10px;
+    }
+
+    .stat-card {
+        padding: 15px;
+    }
+
+    .stat-icon {
+        font-size: 2rem;
+        width: 50px;
+        height: 50px;
+    }
+
+    .stat-number {
+        font-size: 1.5rem;
+    }
+
+    .log-timestamp {
+        font-size: 0.75rem;
+    }
+
+    .log-message {
+        font-size: 0.9rem;
+    }
+
+    .filters-panel .row .col-md-2,
+    .filters-panel .row .col-md-3,
+    .filters-panel .row .col-md-4,
+    .filters-panel .row .col-md-8 {
+        margin-bottom: 10px;
+    }
+}
+
+/* Dark Mode Support (Optional) */
+@media (prefers-color-scheme: dark) {
+    .log-viewer-container {
+        color: #e9ecef;
+    }
+
+    .stat-card,
+    .filters-panel,
+    .log-entry {
+        background-color: #2b2b2b;
+        border-color: #444;
+    }
+
+    .results-summary {
+        background-color: #333;
+    }
+
+    .log-exception pre {
+        background-color: #1e1e1e !important;
+        border-color: #444 !important;
+        color: #e9ecef;
+    }
+}
+
+/* Button Overrides */
+.log-entry .btn-outline-danger {
+    font-size: 0.8rem;
+    padding: 4px 10px;
+}
+
+.log-entry .btn-outline-danger:hover {
+    background-color: #dc3545;
+    color: white;
+}
+
+/* Form Controls in Filter Panel */
+.filters-panel .form-label {
+    font-weight: 500;
+    margin-bottom: 0.25rem;
+    font-size: 0.9rem;
+}
+
+.filters-panel .form-control,
+.filters-panel .form-select {
+    font-size: 0.9rem;
+}
+
+/* Dropdown Menu */
+.dropdown-menu {
+    min-width: 120px;
+}
+
+.dropdown-item {
+    cursor: pointer;
+}
+
+.dropdown-item:active {
+    background-color: #0051ba;
+}

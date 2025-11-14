@@ -1,0 +1,451 @@
+@page "/admin/logs"
+@using IkeaDocuScan.Shared.DTOs
+@using IkeaDocuScan.Shared.Interfaces
+@inject ILogViewerService LogService
+@inject NavigationManager Navigation
+@inject IJSRuntime JS
+@attribute [Authorize(Policy = "SuperUser")]
+@rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
+
+<PageTitle>System Logs - IkeaDocuScan</PageTitle>
+
+<div class="log-viewer-container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>
+            <i class="fas fa-file-alt"></i> System Logs
+        </h2>
+    </div>
+
+    @if (statistics != null)
+    {
+        <div class="stats-cards mb-4">
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <div class="stat-card stat-error">
+                        <div class="stat-icon">
+                            <i class="fas fa-exclamation-circle"></i>
+                        </div>
+                        <div class="stat-content">
+                            <div class="stat-number">@statistics.ErrorCount</div>
+                            <div class="stat-label">Errors (Last 24h)</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-card stat-warning">
+                        <div class="stat-icon">
+                            <i class="fas fa-exclamation-triangle"></i>
+                        </div>
+                        <div class="stat-content">
+                            <div class="stat-number">@statistics.WarningCount</div>
+                            <div class="stat-label">Warnings (Last 24h)</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-card stat-info">
+                        <div class="stat-icon">
+                            <i class="fas fa-info-circle"></i>
+                        </div>
+                        <div class="stat-content">
+                            <div class="stat-number">@statistics.InformationCount</div>
+                            <div class="stat-label">Info Messages</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-card stat-total">
+                        <div class="stat-icon">
+                            <i class="fas fa-list"></i>
+                        </div>
+                        <div class="stat-content">
+                            <div class="stat-number">@statistics.TotalCount</div>
+                            <div class="stat-label">Total Entries</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+
+    <div class="filters-panel card">
+        <div class="card-body">
+            <div class="row g-3">
+                <!-- Date Range -->
+                <div class="col-md-3">
+                    <label class="form-label">From Date</label>
+                    <input type="date" class="form-control" @bind="fromDate" @bind:event="oninput" />
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">To Date</label>
+                    <input type="date" class="form-control" @bind="toDate" @bind:event="oninput" />
+                </div>
+
+                <!-- Log Level -->
+                <div class="col-md-2">
+                    <label class="form-label">Level</label>
+                    <select class="form-select" @bind="selectedLevel">
+                        <option value="">All</option>
+                        <option value="Verbose">Verbose</option>
+                        <option value="Debug">Debug</option>
+                        <option value="Information">Information</option>
+                        <option value="Warning">Warning</option>
+                        <option value="Error">Error</option>
+                        <option value="Fatal">Fatal</option>
+                    </select>
+                </div>
+
+                <!-- Source -->
+                <div class="col-md-2">
+                    <label class="form-label">Source</label>
+                    <select class="form-select" @bind="selectedSource">
+                        <option value="">All</option>
+                        @foreach (var source in availableSources)
+                        {
+                            <option value="@source">@GetShortSourceName(source)</option>
+                        }
+                    </select>
+                </div>
+
+                <!-- Page Size -->
+                <div class="col-md-2">
+                    <label class="form-label">Page Size</label>
+                    <select class="form-select" @bind="pageSize" @bind:after="SearchLogs">
+                        <option value="25">25</option>
+                        <option value="50">50</option>
+                        <option value="100">100</option>
+                        <option value="500">500</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="row g-3 mt-2">
+                <!-- Search Text -->
+                <div class="col-md-8">
+                    <label class="form-label">Search Message</label>
+                    <input type="text" class="form-control" placeholder="Search in message and exception..."
+                           @bind="searchText" @bind:event="oninput" />
+                </div>
+
+                <!-- Actions -->
+                <div class="col-md-4 d-flex align-items-end gap-2">
+                    <button class="btn btn-primary flex-fill" @onclick="SearchLogs" disabled="@isLoading">
+                        <i class="fas fa-search"></i> Search
+                    </button>
+                    <button class="btn btn-secondary" @onclick="ResetFilters" disabled="@isLoading">
+                        <i class="fas fa-redo"></i> Reset
+                    </button>
+                    <div class="dropdown">
+                        <button class="btn btn-success dropdown-toggle" type="button" data-bs-toggle="dropdown" disabled="@isLoading">
+                            <i class="fas fa-download"></i> Export
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="#" @onclick="@(() => ExportLogs("json"))" @onclick:preventDefault>JSON</a></li>
+                            <li><a class="dropdown-item" href="#" @onclick="@(() => ExportLogs("csv"))" @onclick:preventDefault>CSV</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @if (isLoading)
+    {
+        <div class="text-center my-5">
+            <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-3">Loading logs...</p>
+        </div>
+    }
+    else if (searchResult != null && searchResult.Logs.Any())
+    {
+        <div class="results-summary mt-3">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <strong>@searchResult.TotalCount</strong> log entries found
+                    (Page @searchResult.PageNumber of @searchResult.TotalPages)
+                </div>
+                <div>
+                    <label class="me-2">Sort:</label>
+                    <select class="form-select form-select-sm d-inline-block w-auto" @bind="sortOrder" @bind:after="SearchLogs">
+                        <option value="desc">Newest First</option>
+                        <option value="asc">Oldest First</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <div class="logs-list mt-3">
+            @foreach (var log in searchResult.Logs)
+            {
+                <div class="log-entry card mb-2 log-level-@log.Level.ToLower()">
+                    <div class="card-body">
+                        <div class="log-header d-flex justify-content-between align-items-start">
+                            <div class="flex-grow-1">
+                                <span class="log-timestamp">@log.Timestamp.ToString("yyyy-MM-dd HH:mm:ss.fff")</span>
+                                <span class="log-level badge bg-@GetLevelColor(log.Level)">@log.Level</span>
+                                @if (!string.IsNullOrEmpty(log.Source))
+                                {
+                                    <span class="log-source text-muted" title="@log.Source">[@GetShortSourceName(log.Source)]</span>
+                                }
+                                @if (!string.IsNullOrEmpty(log.User))
+                                {
+                                    <span class="log-user text-info"><i class="fas fa-user"></i> @log.User</span>
+                                }
+                                @if (!string.IsNullOrEmpty(log.RequestId))
+                                {
+                                    <span class="log-request-id text-secondary" title="Request ID: @log.RequestId">
+                                        <i class="fas fa-fingerprint"></i> @log.RequestId.Substring(0, Math.Min(8, log.RequestId.Length))...
+                                    </span>
+                                }
+                            </div>
+                            @if (!string.IsNullOrEmpty(log.Exception))
+                            {
+                                <button class="btn btn-sm btn-outline-danger" @onclick="() => ToggleException(log)">
+                                    <i class="fas @(expandedExceptions.Contains(log) ? "fa-chevron-up" : "fa-chevron-down")"></i>
+                                    Exception
+                                </button>
+                            }
+                        </div>
+                        <div class="log-message mt-2">
+                            @log.Message
+                        </div>
+                        @if (expandedExceptions.Contains(log) && !string.IsNullOrEmpty(log.Exception))
+                        {
+                            <div class="log-exception mt-2">
+                                <pre class="bg-light p-2 border rounded">@log.Exception</pre>
+                            </div>
+                        }
+                        @if (log.Properties != null && log.Properties.Any())
+                        {
+                            <div class="log-properties mt-2">
+                                <small class="text-muted">
+                                    @foreach (var prop in log.Properties.Take(5))
+                                    {
+                                        <span class="badge bg-secondary me-1" title="@prop.Value">@prop.Key: @GetTruncatedValue(prop.Value?.ToString())</span>
+                                    }
+                                    @if (log.Properties.Count > 5)
+                                    {
+                                        <span class="badge bg-secondary">+@(log.Properties.Count - 5) more</span>
+                                    }
+                                </small>
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+
+        @if (searchResult.TotalPages > 1)
+        {
+            <nav class="mt-4">
+                <ul class="pagination justify-content-center">
+                    <li class="page-item @(currentPage == 1 ? "disabled" : "")">
+                        <button class="page-link" @onclick="() => ChangePage(currentPage - 1)" disabled="@(currentPage == 1)">Previous</button>
+                    </li>
+
+                    @for (int i = Math.Max(1, currentPage - 2); i <= Math.Min(searchResult.TotalPages, currentPage + 2); i++)
+                    {
+                        var pageNum = i;
+                        <li class="page-item @(currentPage == pageNum ? "active" : "")">
+                            <button class="page-link" @onclick="() => ChangePage(pageNum)">@pageNum</button>
+                        </li>
+                    }
+
+                    <li class="page-item @(currentPage == searchResult.TotalPages ? "disabled" : "")">
+                        <button class="page-link" @onclick="() => ChangePage(currentPage + 1)" disabled="@(currentPage == searchResult.TotalPages)">Next</button>
+                    </li>
+                </ul>
+            </nav>
+        }
+    }
+    else if (!isLoading && searchResult != null)
+    {
+        <div class="alert alert-info mt-3">
+            <i class="fas fa-info-circle"></i> No log entries found matching your search criteria. Try adjusting the filters.
+        </div>
+    }
+    else if (!isLoading)
+    {
+        <div class="alert alert-info mt-3">
+            <i class="fas fa-info-circle"></i> Use the filters above to search logs. Click "Search" to view log entries.
+        </div>
+    }
+</div>
+
+@code {
+    private DateTime fromDate = DateTime.Today.AddDays(-7);
+    private DateTime toDate = DateTime.Today;
+    private string selectedLevel = "";
+    private string selectedSource = "";
+    private string searchText = "";
+    private int pageSize = 50;
+    private int currentPage = 1;
+    private string sortOrder = "desc";
+
+    private bool isLoading = false;
+    private LogSearchResult? searchResult;
+    private LogStatisticsDto? statistics;
+    private List<string> availableSources = new();
+    private HashSet<LogEntryDto> expandedExceptions = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAvailableSources();
+        await LoadStatistics();
+        await SearchLogs();
+    }
+
+    private async Task LoadAvailableSources()
+    {
+        try
+        {
+            availableSources = await LogService.GetLogSourcesAsync();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading sources: {ex.Message}");
+        }
+    }
+
+    private async Task LoadStatistics()
+    {
+        try
+        {
+            statistics = await LogService.GetLogStatisticsAsync(DateTime.Today.AddDays(-1), DateTime.Today.AddDays(1));
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading statistics: {ex.Message}");
+        }
+    }
+
+    private async Task SearchLogs()
+    {
+        isLoading = true;
+        expandedExceptions.Clear();
+
+        try
+        {
+            var request = new LogSearchRequest
+            {
+                FromDate = fromDate,
+                ToDate = toDate.AddDays(1).AddSeconds(-1), // Include entire day
+                Level = string.IsNullOrEmpty(selectedLevel) ? null : selectedLevel,
+                Source = string.IsNullOrEmpty(selectedSource) ? null : selectedSource,
+                SearchText = string.IsNullOrEmpty(searchText) ? null : searchText,
+                PageNumber = currentPage,
+                PageSize = pageSize,
+                SortOrder = sortOrder
+            };
+
+            searchResult = await LogService.SearchLogsAsync(request);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error searching logs: {ex.Message}");
+            searchResult = new LogSearchResult();
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task ChangePage(int page)
+    {
+        if (page < 1 || (searchResult != null && page > searchResult.TotalPages))
+            return;
+
+        currentPage = page;
+        await SearchLogs();
+    }
+
+    private async Task ResetFilters()
+    {
+        fromDate = DateTime.Today.AddDays(-7);
+        toDate = DateTime.Today;
+        selectedLevel = "";
+        selectedSource = "";
+        searchText = "";
+        currentPage = 1;
+        await SearchLogs();
+    }
+
+    private async Task ExportLogs(string format)
+    {
+        try
+        {
+            // Build query string with filter parameters
+            var queryParams = new List<string>
+            {
+                $"format={format}"
+            };
+
+            if (fromDate != default)
+                queryParams.Add($"fromDate={fromDate:yyyy-MM-dd}");
+
+            if (toDate != default)
+                queryParams.Add($"toDate={toDate.AddDays(1).AddSeconds(-1):yyyy-MM-dd}");
+
+            if (!string.IsNullOrEmpty(selectedLevel))
+                queryParams.Add($"level={Uri.EscapeDataString(selectedLevel)}");
+
+            if (!string.IsNullOrEmpty(selectedSource))
+                queryParams.Add($"source={Uri.EscapeDataString(selectedSource)}");
+
+            if (!string.IsNullOrEmpty(searchText))
+                queryParams.Add($"searchText={Uri.EscapeDataString(searchText)}");
+
+            var url = $"/api/logs/export?{string.Join("&", queryParams)}";
+
+            // Open in new tab to trigger download
+            await JS.InvokeVoidAsync("open", url, "_blank");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error exporting logs: {ex.Message}");
+        }
+    }
+
+    private void ToggleException(LogEntryDto log)
+    {
+        if (expandedExceptions.Contains(log))
+            expandedExceptions.Remove(log);
+        else
+            expandedExceptions.Add(log);
+    }
+
+    private string GetLevelColor(string level)
+    {
+        return level.ToLower() switch
+        {
+            "verbose" => "secondary",
+            "debug" => "info",
+            "information" => "success",
+            "warning" => "warning",
+            "error" => "danger",
+            "fatal" => "dark",
+            _ => "secondary"
+        };
+    }
+
+    private string GetShortSourceName(string? source)
+    {
+        if (string.IsNullOrEmpty(source))
+            return "";
+
+        // Take last part after last dot
+        var parts = source.Split('.');
+        return parts.Length > 0 ? parts[^1] : source;
+    }
+
+    private string GetTruncatedValue(string? value, int maxLength = 30)
+    {
+        if (string.IsNullOrEmpty(value))
+            return "";
+
+        return value.Length <= maxLength ? value : value.Substring(0, maxLength) + "...";
+    }
+}
