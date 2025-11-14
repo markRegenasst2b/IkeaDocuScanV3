@@ -35,7 +35,7 @@ public class LogViewerService : ILogViewerService
             try
             {
                 Directory.CreateDirectory(_logDirectory);
-                _logger.LogDebug("Created log directory: {LogDirectory}", _logDirectory);
+                _logger.LogInformation("Created log directory: {LogDirectory}", _logDirectory);
             }
             catch (Exception ex)
             {
