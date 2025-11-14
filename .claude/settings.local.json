@@ -4,7 +4,10 @@
       "WebFetch(domain:tonybaloney.github.io)",
       "Bash(dotnet new:*)",
       "Bash(mkdir:*)",
-      "Bash(dotnet build:*)"
+      "Bash(dotnet build:*)",
+      "Bash(apt list:*)",
+      "Bash(sudo apt-get update:*)",
+      "Bash(sudo apt-get install:*)"
     ],
     "deny": [],
     "ask": []

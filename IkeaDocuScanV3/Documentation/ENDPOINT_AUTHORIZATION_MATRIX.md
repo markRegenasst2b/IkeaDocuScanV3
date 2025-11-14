@@ -1,8 +1,8 @@
 # Endpoint Authorization Matrix - Complete API Reference
 
-**Date:** 2025-11-07
-**Version:** 3.1
-**Total Endpoints:** 16 Files, 108 Endpoints
+**Date:** 2025-11-14
+**Version:** 3.2
+**Total Endpoints:** 16 Files, 113 Endpoints
 
 ---
 

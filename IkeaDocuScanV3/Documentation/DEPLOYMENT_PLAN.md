@@ -284,7 +284,7 @@ wwwroot/
 
 **Execution Order:**
 
-The scripts are prefixed with numbers to indicate execution order. Execute ALL 10 scripts sequentially:
+The scripts are prefixed with numbers to indicate execution order. Execute ALL 8 scripts sequentially:
 
 | Order | Script Name | Purpose |
 |-------|-------------|---------|

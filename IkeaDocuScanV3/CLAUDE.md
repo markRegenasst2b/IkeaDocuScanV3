@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-IkeaDocuScan is an enterprise document management and scanning system built with .NET 9.0 Aspire. It uses a Blazor hybrid rendering architecture (server-side + WebAssembly client) with real-time updates via SignalR, Windows Authentication with Active Directory integration, and comprehensive audit logging.
+IkeaDocuScan is an enterprise document management and scanning system built with .NET 10.0 Aspire. It uses a Blazor hybrid rendering architecture (server-side + WebAssembly client) with real-time updates via SignalR, Windows Authentication with Active Directory integration, and comprehensive audit logging.
 
 ## Architecture
 
@@ -28,11 +28,12 @@ SQL Server Database
 
 ### Key Architectural Patterns
 
-1. **Hybrid Blazor Rendering (SSR Disabled)**
-   - **Render Mode**: InteractiveAuto with prerendering disabled globally
-   - **SSR Decision**: Server-side pre-rendering (SSR) is disabled to avoid component ID conflicts during navigation
-   - **Configuration**: `Program.cs` lines 159-160 set `prerender: false` for both Server and WebAssembly modes
-   - **Rationale**: Full page navigation with InteractiveAuto caused "No root component exists with SSR component ID" errors
+1. **Hybrid Blazor Rendering**
+   - **Render Modes**: InteractiveServer and InteractiveWebAssembly modes configured in `Program.cs`
+   - **Global Configuration**: `Program.cs:204-208` registers both render modes WITHOUT global prerender settings
+   - **WebAssembly Pages**: Use `@rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))` to disable prerendering per-page
+   - **SSR Decision**: Prerendering disabled on WebAssembly pages to avoid component ID conflicts during navigation
+   - **Rationale**: Full page navigation with prerendering enabled caused "No root component exists with SSR component ID" errors
    - Server-side components in `IkeaDocuScan-Web/Pages/` (Identity.razor, ServerHome.razor, Error.razor)
    - Client-side components in `IkeaDocuScan-Web.Client/Pages/` (Documents.razor, CheckinScanned.razor, etc.)
    - Components communicate via HTTP API endpoints and SignalR

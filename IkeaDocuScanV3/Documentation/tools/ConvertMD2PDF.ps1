@@ -1,0 +1,2 @@
+  cd "C:\Users\markr\source\repos\markRegenasst2b\IkeaDocuScan-V3\IkeaDocuScanV3\Documentation"
+  Get-ChildItem *.md | ForEach-Object { pandoc $_.Name -o "$($_.BaseName).pdf" --pdf-engine=wkhtmltopdf }

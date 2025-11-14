@@ -53,7 +53,7 @@ Print this checklist and check off items as you complete them during deployment.
 
 - [ ] Production database backup restored
 - [ ] OR new database created: `IkeaDocuScan`
-- [ ] Migration scripts executed in order (ALL 10 scripts):
+- [ ] Migration scripts executed in order (ALL 8 scripts):
   - [ ] 00_Create_Database_And_User.sql
   - [ ] 00A_Restore_And_Migrate_Schema.sql
   - [ ] 02_Migrate_FK_Data.sql
@@ -62,7 +62,7 @@ Print this checklist and check off items as you complete them during deployment.
   - [ ] 05_Migrate_Users_To_DocuScanUser.sql
   - [ ] 06_Add_FK_Constraint_UserPermissions.sql
   - [ ] 07_Remove_AccountName_From_UserPermissions.sql
-  [ ] Verify docuscanch login exists
+- [ ] Verify docuscanch login exists
 - [ ] Verify docuscanch user has database access
 - [ ] Connection tested with docuscanch user
 - [ ] Database configuration verified (TBD)
