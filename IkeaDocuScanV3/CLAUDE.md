@@ -6,42 +6,6 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 IkeaDocuScan is an enterprise document management and scanning system built with .NET 9.0 Aspire. It uses a Blazor hybrid rendering architecture (server-side + WebAssembly client) with real-time updates via SignalR, Windows Authentication with Active Directory integration, and comprehensive audit logging.
 
-## Essential Development Commands
-
-### Building and Running
-
-```bash
-# Build the entire solution
-dotnet build
-
-# Run the web application (from solution root)
-dotnet run --project IkeaDocuScan-Web/IkeaDocuScan-Web
-
-# Run with Aspire orchestration
-dotnet run --project IkeaDocuScanV3.AppHost
-
-# Restore dependencies
-dotnet restore
-```
-
-### Database Migrations
-
-```bash
-# Add new migration (run from Infrastructure project directory)
-cd IkeaDocuScan.Infrastructure
-dotnet ef migrations add <MigrationName> --startup-project ../IkeaDocuScan-Web/IkeaDocuScan-Web
-
-# Update database
-dotnet ef database update --startup-project ../IkeaDocuScan-Web/IkeaDocuScan-Web
-```
-
-### Configuration Encryption
-
-```bash
-# Encrypt sensitive configuration values (Windows only)
-dotnet run --project ConfigEncryptionTool
-```
-
 ## Architecture
 
 ### Layered Architecture
@@ -281,17 +245,6 @@ Defined in `Properties/launchSettings.json`:
 - HTTPS: https://localhost:44101
 - IIS Express profile available for Visual Studio
 
-## Blazorise UI Framework
-
-The application uses Blazorise 1.8.5 with Bootstrap5 theme.
-
-**Key components:**
-- DataGrid: `<DataGrid>` for tabular data (Documents.razor)
-- Modal: `<Modal>` for dialogs
-- Buttons: `<Button Color="Color.Primary">`
-- Forms: `<Field>`, `<FieldLabel>`, `<TextEdit>`, `<Select>`
-
-Setup instructions in `Documentation/BLAZORISE_SETUP_INSTRUCTIONS.md`.
 
 ## Common Development Scenarios
 
@@ -338,6 +291,18 @@ Comprehensive guides available in `Documentation/`:
 - `EMAIL_SERVICE_GUIDE.md`: Email notification configuration
 - `BLAZORISE_SETUP_INSTRUCTIONS.md`: UI framework setup
 - `AD_GROUPS_QUICK_REFERENCE.md`: Active Directory group reference
+
+- `AD_GROUPS_QUICK_REFERENCE.md`: The IKEA DocuScan application supports three Active Directory groups that are automatically mapped to role claims during authentication.
+- `AUTHORIZATION_GUIDE.md`: The IKEA DocuScan application uses a Hybrid Authorization Approach 
+- `DEPLOYMENT_CHECKLIST.md`: Print this checklist and check off items as you complete them during deployment.
+- `DEPLOYMENT_PLAN.md`: keaDocuScan V3 - Deployment Plan
+- `DESIGN_DECISIONS.md`: This document records the design decisions made for migrating the Document Properties Management module to a comprehensive Blazor implementation with full feature parity to the original WebForms application.
+- `EMAIL_SERVICE_GUIDE.md`: The IKEA DocuScan application includes a comprehensive email service for sending notifications and documents via email. The service uses **MailKit** for reliable, modern SMTP communication.
+- `ENDPOINT_AUTHORIZATION_MATRIX.md`: Endpoint Authorization Matrix - Complete API Reference
+- `USER_QUICK_GUIDE.md`: 5-Minute Overview for Users Familiar with Document Management
+
+The feature implementation and bugfix details are in `Documentation/ImplementationDetails\'
+- Put all md files there by default.
 
 ## Testing
 
