@@ -1,6 +1,36 @@
 namespace IkeaDocuScan.Shared.Configuration;
 
 /// <summary>
+/// SMTP security mode options
+/// </summary>
+public enum SmtpSecurityMode
+{
+    /// <summary>
+    /// Automatically determine based on port (recommended)
+    /// Port 25: None, Port 587: StartTls, Port 465: SslOnConnect
+    /// </summary>
+    Auto = 0,
+
+    /// <summary>
+    /// No SSL/TLS encryption (plain text)
+    /// Use for port 25 without STARTTLS support
+    /// </summary>
+    None = 1,
+
+    /// <summary>
+    /// Use STARTTLS after initial connection
+    /// Recommended for port 587
+    /// </summary>
+    StartTls = 2,
+
+    /// <summary>
+    /// Use SSL/TLS from the start of connection (implicit SSL)
+    /// Required for port 465
+    /// </summary>
+    SslOnConnect = 3
+}
+
+/// <summary>
 /// Configuration options for email service
 /// Bound from appsettings.json "Email" section
 /// </summary>
@@ -22,8 +52,20 @@ public class EmailOptions
     public int SmtpPort { get; set; } = 587;
 
     /// <summary>
-    /// Use SSL/TLS for SMTP connection
+    /// SMTP security mode (Auto, None, StartTls, SslOnConnect)
+    /// Auto mode intelligently selects based on port:
+    /// - Port 25: None
+    /// - Port 587: StartTls
+    /// - Port 465: SslOnConnect
     /// </summary>
+    public SmtpSecurityMode SecurityMode { get; set; } = SmtpSecurityMode.Auto;
+
+    /// <summary>
+    /// [DEPRECATED] Use SecurityMode instead.
+    /// Legacy property: Use SSL/TLS for SMTP connection.
+    /// Only used when SecurityMode is Auto and port doesn't match standard ports.
+    /// </summary>
+    [Obsolete("Use SecurityMode property instead for more precise control")]
     public bool UseSsl { get; set; } = true;
 
     /// <summary>

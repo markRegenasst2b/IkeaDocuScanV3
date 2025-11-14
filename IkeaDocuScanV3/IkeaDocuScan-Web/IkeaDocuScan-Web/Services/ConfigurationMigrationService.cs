@@ -545,7 +545,7 @@ public class ConfigurationMigrationService
         </div>
         <div class='content'>
             <div class='reminder-count'>
-                You have {{Count}} action reminder(s) due today.
+                {{TestEnvironmentIndicator}}You have {{Count}} action reminder(s) due today ({{Date}}).
             </div>
             <table class='reminder-table'>
                 <thead>
@@ -558,11 +558,12 @@ public class ConfigurationMigrationService
                 </thead>
                 <tbody>
                     {{#ActionRows}}
+                    <!-- Supported Placeholders: ""BarCode,DocumentType,DocumentName,DocumentNo,CounterParty,CounterPartyNo,ActionDate,ReceivingDate,ActionDescription,Comment,IsOverdue""  -->
                     <tr>
-                        <td><strong>{{BarCode}}</strong></td>
+                        <td><strong><a href='https://localhost:44101/documents/edit/{{BarCode}}'>{{BarCode}}</a></strong></td>
                         <td>{{DocumentType}}</td>
                         <td>{{ActionDate}}</td>
-                        <td>{{Description}}</td>
+                        <td>{{ActionDescription}}</td>
                     </tr>
                     {{/ActionRows}}
                 </tbody>
@@ -574,7 +575,8 @@ public class ConfigurationMigrationService
         </div>
     </div>
 </body>
-</html>";
+</html>
+";
     }
 
     #endregion

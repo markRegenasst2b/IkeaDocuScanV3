@@ -31,6 +31,33 @@ public class EmailService : IEmailService
         _templateService = templateService;
     }
 
+    /// <summary>
+    /// Determine the appropriate SecureSocketOptions based on configuration
+    /// </summary>
+    private SecureSocketOptions DetermineSecureSocketOptions()
+    {
+        // If explicit mode is set, use it
+        if (_options.SecurityMode != SmtpSecurityMode.Auto)
+        {
+            return _options.SecurityMode switch
+            {
+                SmtpSecurityMode.None => SecureSocketOptions.None,
+                SmtpSecurityMode.StartTls => SecureSocketOptions.StartTls,
+                SmtpSecurityMode.SslOnConnect => SecureSocketOptions.SslOnConnect,
+                _ => SecureSocketOptions.Auto
+            };
+        }
+
+        // Auto mode: Intelligently determine based on port
+        return _options.SmtpPort switch
+        {
+            25 => SecureSocketOptions.None,           // Standard SMTP port (no encryption)
+            587 => SecureSocketOptions.StartTls,      // Submission port (STARTTLS)
+            465 => SecureSocketOptions.SslOnConnect,  // Secure SMTP port (implicit SSL)
+            _ => _options.UseSsl ? SecureSocketOptions.StartTls : SecureSocketOptions.None
+        };
+    }
+
     /// <inheritdoc />
     public async Task SendAccessRequestNotificationAsync(string username, string? reason = null)
     {
@@ -541,11 +568,17 @@ public class EmailService : IEmailService
             // Set timeout
             client.Timeout = _options.TimeoutSeconds * 1000;
 
+            // Determine secure socket options
+            var secureSocketOptions = DetermineSecureSocketOptions();
+
+            _logger.LogDebug("Connecting to SMTP server {Host}:{Port} with security mode: {SecurityMode}",
+                _options.SmtpHost, _options.SmtpPort, secureSocketOptions);
+
             // Connect to SMTP server
             await client.ConnectAsync(
                 _options.SmtpHost,
                 _options.SmtpPort,
-                _options.UseSsl ? SecureSocketOptions.StartTls : SecureSocketOptions.None);
+                secureSocketOptions);
 
             // Authenticate if credentials provided
             if (!string.IsNullOrWhiteSpace(_options.SmtpUsername))

@@ -14,7 +14,7 @@ dotnet publish -c Release -o C:\Services\IkeaDocuScanActionReminder
 
 Edit `appsettings.json` in the published directory:
 
-1. Update database connection string
+1. Update database connection string or provide secrets.encrypted.json from the appsettings encryption tool
 2. Set recipient email addresses
 3. Configure SMTP settings
 4. Set schedule time (default: 08:00)

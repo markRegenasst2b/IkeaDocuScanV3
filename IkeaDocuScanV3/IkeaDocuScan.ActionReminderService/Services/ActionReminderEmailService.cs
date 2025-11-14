@@ -148,6 +148,7 @@ public class ActionReminderEmailService : IActionReminderEmailService
             }
 
             // Try to get email template from database
+            _logger.LogDebug("Attempting to retrieve ActionReminderDaily template from database");
             var template = await _configManager.GetEmailTemplateAsync("ActionReminderDaily");
             string htmlBody, plainTextBody, subject;
 
@@ -155,12 +156,25 @@ public class ActionReminderEmailService : IActionReminderEmailService
             {
                 // Use database template with loop support
                 _logger.LogInformation("Using ActionReminderDaily template from database");
+                _logger.LogDebug("Template details - Subject length: {SubjectLen}, HtmlBody length: {HtmlLen}, PlainText length: {PlainLen}",
+                    template.Subject?.Length ?? 0,
+                    template.HtmlBody?.Length ?? 0,
+                    template.PlainTextBody?.Length ?? 0);
+
+                // Log first 200 chars of HTML template to verify content
+                if (!string.IsNullOrEmpty(template.HtmlBody) && template.HtmlBody.Length > 0)
+                {
+                    var preview = template.HtmlBody.Length > 200 ? template.HtmlBody.Substring(0, 200) : template.HtmlBody;
+                    _logger.LogDebug("Template HTML preview: {Preview}...", preview);
+                }
 
                 var data = new Dictionary<string, object>
                 {
                     { "Count", dueActions.Count },
                     { "Date", DateTime.Now }
                 };
+
+                _logger.LogDebug("Template data prepared: Count={Count}, Date={Date}", dueActions.Count, DateTime.Now);
 
                 var loops = new Dictionary<string, List<Dictionary<string, object>>>
                 {
@@ -181,11 +195,26 @@ public class ActionReminderEmailService : IActionReminderEmailService
                     }
                 };
 
+                _logger.LogDebug("Loop data prepared: ActionRows with {RowCount} items", loops["ActionRows"].Count);
+                if (loops["ActionRows"].Count > 0)
+                {
+                    var firstRow = loops["ActionRows"][0];
+                    _logger.LogDebug("First ActionRow keys: {Keys}", string.Join(", ", firstRow.Keys));
+                }
+
+                _logger.LogDebug("Rendering HTML body with loops...");
                 htmlBody = _templateService.RenderTemplateWithLoops(template.HtmlBody, data, loops);
+                _logger.LogDebug("HTML body rendered. Length: {Length}", htmlBody?.Length ?? 0);
+
+                _logger.LogDebug("Rendering plain text body...");
                 plainTextBody = !string.IsNullOrEmpty(template.PlainTextBody)
                     ? _templateService.RenderTemplateWithLoops(template.PlainTextBody, data, loops)
                     : BuildPlainTextActionReminder(dueActions);
+                _logger.LogDebug("Plain text body rendered. Length: {Length}", plainTextBody?.Length ?? 0);
+
+                _logger.LogDebug("Rendering subject...");
                 subject = _templateService.RenderTemplate(template.Subject, data);
+                _logger.LogDebug("Subject rendered: {Subject}", subject);
             }
             else
             {
@@ -195,7 +224,10 @@ public class ActionReminderEmailService : IActionReminderEmailService
                 subject = _options.EmailSubject.Replace("{Count}", dueActions.Count.ToString());
             }
 
-            _logger.LogInformation("Sending action reminder email to {Count} recipient(s)", recipientEmails.Length);
+            _logger.LogInformation("Sending action reminder email to {Count} recipient(s): {Recipients}",
+                recipientEmails.Length, string.Join(", ", recipientEmails));
+            _logger.LogDebug("Email details - Subject: {Subject}, HTML length: {HtmlLen}, PlainText length: {PlainLen}",
+                subject, htmlBody?.Length ?? 0, plainTextBody?.Length ?? 0);
 
             await _emailSender.SendEmailAsync(
                 recipientEmails,
@@ -204,7 +236,7 @@ public class ActionReminderEmailService : IActionReminderEmailService
                 plainTextBody,
                 cancellationToken);
 
-            _logger.LogInformation("Action reminder email sent successfully");
+            _logger.LogInformation("Action reminder email sent successfully to {Count} recipient(s)", recipientEmails.Length);
         }
         catch (Exception ex)
         {
