@@ -233,8 +233,8 @@ public partial class AppDbContext : DbContext
             entity.HasIndex(e => e.ConfigKey).IsUnique().HasDatabaseName("IX_SystemConfiguration_ConfigKey");
             entity.HasIndex(e => new { e.ConfigSection, e.IsActive }).HasDatabaseName("IX_SystemConfiguration_Section_Active");
 
-            entity.HasCheckConstraint("CK_SystemConfiguration_Section",
-                "ConfigSection IN ('Email', 'ActionReminderService', 'General', 'System')");
+            entity.ToTable(t => t.HasCheckConstraint("CK_SystemConfiguration_Section",
+                "ConfigSection IN ('Email', 'ActionReminderService', 'General', 'System')"));
         });
 
         // Configure SystemConfigurationAudit

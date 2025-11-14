@@ -156,7 +156,7 @@
             <div class="row mb-3">
                 <div class="col">
                     <div class="btn-group" role="group">
-                        <button class="btn btn-primary" @onclick="SaveDocument" disabled="@(isSaving || !hasUnsavedChanges)">
+                        <button class="btn btn-primary" @onclick="SaveDocument" disabled="@((isSaving || !hasUnsavedChanges) ? true : null)">
                             @if (isSaving)
                             {
                                 <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
@@ -255,7 +255,7 @@
                                     <i class="fa fa-copy me-2"></i>
                                     Copy
                                 </button>
-                                <button class="btn btn-info" @onclick="PasteFormData" disabled="@(!hasCopiedData)">
+                                <button class="btn btn-info" @onclick="PasteFormData" disabled="@(!hasCopiedData ? true : null)">
                                     <i class="fa fa-paste me-2"></i>
                                     Paste
                                 </button>

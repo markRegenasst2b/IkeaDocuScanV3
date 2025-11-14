@@ -16,10 +16,15 @@ builder.Services.AddWindowsService(options =>
 // Configure logging
 builder.Logging.ClearProviders();
 builder.Logging.AddConsole();
-builder.Logging.AddEventLog(settings =>
+
+// Add Event Log on Windows only
+if (OperatingSystem.IsWindows())
 {
-    settings.SourceName = "IkeaDocuScan Action Reminder";
-});
+    builder.Logging.AddEventLog(settings =>
+    {
+        settings.SourceName = "IkeaDocuScan Action Reminder";
+    });
+}
 
 // Load configuration
 builder.Configuration

@@ -110,7 +110,7 @@ public class ActionReminderEmailService : IActionReminderEmailService
         {
             BarCode = d.BarCode,
             DocumentType = d.DocumentType,
-            DocumentName = d.DocumentName,
+            DocumentName = d.DocumentName ?? string.Empty,
             DocumentNo = d.DocumentNo,
             CounterParty = d.CounterParty,
             CounterPartyNo = d.CounterPartyNo,
@@ -186,8 +186,8 @@ public class ActionReminderEmailService : IActionReminderEmailService
                             { "DocumentNo", action.DocumentNo ?? string.Empty },
                             { "CounterParty", action.CounterParty },
                             { "CounterPartyNo", action.CounterPartyNo?.ToString() ?? string.Empty },
-                            { "ActionDate", action.ActionDate },
-                            { "ReceivingDate", action.ReceivingDate },
+                            { "ActionDate", (object?)action.ActionDate ?? string.Empty },
+                            { "ReceivingDate", (object?)action.ReceivingDate ?? string.Empty },
                             { "ActionDescription", action.ActionDescription ?? string.Empty },
                             { "Comment", action.Comment ?? string.Empty },
                             { "IsOverdue", action.ActionDate.HasValue && action.ActionDate.Value < DateTime.Today }
@@ -203,7 +203,7 @@ public class ActionReminderEmailService : IActionReminderEmailService
                 }
 
                 _logger.LogDebug("Rendering HTML body with loops...");
-                htmlBody = _templateService.RenderTemplateWithLoops(template.HtmlBody, data, loops);
+                htmlBody = _templateService.RenderTemplateWithLoops(template.HtmlBody ?? string.Empty, data, loops);
                 _logger.LogDebug("HTML body rendered. Length: {Length}", htmlBody?.Length ?? 0);
 
                 _logger.LogDebug("Rendering plain text body...");
@@ -213,7 +213,7 @@ public class ActionReminderEmailService : IActionReminderEmailService
                 _logger.LogDebug("Plain text body rendered. Length: {Length}", plainTextBody?.Length ?? 0);
 
                 _logger.LogDebug("Rendering subject...");
-                subject = _templateService.RenderTemplate(template.Subject, data);
+                subject = _templateService.RenderTemplate(template.Subject ?? "Action Reminder", data);
                 _logger.LogDebug("Subject rendered: {Subject}", subject);
             }
             else
@@ -231,8 +231,8 @@ public class ActionReminderEmailService : IActionReminderEmailService
 
             await _emailSender.SendEmailAsync(
                 recipientEmails,
-                subject,
-                htmlBody,
+                subject ?? "Action Reminder",
+                htmlBody ?? string.Empty,
                 plainTextBody,
                 cancellationToken);
 

@@ -1,4 +1,5 @@
 ﻿@using IkeaDocuScan_Web.Client.Services
+@using IkeaDocuScan.Shared.DTOs.UserPermissions
 @using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.AspNetCore.Components.Web
 @using System.Security.Claims
@@ -185,12 +186,18 @@
     {
         var user = await UserIdentityHttpService.GetUserIdentityAsync();
 
+        if (user == null)
+        {
+            canCreateEdit = false;
+            return;
+        }
+
         var claims = user.Claims;
         // Type = 'http://schemas.microsoft.com/ws/2008/06/identity/claims/role' 'SuperUser'
         //        'IsSuperUser' 'True'
         // Check if user has Publisher role OR SuperUser policy (IsSuperUser claim)
         var isPublisher = claims.Any(c => c.Type == "http://schemas.microsoft.com/ws/2008/06/identity/claims/role" && c.Value == "Publisher");
-        var isSuperUser = claims.Any(c => (c.Type == "http://schemas.microsoft.com/ws/2008/06/identity/claims/role" && c.Value == "SuperUser") 
+        var isSuperUser = claims.Any(c => (c.Type == "http://schemas.microsoft.com/ws/2008/06/identity/claims/role" && c.Value == "SuperUser")
                                        || (c.Type == "IsSuperUser" && c.Value == "True"));
 
         canCreateEdit = isPublisher || isSuperUser;

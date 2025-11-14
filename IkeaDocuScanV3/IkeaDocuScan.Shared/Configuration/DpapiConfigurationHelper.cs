@@ -1,3 +1,4 @@
+using System.Runtime.Versioning;
 using System.Security.Cryptography;
 using System.Text;
 
@@ -8,6 +9,7 @@ namespace IkeaDocuScan.Shared.Configuration;
 /// Data Protection API (DPAPI) - encrypts data using Windows credentials
 /// Only the same user account on the same machine can decrypt
 /// </summary>
+[SupportedOSPlatform("windows")]
 public static class DpapiConfigurationHelper
 {
     /// <summary>

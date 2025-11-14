@@ -1,3 +1,4 @@
+using System.Runtime.Versioning;
 using System.Security.Claims;
 using System.Security.Principal;
 using IkeaDocuScan.Infrastructure.Data;
@@ -7,6 +8,7 @@ using Microsoft.Extensions.Options;
 
 namespace IkeaDocuScan_Web.Middleware;
 
+[SupportedOSPlatform("windows")]
 public class WindowsIdentityMiddleware
 {
     private readonly RequestDelegate _next;

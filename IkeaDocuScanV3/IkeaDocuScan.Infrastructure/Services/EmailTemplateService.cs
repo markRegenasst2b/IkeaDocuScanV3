@@ -232,11 +232,11 @@ public class EmailTemplateService : IEmailTemplateService
                 // Check if the markers exist at all in the template
                 if (template.Contains($"{{{{#{loopName}}}}}"))
                 {
-                    _logger.LogWarning("Start marker {{{{#{LoopName}}}}}} exists in template but regex didn't match!", loopName);
+                    _logger.LogWarning("Start marker for loop '{LoopName}' exists in template but regex didn't match!", loopName);
                 }
                 if (template.Contains($"{{{{/{loopName}}}}}"))
                 {
-                    _logger.LogWarning("End marker {{{{/{LoopName}}}}}} exists in template but regex didn't match!", loopName);
+                    _logger.LogWarning("End marker for loop '{LoopName}' exists in template but regex didn't match!", loopName);
                 }
 
                 return template;

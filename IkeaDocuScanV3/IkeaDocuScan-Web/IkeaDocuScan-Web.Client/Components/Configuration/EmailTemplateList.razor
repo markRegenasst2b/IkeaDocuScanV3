@@ -312,7 +312,10 @@
         try
         {
             isDeleting = true;
-            await OnDelete.InvokeAsync(templateToDelete.TemplateId.Value);
+            if (templateToDelete.TemplateId.HasValue)
+            {
+                await OnDelete.InvokeAsync(templateToDelete.TemplateId.Value);
+            }
             await HideDeleteModal();
             await LoadTemplates();
         }

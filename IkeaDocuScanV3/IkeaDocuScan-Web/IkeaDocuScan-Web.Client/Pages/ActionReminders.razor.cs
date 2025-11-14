@@ -31,7 +31,7 @@ public partial class ActionReminders
             documentTypes = await DocumentTypeService.GetAllAsync();
 
             // Initialize with default filters (show today and overdue)
-            SetQuickFilter(QuickFilterType.Today);
+            await SetQuickFilter(QuickFilterType.Today);
 
             await LoadActionRemindersAsync();
         }

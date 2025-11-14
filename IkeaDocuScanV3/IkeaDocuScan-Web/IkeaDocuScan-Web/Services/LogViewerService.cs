@@ -324,9 +324,9 @@ public class LogViewerService : ILogViewerService
 
             using var reader = new StreamReader(fileStream);
 
-            while (!reader.EndOfStream && !cancellationToken.IsCancellationRequested)
+            string? line;
+            while ((line = await reader.ReadLineAsync(cancellationToken)) != null && !cancellationToken.IsCancellationRequested)
             {
-                var line = await reader.ReadLineAsync(cancellationToken);
                 if (string.IsNullOrWhiteSpace(line)) continue;
 
                 try

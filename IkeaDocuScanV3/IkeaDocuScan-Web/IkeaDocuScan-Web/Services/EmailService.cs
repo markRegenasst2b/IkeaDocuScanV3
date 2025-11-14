@@ -54,7 +54,9 @@ public class EmailService : IEmailService
             25 => SecureSocketOptions.None,           // Standard SMTP port (no encryption)
             587 => SecureSocketOptions.StartTls,      // Submission port (STARTTLS)
             465 => SecureSocketOptions.SslOnConnect,  // Secure SMTP port (implicit SSL)
+#pragma warning disable CS0618 // Type or member is obsolete - kept for backward compatibility with old config files
             _ => _options.UseSsl ? SecureSocketOptions.StartTls : SecureSocketOptions.None
+#pragma warning restore CS0618
         };
     }
 

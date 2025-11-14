@@ -608,7 +608,7 @@ public class DocumentService : IDocumentService
         if (!string.IsNullOrWhiteSpace(request.CounterpartyName))
         {
             query = query.Where(d =>
-                (d.CounterParty != null && d.CounterParty.Name.Contains(request.CounterpartyName)) ||
+                (d.CounterParty != null && d.CounterParty.Name != null && d.CounterParty.Name.Contains(request.CounterpartyName)) ||
                 (d.ThirdParty != null && d.ThirdParty.Contains(request.CounterpartyName)));
         }
 
