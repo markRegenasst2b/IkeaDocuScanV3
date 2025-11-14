@@ -458,28 +458,54 @@ public class LogViewerService : ILogViewerService
 
         foreach (var log in logs)
         {
-            csv.AppendLine($"\"{log.Timestamp:yyyy-MM-dd HH:mm:ss}\",\"{EscapeCsv(log.Level)}\",\"{EscapeCsv(log.Source)}\",\"{EscapeCsv(log.User)}\",\"{EscapeCsv(log.RequestId)}\",\"{EscapeCsv(log.Message)}\",\"{EscapeCsv(log.Exception)}\"");
+            // Build CSV line with proper RFC 4180 escaping
+            var fields = new[]
+            {
+                log.Timestamp.ToString("yyyy-MM-dd HH:mm:ss"),
+                log.Level ?? "",
+                log.Source ?? "",
+                log.User ?? "",
+                log.RequestId ?? "",
+                log.Message ?? "",
+                log.Exception ?? ""
+            };
+
+            csv.AppendLine(string.Join(",", fields.Select(EscapeCsvField)));
         }
 
         return Encoding.UTF8.GetBytes(csv.ToString());
     }
 
-    private string EscapeCsv(string? value)
+    private string EscapeCsvField(string? value)
     {
-        if (string.IsNullOrEmpty(value)) return "";
+        if (string.IsNullOrEmpty(value)) return "\"\"";
 
-        // Replace newlines with space to prevent multi-line cells
-        var result = value
-            .Replace("\r\n", " ") // Windows newlines
-            .Replace("\n", " ")   // Unix newlines
-            .Replace("\r", " ")   // Old Mac newlines
-            .Replace("\"", "\"\""); // Escape quotes
+        // Normalize value: replace newlines with space and trim excessive whitespace
+        var normalized = value
+            .Replace("\r\n", " ")  // Windows newlines
+            .Replace("\n", " ")    // Unix newlines
+            .Replace("\r", " ")    // Old Mac newlines
+            .Replace(";", ",");    // Replace semicolons with commas (Swiss/European Excel compatibility)
 
         // Remove excessive whitespace
-        while (result.Contains("  "))
-            result = result.Replace("  ", " ");
+        while (normalized.Contains("  "))
+            normalized = normalized.Replace("  ", " ");
 
-        return result.Trim();
+        normalized = normalized.Trim();
+
+        // RFC 4180: Fields containing quotes, commas, or newlines must be quoted
+        // All quotes within the field must be escaped by doubling them
+        var escaped = normalized.Replace("\"", "\"\"");
+
+        // Always quote all fields for maximum compatibility
+        return $"\"{escaped}\"";
+    }
+
+    [Obsolete("Use EscapeCsvField instead")]
+    private string EscapeCsv(string? value)
+    {
+        // Keep for backward compatibility if needed
+        return EscapeCsvField(value).Trim('"');
     }
 
     #endregion

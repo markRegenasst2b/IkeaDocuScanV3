@@ -402,8 +402,8 @@
 
             Console.WriteLine($"Exporting logs with URL: {url}");
 
-            // Open in new tab to trigger download
-            await JS.InvokeVoidAsync("open", url, "_blank");
+            // Use dedicated JavaScript helper to trigger download
+            await JS.InvokeVoidAsync("logExportHelper.triggerDownload", url);
         }
         catch (Exception ex)
         {

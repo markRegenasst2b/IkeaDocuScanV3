@@ -47,7 +47,7 @@ public class AuditTrailService : IAuditTrailService
             await _context.SaveChangesAsync();
 
             _logger.LogInformation(
-                "Audit log created: User={User}, Action={Action}, BarCode={BarCode}",
+                "Audit log created for user {User} with action {Action} and barcode {BarCode}",
                 user, actionName, barCode);
         }
         catch (Exception ex)
@@ -110,7 +110,7 @@ public class AuditTrailService : IAuditTrailService
             await _context.SaveChangesAsync();
 
             _logger.LogInformation(
-                "Batch audit log created: User={User}, Action={Action}, Count={Count}",
+                "Batch audit log created for user {User} with action {Action} and count {Count}",
                 user, actionName, auditEntries.Count);
         }
         catch (Exception ex)
