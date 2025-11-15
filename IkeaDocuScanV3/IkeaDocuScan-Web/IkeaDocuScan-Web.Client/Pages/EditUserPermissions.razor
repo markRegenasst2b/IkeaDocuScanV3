@@ -899,7 +899,7 @@
         catch (Exception ex)
         {
             saveErrorMessage = $"Error deleting user: {ex.Message}";
-            Logger.LogError(ex, "Error deleting user {UserId}", userToDelete.UserId);
+            Logger.LogError(ex, "Error deleting user {UserId}", userToDelete?.UserId);
         }
     }
 

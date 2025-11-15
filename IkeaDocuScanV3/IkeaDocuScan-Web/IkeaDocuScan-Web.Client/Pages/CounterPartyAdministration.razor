@@ -582,12 +582,13 @@
 
     private void OpenEditModal(CounterPartyDto counterParty)
     {
+        ArgumentNullException.ThrowIfNull(counterParty);
         isEditMode = true;
         editingCounterPartyId = counterParty.CounterPartyId;
         editDto = new UpdateCounterPartyDto
         {
-            Name = counterParty.Name,
-            CounterPartyNoAlpha = counterParty.CounterPartyNoAlpha,
+            Name = counterParty!.Name,
+            CounterPartyNoAlpha = counterParty!.CounterPartyNoAlpha,
             Address = counterParty.Address,
             City = counterParty.City,
             Country = counterParty.Country,

@@ -117,7 +117,7 @@ public static class EmailEndpoints
                 request.DocumentIds.Count, request.ToEmail);
 
             // Load all documents and their files
-            var documents = new List<(string BarCode, byte[] Data, string FileName)>();
+            var documents = new List<(string BarCode, byte[]? Data, string? FileName)>();
 
             foreach (var documentId in request.DocumentIds)
             {

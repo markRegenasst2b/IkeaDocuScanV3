@@ -68,7 +68,7 @@ public interface IEmailService
     /// <param name="message">Optional message to include</param>
     Task SendDocumentAttachmentsAsync(
         string recipientEmail,
-        IEnumerable<(string BarCode, byte[] Data, string FileName)> documents,
+        IEnumerable<(string BarCode, byte[]? Data, string? FileName)> documents,
         string? message = null);
 
     /// <summary>

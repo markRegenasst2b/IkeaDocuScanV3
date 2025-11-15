@@ -75,6 +75,7 @@ public class ConfigurationManagerService : ISystemConfigurationManager
             {
                 _logger.LogInformation("Loading configuration from database: {ConfigKey}", configKey);
                 var value = DeserializeValue<T>(dbConfig.ConfigValue, dbConfig.ValueType);
+                if (value == null) throw new InvalidDataException("could not deseriazlize config value.");
 
                 // Cache the value
                 _cache[cacheKey] = new CacheEntry(value, DateTime.UtcNow.Add(CacheDuration));
@@ -460,7 +461,7 @@ public class ConfigurationManagerService : ISystemConfigurationManager
 
             try
             {
-                EmailTemplate entity;
+                EmailTemplate? entity;
 
                 if (template.TemplateId.HasValue)
                 {

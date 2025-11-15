@@ -1209,10 +1209,11 @@ public partial class DocumentPropertiesPage : ComponentBase, IDisposable
 
     private UpdateDocumentDto MapToUpdateDto()
     {
+        if (Model == null) throw new InvalidOperationException("Model can't be null on MapToUpdateDto().");
         return new UpdateDocumentDto
         {
             Id = Model.Id!.Value,
-            Name = Model.Name,
+            Name = Model!.Name,
             BarCode = Model.BarCode,
             DocumentTypeId = Model.DocumentTypeId,
             CounterPartyId = int.Parse(Model.CounterPartyId ?? "-1"),
