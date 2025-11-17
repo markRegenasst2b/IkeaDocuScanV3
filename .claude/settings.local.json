@@ -9,9 +9,13 @@
       "Bash(sudo apt-get update:*)",
       "Bash(sudo apt-get install:*)",
       "Bash(dotnet add:*)",
-      "Bash(dotnet add package:*)"
+      "Bash(dotnet add package:*)",
+      "WebSearch"
     ],
     "deny": [],
     "ask": []
+  },
+  "environment": {
+    "CLAUDE_CODE_MAX_OUTPUT_TOKENS": "64000"
   }
 }

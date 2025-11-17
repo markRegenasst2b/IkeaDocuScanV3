@@ -44,6 +44,11 @@ public partial class AppDbContext : DbContext
     public virtual DbSet<EmailRecipientGroup> EmailRecipientGroups { get; set; }
     public virtual DbSet<EmailRecipient> EmailRecipients { get; set; }
 
+    // Dynamic Authorization DbSets
+    public virtual DbSet<EndpointRegistry> EndpointRegistries { get; set; }
+    public virtual DbSet<EndpointRolePermission> EndpointRolePermissions { get; set; }
+    public virtual DbSet<PermissionChangeAuditLog> PermissionChangeAuditLogs { get; set; }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<AuditTrail>(entity =>
@@ -315,6 +320,105 @@ public partial class AppDbContext : DbContext
                 .IsUnique()
                 .HasDatabaseName("IX_EmailRecipient_Group_Email");
             entity.HasIndex(e => new { e.GroupId, e.IsActive }).HasDatabaseName("IX_EmailRecipient_Group_Active");
+        });
+
+        // Configure EndpointRegistry
+        modelBuilder.Entity<EndpointRegistry>(entity =>
+        {
+            entity.ToTable("EndpointRegistry");
+            entity.HasKey(e => e.EndpointId).HasName("PK_EndpointRegistry");
+
+            entity.Property(e => e.HttpMethod).HasMaxLength(10).IsRequired();
+            entity.Property(e => e.Route).HasMaxLength(500).IsRequired();
+            entity.Property(e => e.EndpointName).HasMaxLength(200).IsRequired();
+            entity.Property(e => e.Description).HasMaxLength(500);
+            entity.Property(e => e.Category).HasMaxLength(100);
+            entity.Property(e => e.IsActive).HasDefaultValue(true);
+            entity.Property(e => e.CreatedOn).HasDefaultValueSql("GETDATE()");
+
+            // Unique constraint on HttpMethod + Route
+            entity.HasIndex(e => new { e.HttpMethod, e.Route })
+                .IsUnique()
+                .HasDatabaseName("UK_EndpointRegistry_Method_Route");
+
+            // Performance indexes
+            entity.HasIndex(e => e.Category)
+                .HasDatabaseName("IX_EndpointRegistry_Category")
+                .HasFilter("[IsActive] = 1");
+
+            entity.HasIndex(e => e.IsActive)
+                .HasDatabaseName("IX_EndpointRegistry_IsActive");
+        });
+
+        // Configure EndpointRolePermission
+        modelBuilder.Entity<EndpointRolePermission>(entity =>
+        {
+            entity.ToTable("EndpointRolePermission");
+            entity.HasKey(e => e.PermissionId).HasName("PK_EndpointRolePermission");
+
+            entity.Property(e => e.RoleName).HasMaxLength(50).IsRequired();
+            entity.Property(e => e.CreatedOn).HasDefaultValueSql("GETDATE()");
+            entity.Property(e => e.CreatedBy).HasMaxLength(255);
+
+            // Unique constraint on EndpointId + RoleName
+            entity.HasIndex(e => new { e.EndpointId, e.RoleName })
+                .IsUnique()
+                .HasDatabaseName("UK_EndpointRolePermission_EndpointRole");
+
+            // Foreign key to EndpointRegistry with cascade delete
+            entity.HasOne(e => e.Endpoint)
+                .WithMany(e => e.RolePermissions)
+                .HasForeignKey(e => e.EndpointId)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("FK_EndpointRolePermission_Endpoint");
+
+            // Performance indexes
+            entity.HasIndex(e => e.EndpointId)
+                .HasDatabaseName("IX_EndpointRolePermission_EndpointId")
+                .IncludeProperties(e => e.RoleName);
+
+            entity.HasIndex(e => e.RoleName)
+                .HasDatabaseName("IX_EndpointRolePermission_RoleName");
+
+            // Check constraint for valid role names
+            entity.ToTable(t => t.HasCheckConstraint("CHK_EndpointRolePermission_RoleName",
+                "[RoleName] IN ('Reader', 'Publisher', 'ADAdmin', 'SuperUser')"));
+        });
+
+        // Configure PermissionChangeAuditLog
+        modelBuilder.Entity<PermissionChangeAuditLog>(entity =>
+        {
+            entity.ToTable("PermissionChangeAuditLog");
+            entity.HasKey(e => e.AuditId).HasName("PK_PermissionChangeAuditLog");
+
+            entity.Property(e => e.ChangedBy).HasMaxLength(255).IsRequired();
+            entity.Property(e => e.ChangeType).HasMaxLength(50).IsRequired();
+            entity.Property(e => e.OldValue).HasColumnType("nvarchar(max)");
+            entity.Property(e => e.NewValue).HasColumnType("nvarchar(max)");
+            entity.Property(e => e.ChangeReason).HasMaxLength(500);
+            entity.Property(e => e.ChangedOn).HasDefaultValueSql("GETDATE()");
+
+            // Foreign key to EndpointRegistry (no cascade delete - preserve audit history)
+            entity.HasOne(e => e.Endpoint)
+                .WithMany(e => e.AuditLogs)
+                .HasForeignKey(e => e.EndpointId)
+                .OnDelete(DeleteBehavior.Restrict)
+                .HasConstraintName("FK_PermissionChangeAudit_Endpoint");
+
+            // Performance indexes
+            entity.HasIndex(e => e.EndpointId)
+                .HasDatabaseName("IX_PermissionChangeAuditLog_EndpointId");
+
+            entity.HasIndex(e => e.ChangedOn)
+                .IsDescending()
+                .HasDatabaseName("IX_PermissionChangeAuditLog_ChangedOn");
+
+            entity.HasIndex(e => e.ChangedBy)
+                .HasDatabaseName("IX_PermissionChangeAuditLog_ChangedBy");
+
+            // Check constraint for valid change types
+            entity.ToTable(t => t.HasCheckConstraint("CHK_PermissionChangeAuditLog_ChangeType",
+                "[ChangeType] IN ('RoleAdded', 'RoleRemoved', 'EndpointCreated', 'EndpointModified', 'EndpointDeactivated', 'EndpointReactivated')"));
         });
 
         OnModelCreatingPartial(modelBuilder);

@@ -154,18 +154,20 @@ public class WindowsIdentityMiddleware
                 }
             }
 
-            // Check SuperUser AD group (in addition to database flag)
-            if (!string.IsNullOrWhiteSpace(_options.ADGroupSuperUser))
+            // Check ADAdmin AD group (replaces old SuperUser AD group check)
+            if (!string.IsNullOrWhiteSpace(_options.ADGroupADAdmin))
             {
-                if (principal.IsInRole(_options.ADGroupSuperUser))
+                if (principal.IsInRole(_options.ADGroupADAdmin))
                 {
-                    claims.Add(new Claim(ClaimTypes.Role, "SuperUser"));
-                    claims.Add(new Claim("IsSuperUser", "true")); // Override database value
-                    claims.Add(new Claim("HasAccess", "true")); // SuperUser always has access
-                    _logger.LogInformation("User {Username} is in AD group {GroupName}",
-                        windowsIdentity.Name, _options.ADGroupSuperUser);
+                    claims.Add(new Claim(ClaimTypes.Role, "ADAdmin"));
+                    _logger.LogInformation("User {Username} is in AD group {GroupName} - assigned ADAdmin role",
+                        windowsIdentity.Name, _options.ADGroupADAdmin);
                 }
             }
+
+            // NOTE: SuperUser role is now ONLY assigned via database flag (IsSuperUser = true)
+            // The old ADGroupSuperUser check has been removed
+            // SuperUser role claim is added below based on database flag only
         }
         catch (Exception ex)
         {

@@ -61,7 +61,7 @@ else
         .AddScheme<Microsoft.AspNetCore.Authentication.AuthenticationSchemeOptions, TestAuthenticationHandler>("TestScheme", options => { });
 }
 
-// Authorization with custom policies
+// Authorization with custom policies and dynamic policy provider
 builder.Services.AddAuthorization(options =>
 {
     // Policy requiring user to have access to the system
@@ -78,9 +78,15 @@ builder.Services.AddAuthorization(options =>
         .Build();
 });
 
+// Register dynamic authorization policy provider for database-driven endpoint authorization
+builder.Services.AddSingleton<IAuthorizationPolicyProvider, DynamicAuthorizationPolicyProvider>();
+
 // Register authorization handlers
 builder.Services.AddScoped<IAuthorizationHandler, UserAccessHandler>();
 builder.Services.AddScoped<IAuthorizationHandler, SuperUserHandler>();
+
+// Register endpoint authorization service for dynamic authorization
+builder.Services.AddScoped<IEndpointAuthorizationService, EndpointAuthorizationService>();
 
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<UserIdentityService>();
