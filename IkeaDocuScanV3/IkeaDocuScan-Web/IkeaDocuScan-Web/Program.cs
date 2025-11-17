@@ -254,6 +254,9 @@ app.MapLogViewerEndpoints();
 #if DEBUG
 // Test Identity Endpoints (DEVELOPMENT ONLY)
 app.MapTestIdentityEndpoints();
+
+// Diagnostic Endpoints (DEVELOPMENT ONLY)
+app.MapDiagnosticEndpoints();
 #endif
 
     app.Run();
