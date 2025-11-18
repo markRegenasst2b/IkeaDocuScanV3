@@ -25,13 +25,16 @@ public static class UserPermissionEndpoints
         .Produces<List<UserPermissionDto>>(200)
         .Produces(403);
 
+        // STEP 5 TEST: Changed to dynamic authorization (database-driven)
+        // Expected roles per database seed: ADAdmin, SuperUser
+        // Test: Reader → 403, Publisher → 403, ADAdmin → 200, SuperUser → 200
         group.MapGet("/users", async (string? accountNameFilter, IUserPermissionService service) =>
         {
             var users = await service.GetAllUsersAsync(accountNameFilter);
             return Results.Ok(users);
         })
         .WithName("GetAllDocuScanUsers")
-        .RequireAuthorization(policy => policy.RequireRole("SuperUser"))
+        .RequireAuthorization("Endpoint:GET:/api/userpermissions/users")  // ← CHANGED: Dynamic authorization
         .Produces<List<DocuScanUserDto>>(200)
         .Produces(403);
 
