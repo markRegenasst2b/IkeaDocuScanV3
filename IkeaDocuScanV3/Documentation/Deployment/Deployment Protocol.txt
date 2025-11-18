@@ -1,0 +1,131 @@
+Created Filestructure
+
+D:\
+├── IkeaDocuScan\                          # Main application root
+│   ├── Deployment\                        # Deployment working directory
+│   │   ├── Archives\                      # Historical deployment packages
+│   │   ├── Current\                       # Current deployment package (unzipped)
+│   │   ├── Scripts\                       # Deployment helper scripts
+│   │   └── Installers\                    # .NET Runtime and other installers (offline)
+│   │
+│   ├── wwwroot\                           # IIS application root
+│   │   └── IkeaDocuScan\                  # Application files (deployed here)
+│   │       ├── IkeaDocuScan-Web.dll
+│   │       ├── web.config
+│   │       ├── wwwroot\
+│   │       ├── appsettings.json
+│   │       ├── appsettings.Production.json
+│   │       ├── appsettings.Local.json     # Server-specific config (create manually)
+│   │       ├── secrets.encrypted.json     # Encrypted secrets (create manually)
+│   │       └── logs\                      # Application stdout logs
+│   │
+│   ├── Tools\                             # Utility tools
+│   │   ├── ConfigEncryptionTool\          # DPAPI encryption utility
+│   │   └── ActionReminder\                # Action Reminder Service (separate deployment)
+│   │
+│   ├── Database\                          # Database migration scripts
+│   │   └── MigrationScripts\              # SQL scripts for database upgrade
+│   │
+│   └── ScannedFiles\                      # Scanned document storage
+│       └── checkin\                       # Check-in directory
+│
+├── Logs\                                  # Application logs root
+│   └── IkeaDocuScan\                      # IkeaDocuScan application logs
+│       └── log-YYYYMMDD.json              # Daily rolling log files
+│
+└── Backups\                               # Backup storage
+    └── IkeaDocuScan\                      # Application backups
+        ├── Database\                      # Database backups
+        └── Config\                        # Configuration file backups
+        
+Verify Server Specs
+
+
+# Verify Windows version
+Get-ComputerInfo | Select-Object WindowsProductName, WindowsVersion, OsHardwareAbstractionLayer
+
+# Expected: Windows Server 2022 Standard
+
+# Check available disk space on D:\ (need at least 10GB)
+Get-PSDrive D | Select-Object Name, Used, Free, @{Name="FreeGB";Expression={[math]::Round($_.Free/1GB,2)}}
+
+# Check RAM (recommended 8GB+)
+Get-CimInstance Win32_ComputerSystem | Select-Object TotalPhysicalMemory, @{Name="TotalRAM_GB";Expression={[math]::Round($_.TotalPhysicalMemory/1GB,2)}}
+
+# Check if server is domain-joined
+Get-ComputerInfo | Select-Object CsDomain, CsDomainRole
+
+# Expected: CsDomain should show ikeadt.com or similar
+
+
+Install IIS
+Features:
+    $features = @(
+        'Web-WebServer',
+        'Web-Common-Http',
+        'Web-Default-Doc',
+        'Web-Dir-Browsing',
+        'Web-Http-Errors',
+        'Web-Static-Content',
+        'Web-Http-Redirect',
+        'Web-Health',
+        'Web-Http-Logging',
+        'Web-Log-Libraries',
+        'Web-Request-Monitor',
+        'Web-Performance',
+        'Web-Stat-Compression',
+        'Web-Dyn-Compression',
+        'Web-Security',
+        'Web-Filtering',
+        'Web-Windows-Auth',
+        'Web-App-Dev',
+        'Web-Net-Ext45',
+        'Web-Asp-Net45',
+        'Web-ISAPI-Ext',
+        'Web-ISAPI-Filter',
+        'Web-WebSockets',
+        'Web-Mgmt-Tools',
+        'Web-Mgmt-Console'
+    )
+    
+test in browser: http://localhost
+
+
+Download and install ASP.NET Core 10.0 Runtime (v10.0.0) - Windows Hosting Bundle Installer
+
+restart powershell
+> dotnet --info
+Expected: Version 10
+
+DB
+---
+
+Verify if IKEA\L-DSCAN-A-FINCHPRA exists and has the db_owner, db_datareader, db_datawrite rolse
+
+SELECT
+    dp.name AS DatabaseUser,
+    dp.type_desc AS UserType,
+    dp.create_date AS CreatedDate,
+    STRING_AGG(dr.name, ', ') AS DatabaseRoles
+FROM sys.database_principals dp
+LEFT JOIN sys.database_role_members drm ON dp.principal_id = drm.member_principal_id
+LEFT JOIN sys.database_principals dr ON drm.role_principal_id = dr.principal_id
+WHERE dp.name = 'IKEA\L-DSCAN-A-FINCHPRA'
+GROUP BY dp.name, dp.type_desc, dp.create_date;
+GO
+
+RUN THE SCRIPTS (adapt the database use)
+D:\IkeaDocuScan\Database\MigrationScripts\02_Migrate_FK_Data.sql
+D:\IkeaDocuScan\Database\MigrationScripts\03_Finalize_FK_Constraints.sql
+D:\IkeaDocuScan\Database\MigrationScripts\04_Create_DocuScanUser_Table.sql
+D:\IkeaDocuScan\Database\MigrationScripts\05_Migrate_Users_To_DocuScanUser.sql
+D:\IkeaDocuScan\Database\MigrationScripts\06_Add_FK_Constraint_UserPermissions.sql
+D:\IkeaDocuScan\Database\MigrationScripts\07_Remove_AccountName_From_UserPermissions.sql
+
+
+TODOs
+- Self-signed certificate added to Trusted Root store
+- host entry    127.0.0.1    testdocuscan.ikeadt.com
+- 
+
+
