@@ -284,7 +284,7 @@ try {
     New-PublishZip -Version $newVersion
     
     # Step 6: Commit the version change
-    nvoke-GitCommitAndPush "Publish Debug $newVersion"
+    Invoke-GitCommitAndPush "Publish Debug $newVersion"
 
     # Show summary
     Show-Summary -Version $newVersion
