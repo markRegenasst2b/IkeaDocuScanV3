@@ -1,7 +1,3 @@
-#Requires -Version 5.1
-
-
-
 # ============================================================================
 # Configuration
 # ============================================================================
@@ -14,24 +10,36 @@ $csprojFile = Join-Path $projectPath "IkeaDocuScan-Web.csproj"
 $outputZip = "d:\IkeaDocuScan-Debug-$(Get-Date -Format 'yyyyMMdd-HHmmss').zip"
 
 # ============================================================================
-# Functions
-# ============================================================================
 
 function Write-Step {
     param([string]$Message)
     Write-Host "`n[$(Get-Date -Format 'HH:mm:ss')] $Message" -ForegroundColor Cyan
 }
-
 function Write-Success {
     param([string]$Message)
-    Write-Host "✓ $Message" -ForegroundColor Green
+    Write-Host "$Message" -ForegroundColor Green
 }
-
 function Write-ErrorMessage {
     param([string]$Message)
-    Write-Host "✗ $Message" -ForegroundColor Red
+    Write-Host "$Message" -ForegroundColor Red
 }
+function Remove-PublishFolder {
+    Write-Step "Cleaning publish folder..."
 
+    if (Test-Path $publishFolder) {
+        try {
+            Remove-Item $publishFolder -Recurse -Force
+            Write-Success "Deleted $publishFolder"
+        }
+        catch {
+            Write-ErrorMessage "Failed to delete $publishFolder. $($_.Exception.Message)"
+            throw
+        }
+    }
+    else {
+        Write-Success "Publish folder does not exist (nothing to clean)"
+    }
+}
 function Test-GitPendingChanges {
     Write-Step "Checking for pending git changes..."
 
@@ -58,25 +66,6 @@ function Test-GitPendingChanges {
         Pop-Location
     }
 }
-
-function Remove-PublishFolder {
-    Write-Step "Cleaning publish folder..."
-
-    if (Test-Path $publishFolder) {
-        try {
-            Remove-Item $publishFolder -Recurse -Force
-            Write-Success "Deleted $publishFolder"
-        }
-        catch {
-            Write-ErrorMessage "Failed to delete $publishFolder"
-            throw
-        }
-    }
-    else {
-        Write-Success "Publish folder does not exist (nothing to clean)"
-    }
-}
-
 function Update-ProjectVersion {
     Write-Step "Updating project version..."
 
@@ -84,8 +73,8 @@ function Update-ProjectVersion {
         throw "Project file not found: $csprojFile"
     }
 
-    # Load XML
-    [xml]$csproj = Get-Content $csprojFile
+    # FIX 1: Load XML using explicit UTF8 encoding to prevent parsing/saving errors.
+    [xml]$csproj = Get-Content $csprojFile -Encoding UTF8
 
     # Find PropertyGroup with VersionPrefix
     $propertyGroup = $csproj.Project.PropertyGroup | Where-Object { $_.VersionPrefix -ne $null } | Select-Object -First 1
@@ -124,14 +113,13 @@ function Update-ProjectVersion {
         $propertyGroup.VersionSuffix = $newVersionSuffix
     }
 
-    # Save XML
+    # Save XML (This saves it with the encoding it was read with, which is now UTF8)
     $csproj.Save($csprojFile)
 
     Write-Success "Updated version: $newVersion-$newVersionSuffix"
 
     return "$newVersion-$newVersionSuffix"
 }
-
 function Invoke-DotNetPublish {
     Write-Step "Publishing application..."
 
@@ -157,7 +145,6 @@ function Invoke-DotNetPublish {
         Pop-Location
     }
 }
-
 function New-PublishZip {
     param([string]$Version)
 
@@ -172,31 +159,30 @@ function New-PublishZip {
     $script:outputZip = "d:\$zipFileName"
 
     try {
-        # Compress without including the parent folder
-        # Get all items in the publish folder and compress them directly
-        $files = Get-ChildItem -Path $publishFolder -Recurse
+        # FIX 2: Correctly use the pipeline to ensure only the *contents* # of $publishFolder are zipped, avoiding the unstable wildcard syntax.
+        $itemsToCompress = Get-ChildItem -Path $publishFolder -Force
 
-        if ($files.Count -eq 0) {
+        if ($itemsToCompress.Count -eq 0) {
             throw "No files found in publish folder"
         }
 
-        # Use Compress-Archive with -Force to overwrite if exists
-        Compress-Archive -Path "$publishFolder\*" -DestinationPath $outputZip -Force
+        # Pipe all items to Compress-Archive
+        $itemsToCompress | Compress-Archive -DestinationPath $outputZip -Force -ErrorAction Stop
 
         $zipSize = (Get-Item $outputZip).Length / 1MB
         $zipSizeRounded = [math]::Round($zipSize, 2)
-        Write-Success "Created zip: $outputZip (" + $zipSizeRounded + " )"
+        Write-Success "Created zip: $outputZip (" + $zipSizeRounded + ")"
     }
     catch {
-        Write-ErrorMessage "Failed to create zip archive"
+        Write-ErrorMessage "Failed to create zip archive: $($_.Exception.Message)"
         throw
     }
 }
 
 function Show-Summary {
     param([string]$Version)
-
-    Write-Host "`n" + ("=" * 70) -ForegroundColor Cyan
+    Write-Host ""
+    Write-Host ("=" * 70) -ForegroundColor Cyan
     Write-Host "PUBLISH SUMMARY" -ForegroundColor Cyan
     Write-Host ("=" * 70) -ForegroundColor Cyan
     Write-Host "  Version:        $Version" -ForegroundColor White
@@ -205,15 +191,10 @@ function Show-Summary {
     Write-Host "  Zip File:       $outputZip" -ForegroundColor White
     Write-Host ("=" * 70) -ForegroundColor Cyan
 }
-
-# ============================================================================
-# Main Script Execution
-# ============================================================================
-
 try {
-    Write-Host "╔═══════════════════════════════════════════════════════════════════╗" -ForegroundColor Cyan
-    Write-Host "║          IkeaDocuScan Debug Publish Script                       ║" -ForegroundColor Cyan
-    Write-Host "╚═══════════════════════════════════════════════════════════════════╝" -ForegroundColor Cyan
+    Write-Host "============================================================================" -ForegroundColor Cyan
+    Write-Host "           IkeaDocuScan Debug Publish Script                       " -ForegroundColor Cyan
+    Write-Host "============================================================================" -ForegroundColor Cyan
 
     # Step 1: Check for pending git changes
     Test-GitPendingChanges
@@ -238,7 +219,8 @@ try {
     exit 0
 }
 catch {
-    $msg = "`n✗ Publish failed: $_`n"
+    # Added .Exception.Message for clearer error reporting
+    $msg = "Publish failed:  $_"
     Write-Host $msg -ForegroundColor Red
     Write-Host $_.ScriptStackTrace -ForegroundColor DarkGray
     exit 1
