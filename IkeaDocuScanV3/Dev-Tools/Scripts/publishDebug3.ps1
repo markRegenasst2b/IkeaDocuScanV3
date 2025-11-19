@@ -2,6 +2,10 @@ function Write-Step {
     param([string]$Message)
     Write-Host "`n[$(Get-Date -Format 'HH:mm:ss')] $Message" -ForegroundColor Cyan
 }
+function Write-Success {
+    param([string]$Message)
+    Write-Host "$Message" -ForegroundColor Green
+}
 function Write-ErrorMessage {
     param([string]$Message)
     Write-Host "$Message" -ForegroundColor Red
