@@ -10,6 +10,23 @@ function Write-ErrorMessage {
     param([string]$Message)
     Write-Host "$Message" -ForegroundColor Red
 }
+function Remove-PublishFolder {
+    Write-Step "Cleaning publish folder..."
+
+    if (Test-Path $publishFolder) {
+        try {
+            Remove-Item $publishFolder -Recurse -Force
+            Write-Success "Deleted $publishFolder"
+        }
+        catch {
+            Write-ErrorMessage "Failed to delete $publishFolder. $($_.Exception.Message)"
+            throw
+        }
+    }
+    else {
+        Write-Success "Publish folder does not exist (nothing to clean)"
+    }
+}
 function Test-GitPendingChanges {
     Write-Step "Checking for pending git changes..."
 
