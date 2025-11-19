@@ -66,6 +66,60 @@ function Test-GitPendingChanges {
         Pop-Location
     }
 }
+function Update-ProjectVersion {
+    Write-Step "Updating project version..."
+
+    if (-not (Test-Path $csprojFile)) {
+        throw "Project file not found: $csprojFile"
+    }
+
+    # FIX 1: Load XML using explicit UTF8 encoding to prevent parsing/saving errors.
+    [xml]$csproj = Get-Content $csprojFile -Encoding UTF8
+
+    # Find PropertyGroup with VersionPrefix
+    $propertyGroup = $csproj.Project.PropertyGroup | Where-Object { $_.VersionPrefix -ne $null } | Select-Object -First 1
+
+    if (-not $propertyGroup) {
+        throw "Could not find VersionPrefix in project file"
+    }
+
+    # Parse current version
+    $currentVersion = $propertyGroup.VersionPrefix
+    Write-Host "  Current version: $currentVersion" -ForegroundColor Gray
+
+    # Split version and increment last component
+    $versionParts = $currentVersion -split '\.'
+    if ($versionParts.Count -lt 3) {
+        throw "Invalid version format: $currentVersion (expected X.Y.Z)"
+    }
+
+    $versionParts[-1] = [int]$versionParts[-1] + 1
+    $newVersion = $versionParts -join '.'
+
+    # Update VersionPrefix
+    $propertyGroup.VersionPrefix = $newVersion
+
+    # Update VersionSuffix with current date
+    $dateSuffix = Get-Date -Format "MMdd"
+    $newVersionSuffix = "testdeploy$dateSuffix"
+
+    if ($propertyGroup.VersionSuffix -eq $null) {
+        # Create VersionSuffix element if it doesn't exist
+        $versionSuffixElement = $csproj.CreateElement("VersionSuffix")
+        $versionSuffixElement.InnerText = $newVersionSuffix
+        $propertyGroup.AppendChild($versionSuffixElement) | Out-Null
+    }
+    else {
+        $propertyGroup.VersionSuffix = $newVersionSuffix
+    }
+
+    # Save XML (This saves it with the encoding it was read with, which is now UTF8)
+    $csproj.Save($csprojFile)
+
+    Write-Success "Updated version: $newVersion-$newVersionSuffix"
+
+    return "$newVersion-$newVersionSuffix"
+}
 
 try {
     Write-Host "============================================================================" -ForegroundColor Cyan
