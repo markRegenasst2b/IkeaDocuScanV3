@@ -120,7 +120,31 @@ function Update-ProjectVersion {
 
     return "$newVersion-$newVersionSuffix"
 }
+function Invoke-DotNetPublish {
+    Write-Step "Publishing application..."
 
+    Push-Location $projectPath
+    try {
+        # Clean
+        Write-Host "  Running dotnet clean..." -ForegroundColor Gray
+        dotnet clean --configuration Debug
+        if ($LASTEXITCODE -ne 0) {
+            throw "dotnet clean failed with exit code $LASTEXITCODE"
+        }
+        Write-Success "Clean completed"
+
+        # Publish
+        Write-Host "  Running dotnet publish..." -ForegroundColor Gray
+        dotnet publish --configuration Debug --output $publishFolder
+        if ($LASTEXITCODE -ne 0) {
+            throw "dotnet publish failed with exit code $LASTEXITCODE"
+        }
+        Write-Success "Publish completed to $publishFolder"
+    }
+    finally {
+        Pop-Location
+    }
+}
 try {
     Write-Host "============================================================================" -ForegroundColor Cyan
     Write-Host "           IkeaDocuScan Debug Publish Script                       " -ForegroundColor Cyan
