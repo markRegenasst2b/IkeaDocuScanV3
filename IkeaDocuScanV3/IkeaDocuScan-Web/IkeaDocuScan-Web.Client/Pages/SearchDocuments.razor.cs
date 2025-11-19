@@ -514,18 +514,29 @@ public partial class SearchDocuments : ComponentBase
     // ========== Filter Change Handlers ==========
 
     /// <summary>
-    /// Handles Document Types multi-select change
+    /// Adds a document type to the selection from the dropdown
     /// </summary>
-    private void OnDocumentTypesChanged(ChangeEventArgs e)
+    private void AddDocumentType(ChangeEventArgs e)
     {
-        if (e.Value is string[] selectedValues)
+        if (e.Value is string selectedValue && int.TryParse(selectedValue, out var typeId) && typeId > 0)
         {
-            searchRequest.DocumentTypeIds = selectedValues
-                .Select(v => int.TryParse(v, out var id) ? id : 0)
-                .Where(id => id > 0)
-                .ToList();
+            if (!searchRequest.DocumentTypeIds.Contains(typeId))
+            {
+                searchRequest.DocumentTypeIds.Add(typeId);
+                Logger.LogDebug("Document type {TypeId} added to selection", typeId);
+                StateHasChanged();
+            }
+        }
+    }
 
-            Logger.LogDebug("Document types selection changed: {Count} types selected", searchRequest.DocumentTypeIds.Count);
+    /// <summary>
+    /// Removes a document type from the selection
+    /// </summary>
+    private void RemoveDocumentType(int typeId)
+    {
+        if (searchRequest.DocumentTypeIds.Remove(typeId))
+        {
+            Logger.LogDebug("Document type {TypeId} removed from selection", typeId);
 
             // Clear document name if it's no longer valid for the selected types
             if (searchRequest.DocumentNameId.HasValue)
