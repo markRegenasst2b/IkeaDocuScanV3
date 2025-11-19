@@ -184,10 +184,7 @@ function Invoke-GitCommitAndPush {
     param(
         [Parameter(Mandatory=$true)]
         [string]$CommitMessage,
-
-        # Optional parameter to control if we push to remote immediately after commit
-        [bool]$SkipPush = $false
-    )
+  )
 
     Write-Step "Staging all changes and committing to git..."
 
@@ -220,22 +217,7 @@ function Invoke-GitCommitAndPush {
 
         Write-Success "Successfully committed changes."
 
-        # Optional: Push to remote origin
-        if (-not $SkipPush) {
-            Write-Step "Pushing committed changes to remote repository."
-            # Assumes the current branch tracks origin properly.
-            git push 2>&1 | Out-Null
-
-            if ($LASTEXITCODE -ne 0) {
-                 Write-Warning "Failed to push changes to the remote repository. You may need to push manually."
-            } else {
-                 Write-Success "Successfully pushed changes to remote."
-            }
-        }
-        else {
-             Write-Step "Skipping push to remote as requested."
-        }
-    }
+      }
     catch {
         Write-ErrorMessage "An error occurred during git operations: $($_.Exception.Message)"
         # Re-throw the exception to stop script execution if needed
