@@ -179,6 +179,18 @@ function New-PublishZip {
     }
 }
 
+function Show-Summary {
+    param([string]$Version)
+    Write-Host ""
+    Write-Host ("=" * 70) -ForegroundColor Cyan
+    Write-Host "PUBLISH SUMMARY" -ForegroundColor Cyan
+    Write-Host ("=" * 70) -ForegroundColor Cyan
+    Write-Host "  Version:        $Version" -ForegroundColor White
+    Write-Host "  Configuration:  Debug" -ForegroundColor White
+    Write-Host "  Publish Folder: $publishFolder" -ForegroundColor White
+    Write-Host "  Zip File:       $outputZip" -ForegroundColor White
+    Write-Host ("=" * 70) -ForegroundColor Cyan
+}
 try {
     Write-Host "============================================================================" -ForegroundColor Cyan
     Write-Host "           IkeaDocuScan Debug Publish Script                       " -ForegroundColor Cyan
