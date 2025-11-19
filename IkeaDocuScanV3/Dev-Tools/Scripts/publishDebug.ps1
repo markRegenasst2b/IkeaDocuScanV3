@@ -183,7 +183,7 @@ function Invoke-GitCommitAndPush {
     # Define a parameter for the commit message, with a default value
     param(
         [Parameter(Mandatory=$true)]
-        [string]$CommitMessage,
+        [string]$CommitMessage
   )
 
     Write-Step "Staging all changes and committing to git..."
