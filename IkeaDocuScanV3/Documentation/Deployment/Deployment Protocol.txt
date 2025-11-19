@@ -349,6 +349,7 @@ Write-Host "Application Pool state: $appPoolState" -ForegroundColor $(if($appPoo
 
 TODOs
 - host entry    127.0.0.1    testdocuscan.ikeadt.com
+- configure checkin folder broken?
 
 BUGS
 - Menu dropdown on searchresult does not react
@@ -358,4 +359,5 @@ BUGS
 ENHANCEMENTS
 - search page: make document types badge like (selecting a dt adds it as a badge to a list of badges)
 - only show docuscan relevant claims on the test user control
+- add a view on all configurations on the configuration page
 
