@@ -1,3 +1,16 @@
+# ============================================================================
+# Configuration
+# ============================================================================
+
+$ErrorActionPreference = "Stop"
+$sourceFolder = "C:\Users\markr\source\repos\markRegenasst2b\IkeaDocuScan-V3"
+$publishFolder = "d:\Pub"
+$projectPath = Join-Path $sourceFolder "IkeaDocuScanV3\IkeaDocuScan-Web\IkeaDocuScan-Web"
+$csprojFile = Join-Path $projectPath "IkeaDocuScan-Web.csproj"
+$outputZip = "d:\IkeaDocuScan-Debug-$(Get-Date -Format 'yyyyMMdd-HHmmss').zip"
+
+# ============================================================================
+
 function Write-Step {
     param([string]$Message)
     Write-Host "`n[$(Get-Date -Format 'HH:mm:ss')] $Message" -ForegroundColor Cyan
