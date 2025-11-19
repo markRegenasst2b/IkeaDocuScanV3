@@ -191,11 +191,6 @@ function Invoke-GitCommitAndPush {
 
     Write-Step "Staging all changes and committing to git..."
 
-    # Ensure the $sourceFolder is accessible (assumed global variable from context)
-    if (-not $PSBoundParameters.ContainsKey('sourceFolder') -and -not (Get-Variable -Name sourceFolder -Scope Global -ErrorAction SilentlyContinue)) {
-        Write-ErrorMessage "The variable `$sourceFolder` is not defined."
-        throw "sourceFolder not defined"
-    }
 
     Push-Location $sourceFolder
     try {
