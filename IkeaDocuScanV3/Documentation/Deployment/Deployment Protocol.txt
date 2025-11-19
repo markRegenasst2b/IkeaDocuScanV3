@@ -100,19 +100,26 @@ Expected: Version 10
 DB
 ---
 
-Verify if IKEADT\PPSEELM-NT4779$ exists and has the db_owner, db_datareader, db_datawrite rolse
+ALTER DATABASE [YourDatabaseName] SET COMPATIBILITY_LEVEL = 150;
 
-SELECT
-    dp.name AS DatabaseUser,
-    dp.type_desc AS UserType,
-    dp.create_date AS CreatedDate,
-    STRING_AGG(dr.name, ', ') AS DatabaseRoles
-FROM sys.database_principals dp
-LEFT JOIN sys.database_role_members drm ON dp.principal_id = drm.member_principal_id
-LEFT JOIN sys.database_principals dr ON drm.role_principal_id = dr.principal_id
-WHERE dp.name = 'IKEADT\PPSEELM-NT4779$'
-GROUP BY dp.name, dp.type_desc, dp.create_date;
+-- CREATE THE USER FOR THE APP
+use master
+CREATE LOGIN docuscanch
+WITH PASSWORD = 'docuscanch25',
+     DEFAULT_DATABASE = PPDOCUSCAN,
+     CHECK_EXPIRATION = OFF,
+     CHECK_POLICY = OFF;
 GO
+
+use PPDOCUSCAN
+GO
+
+CREATE USER docuscanch FOR LOGIN docuscanch;
+GO
+ALTER ROLE db_owner ADD MEMBER docuscanch;
+GO
+
+
 
 RUN THE SCRIPTS (adapt the database use)
 D:\IkeaDocuScan\Database\MigrationScripts\02_Migrate_FK_Data.sql
@@ -137,6 +144,7 @@ dotnet clean
 dotnet publish -c Debug -o d:/Pub
 copy d:/Pub/**.*  to PPSEELM-NT447(D:)\\IkeaDocuScan\Deployment\Current
 
+stop web app
 
 ```powershell
 # Copy from Current to wwwroot
@@ -172,6 +180,7 @@ Write-Host "`nDeployed application files:" -ForegroundColor Cyan
 Get-ChildItem $destPath -File | Select-Object Name, Length | Format-Table
 ```
 
+start webapp
 
 create appsettings.Local.json
 {
@@ -339,6 +348,14 @@ Write-Host "Application Pool state: $appPoolState" -ForegroundColor $(if($appPoo
 
 
 TODOs
-- Self-signed certificate added to Trusted Root store
 - host entry    127.0.0.1    testdocuscan.ikeadt.com
-- 
+
+BUGS
+- Menu dropdown on searchresult does not react
+- NavMenu is to narrow (scrollbar makes item titles brake)
+
+
+ENHANCEMENTS
+- search page: make document types badge like (selecting a dt adds it as a badge to a list of badges)
+- only show docuscan relevant claims on the test user control
+
