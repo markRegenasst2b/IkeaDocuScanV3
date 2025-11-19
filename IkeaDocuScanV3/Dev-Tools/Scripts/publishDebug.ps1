@@ -179,6 +179,78 @@ function New-PublishZip {
     }
 }
 
+function Invoke-GitCommitAndPush {
+    # Define a parameter for the commit message, with a default value
+    param(
+        [Parameter(Mandatory=$true)]
+        [string]$CommitMessage,
+
+        # Optional parameter to control if we push to remote immediately after commit
+        [bool]$SkipPush = $false
+    )
+
+    Write-Step "Staging all changes and committing to git..."
+
+    # Ensure the $sourceFolder is accessible (assumed global variable from context)
+    if (-not $PSBoundParameters.ContainsKey('sourceFolder') -and -not (Get-Variable -Name sourceFolder -Scope Global -ErrorAction SilentlyContinue)) {
+        Write-ErrorMessage "The variable `$sourceFolder` is not defined."
+        throw "sourceFolder not defined"
+    }
+
+    Push-Location $sourceFolder
+    try {
+        # Check if we're in a git repository before attempting git commands
+        $gitStatusCheck = git status -s 2>$null
+        if ($LASTEXITCODE -ne 0) {
+            Write-ErrorMessage "Not a git repository or 'git' command failed. Cannot commit."
+            throw "Git repository not found"
+        }
+
+        # Stage all pending changes (including untracked files)
+        Write-Step "Adding all changes to staging area (git add -A)."
+        git add -A 2>&1 | Out-Null
+        if ($LASTEXITCODE -ne 0) {
+             Write-ErrorMessage "Failed to stage git changes."
+             throw "Git add failed"
+        }
+
+        # Commit the staged changes using the provided message
+        Write-Step "Committing changes with message: '$CommitMessage'"
+        git commit -m $CommitMessage 2>&1 | Out-Null
+
+        if ($LASTEXITCODE -ne 0) {
+            Write-ErrorMessage "Failed to commit git changes. Check if anything was actually staged."
+            throw "Git commit failed"
+        }
+
+        Write-Success "Successfully committed changes."
+
+        # Optional: Push to remote origin
+        if (-not $SkipPush) {
+            Write-Step "Pushing committed changes to remote repository."
+            # Assumes the current branch tracks origin properly.
+            git push 2>&1 | Out-Null
+
+            if ($LASTEXITCODE -ne 0) {
+                 Write-Warning "Failed to push changes to the remote repository. You may need to push manually."
+            } else {
+                 Write-Success "Successfully pushed changes to remote."
+            }
+        }
+        else {
+             Write-Step "Skipping push to remote as requested."
+        }
+    }
+    catch {
+        Write-ErrorMessage "An error occurred during git operations: $($_.Exception.Message)"
+        # Re-throw the exception to stop script execution if needed
+        throw
+    }
+    finally {
+        Pop-Location
+    }
+}
+
 function Show-Summary {
     param([string]$Version)
     Write-Host ""
@@ -210,6 +282,9 @@ try {
 
     # Step 5: Create zip archive
     New-PublishZip -Version $newVersion
+    
+    # Step 6: Commit the version change
+    nvoke-GitCommitAndPush "Publish Debug $newVersion"
 
     # Show summary
     Show-Summary -Version $newVersion
