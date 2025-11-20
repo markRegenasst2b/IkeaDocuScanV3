@@ -25,7 +25,7 @@ public static class TestIdentityEndpoints
             return Results.Ok(profiles);
         })
         .WithName("GetTestIdentityProfiles")
-        .RequireAuthorization("Endpoint:GET:/api/test-identity/profiles")
+        //.RequireAuthorization("Endpoint:GET:/api/test-identity/profiles")
         .Produces<List<TestIdentityProfile>>(200);
 
         // Get current test identity status
@@ -35,7 +35,7 @@ public static class TestIdentityEndpoints
             return Results.Ok(status);
         })
         .WithName("GetTestIdentityStatus")
-        .RequireAuthorization("Endpoint:GET:/api/test-identity/status")
+        //.RequireAuthorization("Endpoint:GET:/api/test-identity/status")
         .Produces<TestIdentityStatus>(200);
 
         // Set active test identity
@@ -59,7 +59,7 @@ public static class TestIdentityEndpoints
             }
         })
         .WithName("ActivateTestIdentity")
-        .RequireAuthorization("Endpoint:POST:/api/test-identity/activate/{profileId}")
+        //.RequireAuthorization("Endpoint:POST:/api/test-identity/activate/{profileId}")
         .Produces(200)
         .Produces(400)
         .Produces(500);
@@ -71,7 +71,7 @@ public static class TestIdentityEndpoints
             return Results.Ok(new { success = true, message = "Test identity removed" });
         })
         .WithName("ResetTestIdentity")
-        .RequireAuthorization("Endpoint:POST:/api/test-identity/reset")
+        //.RequireAuthorization("Endpoint:POST:/api/test-identity/reset")
         .Produces(200);
 #endif
     }
