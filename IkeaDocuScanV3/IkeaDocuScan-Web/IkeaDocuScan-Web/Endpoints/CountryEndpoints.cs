@@ -4,12 +4,16 @@ using IkeaDocuScan.Shared.Exceptions;
 
 namespace IkeaDocuScan_Web.Endpoints;
 
+/// <summary>
+/// API endpoints for country management
+/// Uses dynamic database-driven authorization
+/// </summary>
 public static class CountryEndpoints
 {
     public static void MapCountryEndpoints(this IEndpointRouteBuilder routes)
     {
         var group = routes.MapGroup("/api/countries")
-            .RequireAuthorization("HasAccess")
+            .RequireAuthorization()  // Base authentication required
             .WithTags("Countries");
 
         // GET /api/countries
@@ -19,6 +23,7 @@ public static class CountryEndpoints
             return Results.Ok(countries);
         })
         .WithName("GetAllCountries")
+        .RequireAuthorization("Endpoint:GET:/api/countries/")
         .Produces<List<CountryDto>>(200);
 
         // GET /api/countries/{code}
@@ -31,6 +36,7 @@ public static class CountryEndpoints
             return Results.Ok(country);
         })
         .WithName("GetCountryByCode")
+        .RequireAuthorization("Endpoint:GET:/api/countries/{code}")
         .Produces<CountryDto>(200)
         .Produces(404);
 
@@ -48,6 +54,7 @@ public static class CountryEndpoints
             }
         })
         .WithName("CreateCountry")
+        .RequireAuthorization("Endpoint:POST:/api/countries/")
         .Produces<CountryDto>(201)
         .Produces(400);
 
@@ -65,6 +72,7 @@ public static class CountryEndpoints
             }
         })
         .WithName("UpdateCountry")
+        .RequireAuthorization("Endpoint:PUT:/api/countries/{code}")
         .Produces<CountryDto>(200)
         .Produces(400);
 
@@ -82,6 +90,7 @@ public static class CountryEndpoints
             }
         })
         .WithName("DeleteCountry")
+        .RequireAuthorization("Endpoint:DELETE:/api/countries/{code}")
         .Produces(204)
         .Produces(400);
 
@@ -100,6 +109,7 @@ public static class CountryEndpoints
             });
         })
         .WithName("GetCountryUsage")
+        .RequireAuthorization("Endpoint:GET:/api/countries/{code}/usage")
         .Produces<object>(200);
     }
 }
