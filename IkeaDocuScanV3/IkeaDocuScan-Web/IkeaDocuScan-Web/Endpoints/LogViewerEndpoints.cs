@@ -5,14 +5,15 @@ using Microsoft.AspNetCore.Mvc;
 namespace IkeaDocuScan_Web.Endpoints;
 
 /// <summary>
-/// API endpoints for log viewer (SuperUser only)
+/// API endpoints for log viewer
+/// Uses dynamic database-driven authorization
 /// </summary>
 public static class LogViewerEndpoints
 {
     public static void MapLogViewerEndpoints(this IEndpointRouteBuilder app)
     {
         var group = app.MapGroup("/api/logs")
-            .RequireAuthorization("SuperUser") // Only SuperUser can access logs
+            .RequireAuthorization() // Base authentication required
             .WithTags("LogViewer");
 
         // Search logs
@@ -46,6 +47,7 @@ public static class LogViewerEndpoints
             }
         })
         .WithName("SearchLogs")
+        .RequireAuthorization("Endpoint:POST:/api/logs/search")
         .Produces<LogSearchResult>(200)
         .Produces(500);
 
@@ -113,6 +115,7 @@ public static class LogViewerEndpoints
             }
         })
         .WithName("ExportLogs")
+        .RequireAuthorization("Endpoint:GET:/api/logs/export")
         .Produces(200)
         .Produces(500);
 
@@ -134,6 +137,7 @@ public static class LogViewerEndpoints
             }
         })
         .WithName("GetLogDates")
+        .RequireAuthorization("Endpoint:GET:/api/logs/dates")
         .Produces<List<string>>(200)
         .Produces(500);
 
@@ -155,6 +159,7 @@ public static class LogViewerEndpoints
             }
         })
         .WithName("GetLogSources")
+        .RequireAuthorization("Endpoint:GET:/api/logs/sources")
         .Produces<List<string>>(200)
         .Produces(500);
 
@@ -180,6 +185,7 @@ public static class LogViewerEndpoints
             }
         })
         .WithName("GetLogStatistics")
+        .RequireAuthorization("Endpoint:GET:/api/logs/statistics")
         .Produces<LogStatisticsDto>(200)
         .Produces(500);
     }
