@@ -6,12 +6,21 @@
 @namespace IkeaDocuScan_Web.Client.Layout
 @rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
 @inject UserIdentityHttpService UserIdentityHttpService
+@inject EndpointAuthorizationHttpService EndpointAuthService
 
 <div class="top-row ps-3 navbar navbar-dark">
     <div class="container-fluid">
         <a class="navbar-brand" href="">Ikea Documentscannning</a>
     </div>
 </div>
+
+@* Debug info - remove in production *@
+@if (errorMessage != null)
+{
+    <div class="alert alert-danger m-2" role="alert">
+        <strong>NavMenu Error:</strong> @errorMessage
+    </div>
+}
 
 <input type="checkbox" title="Navigation menu" class="navbar-toggler" />
 
@@ -27,73 +36,86 @@
 
         <AuthorizeView Policy="HasAccess">
             <Authorized>
-                <div class="nav-section-header">DOCUMENT MANAGEMENT</div>
-
-@* Register Document - Show for Publisher role OR SuperUser *@
-                @if (canCreateEdit)
+                @if (!isLoading)
                 {
+                    <div class="nav-section-header">DOCUMENT MANAGEMENT</div>
+
+                    @* Register Document - Dynamic authorization check *@
+                    @if (HasAccess("RegisterDocument"))
+                    {
+                        <div class="nav-item px-3">
+                            <NavLink class="nav-link" href="documents/register">
+                                <span class="bi bi-file-earmark-plus" aria-hidden="true"></span> Register Document
+                            </NavLink>
+                        </div>
+                    }
+
+                    @* Search Documents - Dynamic authorization check *@
+                    @if (HasAccess("SearchDocuments"))
+                    {
+                        <div class="nav-item px-3">
+                            <NavLink class="nav-link" href="documents/search">
+                                <span class="bi bi-search" aria-hidden="true"></span> Search Documents
+                            </NavLink>
+                        </div>
+                    }
+
+                    @* Check-in Scanned - Dynamic authorization check *@
+                    @if (HasAccess("CheckinScanned"))
+                    {
+                        <div class="nav-item px-3">
+                            <NavLink class="nav-link" href="checkin-scanned">
+                                <span class="bi bi-folder-nav-menu" aria-hidden="true"></span> Check-in Scanned
+                            </NavLink>
+                        </div>
+                    }
+
+                    @* Action Reminders - Dynamic authorization check *@
+                    @if (HasAccess("ActionReminders"))
+                    {
+                        <div class="nav-item px-3">
+                            <NavLink class="nav-link" href="action-reminders">
+                                <span class="bi bi-calendar-check" aria-hidden="true"></span> Action Reminders
+                            </NavLink>
+                        </div>
+                    }
+                }
+
+                @* Reports Section - Show if user has access to reports *@
+                @if (!isLoading && HasAccess("Reports"))
+                {
+                    <div class="nav-section-header">SPECIAL REPORTS</div>
+
                     <div class="nav-item px-3">
-                        <NavLink class="nav-link" href="documents/register">
-                            <span class="bi bi-file-earmark-plus" aria-hidden="true"></span> Register Document
+                        <NavLink class="nav-link" href="excel-preview?reportType=barcode-gaps">
+                            <span class="bi bi-bar-chart" aria-hidden="true"></span> Barcode Gaps
+                        </NavLink>
+                    </div>
+
+                    <div class="nav-item px-3">
+                        <NavLink class="nav-link" href="excel-preview?reportType=duplicate-documents">
+                            <span class="bi bi-files" aria-hidden="true"></span> Duplicate Documents
+                        </NavLink>
+                    </div>
+
+                    <div class="nav-item px-3">
+                        <NavLink class="nav-link" href="excel-preview?reportType=unlinked-registrations">
+                            <span class="bi bi-link-45deg" aria-hidden="true"></span> Unlinked Registrations
+                        </NavLink>
+                    </div>
+
+                    <div class="nav-item px-3">
+                        <NavLink class="nav-link" href="excel-preview?reportType=scan-copies">
+                            <span class="bi bi-file-earmark-image" aria-hidden="true"></span> Scan Copies
+                        </NavLink>
+                    </div>
+
+                    <div class="nav-item px-3">
+                        <NavLink class="nav-link" href="excel-preview?reportType=suppliers">
+                            <span class="bi bi-building" aria-hidden="true"></span> Suppliers
                         </NavLink>
                     </div>
                 }
-
-                <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="documents/search">
-                        <span class="bi bi-search" aria-hidden="true"></span> Search Documents
-                    </NavLink>
-                </div>
-
-@* Check-in Scanned - Show for Publisher role OR SuperUser *@
-                @if (canCreateEdit)
-                {
-                    <div class="nav-item px-3">
-                        <NavLink class="nav-link" href="checkin-scanned">
-                            <span class="bi bi-folder-nav-menu" aria-hidden="true"></span> Check-in Scanned
-                        </NavLink>
-                    </div>
-                }
-
-@* Action Reminders - Show for Publisher role OR SuperUser *@
-                @if (canCreateEdit)
-                {
-                    <div class="nav-item px-3">
-                        <NavLink class="nav-link" href="action-reminders">
-                            <span class="bi bi-calendar-check" aria-hidden="true"></span> Action Reminders
-                        </NavLink>
-                    </div>
-                }
-
-                <div class="nav-section-header">SPECIAL REPORTS</div>
-
-                <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="excel-preview?reportType=barcode-gaps">
-                        <span class="bi bi-bar-chart" aria-hidden="true"></span> Barcode Gaps
-                    </NavLink>
-                </div>
-@* *@
-                <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="excel-preview?reportType=duplicate-documents">
-                        <span class="bi bi-files" aria-hidden="true"></span> Duplicate Documents
-                    </NavLink>
-                </div>
-                <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="excel-preview?reportType=unlinked-registrations">
-                        <span class="bi bi-link-45deg" aria-hidden="true"></span> Unlinked Registrations
-                    </NavLink>
-                </div>
-                <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="excel-preview?reportType=scan-copies">
-                        <span class="bi bi-file-earmark-image" aria-hidden="true"></span> Scan Copies
-                    </NavLink>
-                </div>
-
-                <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="excel-preview?reportType=suppliers">
-                        <span class="bi bi-building" aria-hidden="true"></span> Suppliers
-                    </NavLink>
-                </div>
 @* *@
 @* 
                 <div class="nav-item px-3">
@@ -104,67 +126,106 @@
 
  *@
                 @* ADMINISTRATION - Show section header only if user has access to any admin item *@
-                <AuthorizeView Policy="SuperUser">
-                    <Authorized Context="superUserContext">
-                        <div class="nav-section-header">ADMINISTRATION</div>
+                @if (!isLoading && HasAnyAdminAccess())
+                {
+                    <div class="nav-section-header">ADMINISTRATION</div>
 
+                    @if (HasAccess("UserPermissions"))
+                    {
                         <div class="nav-item px-3">
                             <NavLink class="nav-link" href="edit-userpermissions">
                                 <span class="bi bi-people-nav-menu" aria-hidden="true"></span> User Permissions
                             </NavLink>
                         </div>
+                    }
 
+                    @if (HasAccess("Currency"))
+                    {
                         <div class="nav-item px-3">
                             <NavLink class="nav-link" href="currency-administration">
                                 <span class="bi bi-currency-dollar" aria-hidden="true"></span> Currency
                             </NavLink>
                         </div>
+                    }
 
+                    @if (HasAccess("Country"))
+                    {
                         <div class="nav-item px-3">
                             <NavLink class="nav-link" href="country-administration">
                                 <span class="bi bi-globe" aria-hidden="true"></span> Country
                             </NavLink>
                         </div>
+                    }
 
+                    @if (HasAccess("DocumentType"))
+                    {
                         <div class="nav-item px-3">
                             <NavLink class="nav-link" href="documenttype-administration">
                                 <span class="bi bi-file-earmark-text" aria-hidden="true"></span> Document Type
                             </NavLink>
                         </div>
+                    }
 
+                    @if (HasAccess("CounterParty"))
+                    {
                         <div class="nav-item px-3">
                             <NavLink class="nav-link" href="counterparty-administration">
                                 <span class="bi bi-building" aria-hidden="true"></span> Counter Party
                             </NavLink>
                         </div>
+                    }
 
+                    @if (HasAccess("DocumentNames"))
+                    {
                         <div class="nav-item px-3">
                             <NavLink class="nav-link" href="manage-document-names">
                                 <span class="bi bi-building" aria-hidden="true"></span> Document Names
                             </NavLink>
                         </div>
+                    }
+                }
 
-                        <div class="nav-section-header">SETTINGS</div>
+                @* SETTINGS - Show section header only if user has access to any settings item *@
+                @if (!isLoading && HasAnySettingsAccess())
+                {
+                    <div class="nav-section-header">SETTINGS</div>
 
+                    @if (HasAccess("Configuration"))
+                    {
                         <div class="nav-item px-3">
                             <NavLink class="nav-link" href="configuration-management">
                                 <span class="bi bi-gear" aria-hidden="true"></span> Configuration
                             </NavLink>
                         </div>
+                    }
 
+                    @if (HasAccess("AuditTrail"))
+                    {
                         <div class="nav-item px-3">
                             <NavLink class="nav-link" href="audit-trail">
                                 <span class="bi bi-shield-check" aria-hidden="true"></span> Audit Trail
                             </NavLink>
                         </div>
+                    }
 
+                    @if (HasAccess("SystemLogs"))
+                    {
                         <div class="nav-item px-3">
                             <NavLink class="nav-link" href="admin/logs">
                                 <span class="bi bi-file-text" aria-hidden="true"></span> System Logs
                             </NavLink>
                         </div>
-                    </Authorized>
-                </AuthorizeView>
+                    }
+
+                    @if (HasAccess("EndpointAuthorization"))
+                    {
+                        <div class="nav-item px-3">
+                            <NavLink class="nav-link" href="endpoint-authorization">
+                                <span class="bi bi-shield-lock" aria-hidden="true"></span> Endpoint Authorization
+                            </NavLink>
+                        </div>
+                    }
+                }
 
              </Authorized>
         </AuthorizeView>
@@ -180,26 +241,93 @@
 </div>
 
 @code {
-    private bool canCreateEdit = false;
+    // Dictionary to track visibility of each menu item based on endpoint access
+    private Dictionary<string, bool> menuVisibility = new();
+    private bool isLoading = true;
+    private string? errorMessage = null;
 
     protected override async Task OnInitializedAsync()
     {
-        var user = await UserIdentityHttpService.GetUserIdentityAsync();
+        Console.WriteLine("NavMenu: Starting initialization...");
 
-        if (user == null)
+        try
         {
-            canCreateEdit = false;
-            return;
+            // Define representative endpoints for each menu section
+            var endpointsToCheck = new Dictionary<string, (string Method, string Route)>
+            {
+                // Document Management
+                { "RegisterDocument", ("POST", "/api/documents/") },
+                { "SearchDocuments", ("GET", "/api/documents/") },
+                { "CheckinScanned", ("GET", "/api/scannedfiles/") },
+                { "ActionReminders", ("GET", "/api/action-reminders/") },
+
+                // Reports (all reports use same base endpoint)
+                { "Reports", ("GET", "/api/reports/barcode-gaps") },
+
+                // Administration
+                { "UserPermissions", ("GET", "/api/userpermissions/users") },
+                { "Currency", ("GET", "/api/currencies/") },
+                { "Country", ("GET", "/api/countries/") },
+                { "DocumentType", ("GET", "/api/documenttypes/") },
+                { "CounterParty", ("GET", "/api/counterparties/") },
+                { "DocumentNames", ("GET", "/api/documentnames/") },
+
+                // Settings
+                { "Configuration", ("GET", "/api/configuration/sections") },
+                { "AuditTrail", ("GET", "/api/audit-trail/") },
+                { "SystemLogs", ("POST", "/api/logs/search") },
+
+                // Endpoint Authorization (new)
+                { "EndpointAuthorization", ("GET", "/api/endpoint-authorization/endpoints") }
+            };
+
+            Console.WriteLine($"NavMenu: Checking access for {endpointsToCheck.Count} menu items...");
+
+            // Check access for all endpoints in parallel
+            menuVisibility = await EndpointAuthService.CheckMultipleAccessAsync(endpointsToCheck);
+
+            Console.WriteLine($"NavMenu: Access check complete. Results:");
+            foreach (var kvp in menuVisibility)
+            {
+                Console.WriteLine($"  {kvp.Key}: {kvp.Value}");
+            }
+
+            // Determine if user can create/edit (legacy compatibility)
+            // User can create/edit if they have access to POST documents endpoint
+            var canCreateEdit = menuVisibility.GetValueOrDefault("RegisterDocument", false);
+
+            Console.WriteLine($"NavMenu: Initialization complete. Can create/edit: {canCreateEdit}");
         }
-
-        var claims = user.Claims;
-        // Type = 'http://schemas.microsoft.com/ws/2008/06/identity/claims/role' 'SuperUser'
-        //        'IsSuperUser' 'True'
-        // Check if user has Publisher role OR SuperUser policy (IsSuperUser claim)
-        var isPublisher = claims.Any(c => c.Type == "http://schemas.microsoft.com/ws/2008/06/identity/claims/role" && c.Value == "Publisher");
-        var isSuperUser = claims.Any(c => (c.Type == "http://schemas.microsoft.com/ws/2008/06/identity/claims/role" && c.Value == "SuperUser")
-                                       || (c.Type == "IsSuperUser" && c.Value == "True"));
-
-        canCreateEdit = isPublisher || isSuperUser;
+        catch (Exception ex)
+        {
+            // Log error but don't break the menu - default to no access
+            errorMessage = ex.Message;
+            Console.WriteLine($"NavMenu ERROR: {ex.Message}");
+            Console.WriteLine($"NavMenu ERROR Stack: {ex.StackTrace}");
+            menuVisibility = new Dictionary<string, bool>();
+        }
+        finally
+        {
+            isLoading = false;
+        }
     }
+
+    // Helper method to check if user has access to a menu item
+    private bool HasAccess(string menuItem) => menuVisibility.GetValueOrDefault(menuItem, false);
+
+    // Helper to check if any admin items are visible (for showing/hiding admin section header)
+    private bool HasAnyAdminAccess() =>
+        HasAccess("UserPermissions") ||
+        HasAccess("Currency") ||
+        HasAccess("Country") ||
+        HasAccess("DocumentType") ||
+        HasAccess("CounterParty") ||
+        HasAccess("DocumentNames");
+
+    // Helper to check if any settings items are visible
+    private bool HasAnySettingsAccess() =>
+        HasAccess("Configuration") ||
+        HasAccess("AuditTrail") ||
+        HasAccess("SystemLogs") ||
+        HasAccess("EndpointAuthorization");
 }

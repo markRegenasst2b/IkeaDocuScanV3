@@ -5,15 +5,16 @@ using Microsoft.AspNetCore.Mvc;
 namespace IkeaDocuScan_Web.Endpoints;
 
 /// <summary>
-/// API endpoints for action reminders
+/// API endpoints for action reminder management
+/// Uses dynamic database-driven authorization
 /// </summary>
 public static class ActionReminderEndpoints
 {
     public static void MapActionReminderEndpoints(this IEndpointRouteBuilder app)
     {
         var group = app.MapGroup("/api/action-reminders")
-            .WithTags("Action Reminders")
-            .RequireAuthorization("HasAccess");
+            .RequireAuthorization()  // Base authentication required
+            .WithTags("Action Reminders");
 
         // GET /api/action-reminders
         group.MapGet("/", async (
@@ -57,6 +58,7 @@ public static class ActionReminderEndpoints
             }
         })
         .WithName("GetDueActions")
+        .RequireAuthorization("Endpoint:GET:/api/action-reminders/")
         .Produces<List<ActionReminderDto>>(200)
         .Produces(500);
 
@@ -80,6 +82,7 @@ public static class ActionReminderEndpoints
             }
         })
         .WithName("GetDueActionsCount")
+        .RequireAuthorization("Endpoint:GET:/api/action-reminders/count")
         .Produces<int>(200)
         .Produces(500);
 
@@ -103,6 +106,7 @@ public static class ActionReminderEndpoints
             }
         })
         .WithName("GetActionsDueOnDate")
+        .RequireAuthorization("Endpoint:GET:/api/action-reminders/date/{date}")
         .Produces<List<ActionReminderDto>>(200)
         .Produces(500);
     }

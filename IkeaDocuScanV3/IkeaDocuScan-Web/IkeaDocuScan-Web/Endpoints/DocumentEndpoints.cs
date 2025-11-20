@@ -3,16 +3,20 @@ using IkeaDocuScan.Shared.DTOs.Documents;
 
 namespace IkeaDocuScan_Web.Endpoints;
 
+/// <summary>
+/// API endpoints for document management
+/// Uses dynamic database-driven authorization
+/// </summary>
 public static class DocumentEndpoints
 {
     public static void MapDocumentEndpoints(this IEndpointRouteBuilder routes)
     {
         var group = routes.MapGroup("/api/documents")
-            .RequireAuthorization("HasAccess")  // Base policy - user must have access to system
+            .RequireAuthorization()  // Base authentication required
             .WithTags("Documents");
 
         // ========================================
-        // READ OPERATIONS - All authenticated users with HasAccess policy
+        // READ OPERATIONS
         // ========================================
 
         group.MapGet("/", async (IDocumentService service) =>
@@ -21,6 +25,7 @@ public static class DocumentEndpoints
             return Results.Ok(documents);
         })
         .WithName("GetAllDocuments")
+        .RequireAuthorization("Endpoint:GET:/api/documents/")
         .Produces<List<DocumentDto>>(200);
 
         group.MapGet("/{id}", async (int id, IDocumentService service) =>
@@ -29,6 +34,7 @@ public static class DocumentEndpoints
             return Results.Ok(document);
         })
         .WithName("GetDocumentById")
+        .RequireAuthorization("Endpoint:GET:/api/documents/{id}")
         .Produces<DocumentDto>(200)
         .Produces(404);
 
@@ -41,6 +47,7 @@ public static class DocumentEndpoints
             return Results.Ok(document);
         })
         .WithName("GetDocumentByBarCode")
+        .RequireAuthorization("Endpoint:GET:/api/documents/barcode/{barCode}")
         .Produces<DocumentDto>(200)
         .Produces(404);
 
@@ -53,11 +60,12 @@ public static class DocumentEndpoints
             return Results.Ok(documents);
         })
         .WithName("GetDocumentsByIds")
+        .RequireAuthorization("Endpoint:POST:/api/documents/by-ids")
         .Produces<List<DocumentDto>>(200)
         .Produces(400);
 
         // ========================================
-        // WRITE OPERATIONS - Require Publisher or SuperUser role
+        // WRITE OPERATIONS
         // ========================================
 
         group.MapPost("/", async (CreateDocumentDto dto, IDocumentService service) =>
@@ -66,7 +74,7 @@ public static class DocumentEndpoints
             return Results.Created($"/api/documents/{created.Id}", created);
         })
         .WithName("CreateDocument")
-        .RequireAuthorization(policy => policy.RequireRole("Publisher", "SuperUser"))
+        .RequireAuthorization("Endpoint:POST:/api/documents/")
         .Produces<DocumentDto>(201)
         .Produces(400)
         .Produces(403);
@@ -80,14 +88,14 @@ public static class DocumentEndpoints
             return Results.Ok(updated);
         })
         .WithName("UpdateDocument")
-        .RequireAuthorization(policy => policy.RequireRole("Publisher", "SuperUser"))
+        .RequireAuthorization("Endpoint:PUT:/api/documents/{id}")
         .Produces<DocumentDto>(200)
         .Produces(400)
         .Produces(403)
         .Produces(404);
 
         // ========================================
-        // DELETE OPERATIONS - Require SuperUser role only
+        // DELETE OPERATIONS
         // ========================================
 
         group.MapDelete("/{id}", async (int id, IDocumentService service) =>
@@ -96,7 +104,7 @@ public static class DocumentEndpoints
             return Results.NoContent();
         })
         .WithName("DeleteDocument")
-        .RequireAuthorization(policy => policy.RequireRole("SuperUser"))
+        .RequireAuthorization("Endpoint:DELETE:/api/documents/{id}")
         .Produces(204)
         .Produces(403)
         .Produces(404);
@@ -107,6 +115,7 @@ public static class DocumentEndpoints
             return Results.Ok(results);
         })
         .WithName("SearchDocuments")
+        .RequireAuthorization("Endpoint:POST:/api/documents/search")
         .Produces<DocumentSearchResultDto>(200)
         .Produces(400);
 
@@ -122,6 +131,7 @@ public static class DocumentEndpoints
             return Results.File(fileData.FileBytes, contentType);
         })
         .WithName("StreamDocumentFile")
+        .RequireAuthorization("Endpoint:GET:/api/documents/{id}/stream")
         .Produces(200)
         .Produces(404);
 
@@ -137,6 +147,7 @@ public static class DocumentEndpoints
             return Results.File(fileData.FileBytes, contentType, fileData.FileName);
         })
         .WithName("DownloadDocumentFile")
+        .RequireAuthorization("Endpoint:GET:/api/documents/{id}/download")
         .Produces(200)
         .Produces(404);
     }

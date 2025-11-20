@@ -2,12 +2,16 @@ using IkeaDocuScan.Shared.DTOs.UserPermissions;
 
 namespace IkeaDocuScan_Web.Endpoints;
 
+/// <summary>
+/// API endpoints for user identity information
+/// Uses dynamic database-driven authorization
+/// </summary>
 public static class UserIdentityEndpoints
 {
     public static void MapUserIdentityEndpoints(this IEndpointRouteBuilder routes)
     {
         var group = routes.MapGroup("/api/user")
-            .RequireAuthorization()
+            .RequireAuthorization()  // Base authentication required
             .WithTags("UserIdentity");
 
         group.MapGet("/identity", (HttpContext httpContext) =>
@@ -32,6 +36,7 @@ public static class UserIdentityEndpoints
             return Results.Ok(identityDto);
         })
         .WithName("GetUserIdentity")
+        .RequireAuthorization("Endpoint:GET:/api/user/identity")
         .Produces<UserIdentityDto>(200);
     }
 }

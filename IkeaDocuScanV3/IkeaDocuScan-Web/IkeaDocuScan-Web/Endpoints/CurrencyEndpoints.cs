@@ -5,17 +5,15 @@ using IkeaDocuScan.Shared.Exceptions;
 namespace IkeaDocuScan_Web.Endpoints;
 
 /// <summary>
-/// API endpoints for currencies
+/// API endpoints for currency management
+/// Uses dynamic database-driven authorization
 /// </summary>
 public static class CurrencyEndpoints
 {
-    /// <summary>
-    /// Map currency endpoints to the route builder
-    /// </summary>
     public static void MapCurrencyEndpoints(this IEndpointRouteBuilder routes)
     {
         var group = routes.MapGroup("/api/currencies")
-            .RequireAuthorization("HasAccess")
+            .RequireAuthorization()  // Base authentication required
             .WithTags("Currencies");
 
         // GET /api/currencies
@@ -25,6 +23,7 @@ public static class CurrencyEndpoints
             return Results.Ok(currencies);
         })
         .WithName("GetAllCurrencies")
+        .RequireAuthorization("Endpoint:GET:/api/currencies/")
         .Produces<List<CurrencyDto>>(200);
 
         // GET /api/currencies/{code}
@@ -38,6 +37,7 @@ public static class CurrencyEndpoints
             return Results.Ok(currency);
         })
         .WithName("GetCurrencyByCode")
+        .RequireAuthorization("Endpoint:GET:/api/currencies/{code}")
         .Produces<CurrencyDto>(200)
         .Produces(404);
 
@@ -55,6 +55,7 @@ public static class CurrencyEndpoints
             }
         })
         .WithName("CreateCurrency")
+        .RequireAuthorization("Endpoint:POST:/api/currencies/")
         .Produces<CurrencyDto>(201)
         .Produces(400);
 
@@ -72,6 +73,7 @@ public static class CurrencyEndpoints
             }
         })
         .WithName("UpdateCurrency")
+        .RequireAuthorization("Endpoint:PUT:/api/currencies/{code}")
         .Produces<CurrencyDto>(200)
         .Produces(400);
 
@@ -89,6 +91,7 @@ public static class CurrencyEndpoints
             }
         })
         .WithName("DeleteCurrency")
+        .RequireAuthorization("Endpoint:DELETE:/api/currencies/{code}")
         .Produces(204)
         .Produces(400);
 
@@ -100,6 +103,7 @@ public static class CurrencyEndpoints
             return Results.Ok(new { currencyCode = code, isInUse, usageCount = count });
         })
         .WithName("GetCurrencyUsage")
+        .RequireAuthorization("Endpoint:GET:/api/currencies/{code}/usage")
         .Produces<object>(200);
     }
 }

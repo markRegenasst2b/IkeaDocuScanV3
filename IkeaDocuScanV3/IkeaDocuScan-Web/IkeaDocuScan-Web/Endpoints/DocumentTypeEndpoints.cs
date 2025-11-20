@@ -4,16 +4,20 @@ using IkeaDocuScan.Shared.DTOs.DocumentTypes;
 
 namespace IkeaDocuScan_Web.Endpoints;
 
+/// <summary>
+/// API endpoints for document type management
+/// Uses dynamic database-driven authorization
+/// </summary>
 public static class DocumentTypeEndpoints
 {
     public static void MapDocumentTypeEndpoints(this IEndpointRouteBuilder routes)
     {
         var group = routes.MapGroup("/api/documenttypes")
-            .RequireAuthorization("HasAccess")
+            .RequireAuthorization()  // Base authentication required
             .WithTags("DocumentTypes");
 
         // ========================================
-        // READ OPERATIONS - All authenticated users with HasAccess
+        // READ OPERATIONS
         // ========================================
 
         group.MapGet("/", async (IDocumentTypeService service) =>
@@ -22,6 +26,7 @@ public static class DocumentTypeEndpoints
             return Results.Ok(documentTypes);
         })
         .WithName("GetAllDocumentTypes")
+        .RequireAuthorization("Endpoint:GET:/api/documenttypes/")
         .Produces<List<DocumentTypeDto>>(200);
 
         group.MapGet("/all", async (IDocumentTypeService service) =>
@@ -30,6 +35,7 @@ public static class DocumentTypeEndpoints
             return Results.Ok(documentTypes);
         })
         .WithName("GetAllDocumentTypesIncludingDisabled")
+        .RequireAuthorization("Endpoint:GET:/api/documenttypes/all")
         .Produces<List<DocumentTypeDto>>(200);
 
         group.MapGet("/{id}", async (int id, IDocumentTypeService service) =>
@@ -41,11 +47,12 @@ public static class DocumentTypeEndpoints
             return Results.Ok(documentType);
         })
         .WithName("GetDocumentTypeById")
+        .RequireAuthorization("Endpoint:GET:/api/documenttypes/{id}")
         .Produces<DocumentTypeDto>(200)
         .Produces(404);
 
         // ========================================
-        // WRITE OPERATIONS - SuperUser only (system configuration)
+        // WRITE OPERATIONS
         // ========================================
 
         group.MapPost("/", async (CreateDocumentTypeDto dto, IDocumentTypeService service) =>
@@ -61,7 +68,7 @@ public static class DocumentTypeEndpoints
             }
         })
         .WithName("CreateDocumentType")
-        .RequireAuthorization(policy => policy.RequireRole("SuperUser"))
+        .RequireAuthorization("Endpoint:POST:/api/documenttypes/")
         .Produces<DocumentTypeDto>(201)
         .Produces(400)
         .Produces(403);
@@ -79,7 +86,7 @@ public static class DocumentTypeEndpoints
             }
         })
         .WithName("UpdateDocumentType")
-        .RequireAuthorization(policy => policy.RequireRole("SuperUser"))
+        .RequireAuthorization("Endpoint:PUT:/api/documenttypes/{id}")
         .Produces<DocumentTypeDto>(200)
         .Produces(400)
         .Produces(403);
@@ -97,7 +104,7 @@ public static class DocumentTypeEndpoints
             }
         })
         .WithName("DeleteDocumentType")
-        .RequireAuthorization(policy => policy.RequireRole("SuperUser"))
+        .RequireAuthorization("Endpoint:DELETE:/api/documenttypes/{id}")
         .Produces(204)
         .Produces(400)
         .Produces(403);
@@ -118,6 +125,7 @@ public static class DocumentTypeEndpoints
             });
         })
         .WithName("GetDocumentTypeUsage")
+        .RequireAuthorization("Endpoint:GET:/api/documenttypes/{id}/usage")
         .Produces(200);
     }
 }

@@ -3,12 +3,16 @@ using IkeaDocuScan.Shared.Enums;
 
 namespace IkeaDocuScan_Web.Endpoints;
 
+/// <summary>
+/// API endpoints for audit trail management
+/// Uses dynamic database-driven authorization
+/// </summary>
 public static class AuditTrailEndpoints
 {
     public static void MapAuditTrailEndpoints(this IEndpointRouteBuilder routes)
     {
         var group = routes.MapGroup("/api/audittrail")
-            .RequireAuthorization("HasAccess")
+            .RequireAuthorization()  // Base authentication required
             .WithTags("AuditTrail");
 
         // Log audit entry by barcode
@@ -19,6 +23,7 @@ public static class AuditTrailEndpoints
             return Results.Ok(new { message = "Audit entry logged successfully" });
         })
         .WithName("LogAuditTrail")
+        .RequireAuthorization("Endpoint:POST:/api/audittrail/")
         .Produces(200)
         .Produces(400);
 
@@ -30,6 +35,7 @@ public static class AuditTrailEndpoints
             return Results.Ok(new { message = "Audit entry logged successfully" });
         })
         .WithName("LogAuditTrailByDocument")
+        .RequireAuthorization("Endpoint:POST:/api/audittrail/document/{documentId}")
         .Produces(200)
         .Produces(400);
 
@@ -41,6 +47,7 @@ public static class AuditTrailEndpoints
             return Results.Ok(new { message = "Batch audit entries logged successfully" });
         })
         .WithName("LogAuditTrailBatch")
+        .RequireAuthorization("Endpoint:POST:/api/audittrail/batch")
         .Produces(200)
         .Produces(400);
 
@@ -51,6 +58,7 @@ public static class AuditTrailEndpoints
             return Results.Ok(entries);
         })
         .WithName("GetAuditTrailByBarCode")
+        .RequireAuthorization("Endpoint:GET:/api/audittrail/barcode/{barCode}")
         .Produces<List<AuditTrailDto>>(200);
 
         // Get audit entries by user
@@ -60,6 +68,7 @@ public static class AuditTrailEndpoints
             return Results.Ok(entries);
         })
         .WithName("GetAuditTrailByUser")
+        .RequireAuthorization("Endpoint:GET:/api/audittrail/user/{username}")
         .Produces<List<AuditTrailDto>>(200);
 
         // Get recent audit entries
@@ -69,6 +78,7 @@ public static class AuditTrailEndpoints
             return Results.Ok(entries);
         })
         .WithName("GetRecentAuditTrail")
+        .RequireAuthorization("Endpoint:GET:/api/audittrail/recent")
         .Produces<List<AuditTrailDto>>(200);
 
         // Get audit entries by date range
@@ -78,6 +88,7 @@ public static class AuditTrailEndpoints
             return Results.Ok(entries);
         })
         .WithName("GetAuditTrailByDateRange")
+        .RequireAuthorization("Endpoint:GET:/api/audittrail/daterange")
         .Produces<List<AuditTrailDto>>(200);
     }
 

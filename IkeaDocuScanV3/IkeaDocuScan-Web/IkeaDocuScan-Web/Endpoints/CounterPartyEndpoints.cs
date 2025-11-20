@@ -4,16 +4,20 @@ using IkeaDocuScan.Shared.DTOs.CounterParties;
 
 namespace IkeaDocuScan_Web.Endpoints;
 
+/// <summary>
+/// API endpoints for counter party management
+/// Uses dynamic database-driven authorization
+/// </summary>
 public static class CounterPartyEndpoints
 {
     public static void MapCounterPartyEndpoints(this IEndpointRouteBuilder routes)
     {
         var group = routes.MapGroup("/api/counterparties")
-            .RequireAuthorization("HasAccess")
+            .RequireAuthorization()  // Base authentication required
             .WithTags("CounterParties");
 
         // ========================================
-        // READ OPERATIONS - All authenticated users with HasAccess
+        // READ OPERATIONS
         // ========================================
 
         group.MapGet("/", async (ICounterPartyService service) =>
@@ -22,6 +26,7 @@ public static class CounterPartyEndpoints
             return Results.Ok(counterParties);
         })
         .WithName("GetAllCounterParties")
+        .RequireAuthorization("Endpoint:GET:/api/counterparties/")
         .Produces<List<CounterPartyDto>>(200);
 
         group.MapGet("/search", async (string? searchTerm, ICounterPartyService service) =>
@@ -30,6 +35,7 @@ public static class CounterPartyEndpoints
             return Results.Ok(counterParties);
         })
         .WithName("SearchCounterParties")
+        .RequireAuthorization("Endpoint:GET:/api/counterparties/search")
         .Produces<List<CounterPartyDto>>(200);
 
         group.MapGet("/{id}", async (int id, ICounterPartyService service) =>
@@ -41,11 +47,12 @@ public static class CounterPartyEndpoints
             return Results.Ok(counterParty);
         })
         .WithName("GetCounterPartyById")
+        .RequireAuthorization("Endpoint:GET:/api/counterparties/{id}")
         .Produces<CounterPartyDto>(200)
         .Produces(404);
 
         // ========================================
-        // WRITE OPERATIONS - Require Publisher or SuperUser role
+        // WRITE OPERATIONS
         // ========================================
 
         group.MapPost("/", async (CreateCounterPartyDto dto, ICounterPartyService service) =>
@@ -61,7 +68,7 @@ public static class CounterPartyEndpoints
             }
         })
         .WithName("CreateCounterParty")
-        .RequireAuthorization(policy => policy.RequireRole("Publisher", "SuperUser"))
+        .RequireAuthorization("Endpoint:POST:/api/counterparties/")
         .Produces<CounterPartyDto>(201)
         .Produces(400)
         .Produces(403);
@@ -79,7 +86,7 @@ public static class CounterPartyEndpoints
             }
         })
         .WithName("UpdateCounterParty")
-        .RequireAuthorization(policy => policy.RequireRole("Publisher", "SuperUser"))
+        .RequireAuthorization("Endpoint:PUT:/api/counterparties/{id}")
         .Produces<CounterPartyDto>(200)
         .Produces(400)
         .Produces(403);
@@ -97,7 +104,7 @@ public static class CounterPartyEndpoints
             }
         })
         .WithName("DeleteCounterParty")
-        .RequireAuthorization(policy => policy.RequireRole("SuperUser"))
+        .RequireAuthorization("Endpoint:DELETE:/api/counterparties/{id}")
         .Produces(204)
         .Produces(400)
         .Produces(403);
@@ -117,6 +124,7 @@ public static class CounterPartyEndpoints
             });
         })
         .WithName("GetCounterPartyUsage")
+        .RequireAuthorization("Endpoint:GET:/api/counterparties/{id}/usage")
         .Produces(200);
     }
 }

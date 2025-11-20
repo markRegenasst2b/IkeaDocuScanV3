@@ -8,14 +8,14 @@ namespace IkeaDocuScan_Web.Endpoints;
 
 /// <summary>
 /// API endpoints for system configuration management
-/// All endpoints require SuperUser authorization
+/// Uses dynamic database-driven authorization
 /// </summary>
 public static class ConfigurationEndpoints
 {
     public static void MapConfigurationEndpoints(this IEndpointRouteBuilder routes)
     {
         var group = routes.MapGroup("/api/configuration")
-            .RequireAuthorization("SuperUser")
+            .RequireAuthorization()  // Base authentication required
             .WithTags("Configuration");
 
         // ===== Email Recipients Endpoints =====
@@ -26,6 +26,7 @@ public static class ConfigurationEndpoints
             return Results.Ok(groups);
         })
         .WithName("GetAllEmailRecipientGroups")
+        .RequireAuthorization("Endpoint:GET:/api/configuration/email-recipients")
         .Produces<List<EmailRecipientGroupDto>>(200)
         .WithDescription("Get all email recipient groups");
 
@@ -39,6 +40,7 @@ public static class ConfigurationEndpoints
             return Results.Ok(new { groupKey, recipients });
         })
         .WithName("GetEmailRecipientGroup")
+        .RequireAuthorization("Endpoint:GET:/api/configuration/email-recipients/{groupKey}")
         .Produces(200)
         .Produces(404)
         .WithDescription("Get specific email recipient group");
@@ -60,6 +62,7 @@ public static class ConfigurationEndpoints
             return Results.Ok(new { message = $"Email recipient group '{groupKey}' updated successfully" });
         })
         .WithName("UpdateEmailRecipientGroup")
+        .RequireAuthorization("Endpoint:POST:/api/configuration/email-recipients/{groupKey}")
         .Produces(200)
         .Produces(400)
         .WithDescription("Update email recipient group (with automatic rollback on errors)");
@@ -72,6 +75,7 @@ public static class ConfigurationEndpoints
             return Results.Ok(templates);
         })
         .WithName("GetAllEmailTemplates")
+        .RequireAuthorization("Endpoint:GET:/api/configuration/email-templates")
         .Produces<List<EmailTemplateDto>>(200)
         .WithDescription("Get all email templates");
 
@@ -85,6 +89,7 @@ public static class ConfigurationEndpoints
             return Results.Ok(template);
         })
         .WithName("GetEmailTemplateByKey")
+        .RequireAuthorization("Endpoint:GET:/api/configuration/email-templates/{key}")
         .Produces<EmailTemplateDto>(200)
         .Produces(404)
         .WithDescription("Get specific email template by key");
@@ -128,6 +133,7 @@ public static class ConfigurationEndpoints
             return Results.Created($"/api/configuration/email-templates/{saved.TemplateKey}", saved);
         })
         .WithName("CreateEmailTemplate")
+        .RequireAuthorization("Endpoint:POST:/api/configuration/email-templates")
         .Produces<EmailTemplateDto>(201)
         .Produces(400)
         .WithDescription("Create email template (with validation and rollback on errors)");
@@ -176,6 +182,7 @@ public static class ConfigurationEndpoints
             return Results.Ok(updated);
         })
         .WithName("UpdateEmailTemplate")
+        .RequireAuthorization("Endpoint:PUT:/api/configuration/email-templates/{id}")
         .Produces<EmailTemplateDto>(200)
         .Produces(400)
         .Produces(404)
@@ -202,6 +209,7 @@ public static class ConfigurationEndpoints
             return Results.NoContent();
         })
         .WithName("DeactivateEmailTemplate")
+        .RequireAuthorization("Endpoint:DELETE:/api/configuration/email-templates/{id}")
         .Produces(204)
         .Produces(404)
         .WithDescription("Deactivate email template (soft delete)");
@@ -220,6 +228,7 @@ public static class ConfigurationEndpoints
             return Results.Ok(sections);
         })
         .WithName("GetConfigurationSections")
+        .RequireAuthorization("Endpoint:GET:/api/configuration/sections")
         .Produces(200)
         .WithDescription("List all configuration sections");
 
@@ -236,6 +245,7 @@ public static class ConfigurationEndpoints
             return Results.Ok(new { section, key, value });
         })
         .WithName("GetConfiguration")
+        .RequireAuthorization("Endpoint:GET:/api/configuration/{section}/{key}")
         .Produces(200)
         .Produces(404)
         .WithDescription("Get specific configuration value");
@@ -259,6 +269,7 @@ public static class ConfigurationEndpoints
             return Results.Ok(new { message = $"Configuration '{section}:{key}' updated successfully" });
         })
         .WithName("SetConfiguration")
+        .RequireAuthorization("Endpoint:POST:/api/configuration/{section}/{key}")
         .Produces(200)
         .Produces(400)
         .WithDescription("Set individual configuration value (with automatic rollback on errors). Use POST /smtp for bulk SMTP updates with testing.");
@@ -308,6 +319,7 @@ public static class ConfigurationEndpoints
             }
         })
         .WithName("UpdateSmtpConfiguration")
+        .RequireAuthorization("Endpoint:POST:/api/configuration/smtp")
         .Produces(200)
         .Produces(400)
         .WithDescription("Update all SMTP settings atomically. Add ?skipTest=true query parameter to save without testing (not recommended).");
@@ -329,6 +341,7 @@ public static class ConfigurationEndpoints
             }
         })
         .WithName("TestSmtpConnection")
+        .RequireAuthorization("Endpoint:POST:/api/configuration/test-smtp")
         .Produces(200)
         .Produces(400)
         .WithDescription("Test SMTP server connection with current configuration");
@@ -339,6 +352,7 @@ public static class ConfigurationEndpoints
             return Results.Ok(new { message = "Configuration cache reloaded successfully" });
         })
         .WithName("ReloadConfigurationCache")
+        .RequireAuthorization("Endpoint:POST:/api/configuration/reload")
         .Produces(200)
         .WithDescription("Reload configuration cache (clears 5-minute TTL cache)");
 
@@ -377,6 +391,7 @@ public static class ConfigurationEndpoints
             }
         })
         .WithName("MigrateConfiguration")
+        .RequireAuthorization("Endpoint:POST:/api/configuration/migrate")
         .Produces(200)
         .Produces(400)
         .WithDescription("Migrate configuration from appsettings.json to database (with optional overwrite)");
@@ -411,6 +426,7 @@ public static class ConfigurationEndpoints
             }
         })
         .WithName("PreviewEmailTemplate")
+        .RequireAuthorization("Endpoint:POST:/api/configuration/email-templates/preview")
         .Produces(200)
         .Produces(400)
         .WithDescription("Preview email template with sample data");
@@ -442,6 +458,7 @@ public static class ConfigurationEndpoints
             return Results.Ok(new { placeholders, loops });
         })
         .WithName("GetEmailTemplatePlaceholders")
+        .RequireAuthorization("Endpoint:GET:/api/configuration/email-templates/placeholders")
         .Produces(200)
         .WithDescription("Get available placeholders and loops for email templates");
 
@@ -589,6 +606,7 @@ public static class ConfigurationEndpoints
             }
         })
         .WithName("DiagnoseDocumentAttachmentTemplate")
+        .RequireAuthorization("Endpoint:GET:/api/configuration/email-templates/diagnostic/DocumentAttachment")
         .Produces(200)
         .WithDescription("Comprehensive diagnostic for DocumentAttachment email template");
     }

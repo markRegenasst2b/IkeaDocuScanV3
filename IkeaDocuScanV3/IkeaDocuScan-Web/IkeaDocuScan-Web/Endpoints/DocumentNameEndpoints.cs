@@ -4,17 +4,15 @@ using IkeaDocuScan.Shared.DTOs.DocumentNames;
 namespace IkeaDocuScan_Web.Endpoints;
 
 /// <summary>
-/// API endpoints for document names
+/// API endpoints for document name management
+/// Uses dynamic database-driven authorization
 /// </summary>
 public static class DocumentNameEndpoints
 {
-    /// <summary>
-    /// Map document name endpoints to the route builder
-    /// </summary>
     public static void MapDocumentNameEndpoints(this IEndpointRouteBuilder routes)
     {
         var group = routes.MapGroup("/api/documentnames")
-            .RequireAuthorization("HasAccess")
+            .RequireAuthorization()  // Base authentication required
             .WithTags("DocumentNames");
 
         // GET /api/documentnames
@@ -24,6 +22,7 @@ public static class DocumentNameEndpoints
             return Results.Ok(documentNames);
         })
         .WithName("GetAllDocumentNames")
+        .RequireAuthorization("Endpoint:GET:/api/documentnames/")
         .Produces<List<DocumentNameDto>>(200);
 
         // GET /api/documentnames/bytype/{documentTypeId}
@@ -33,6 +32,7 @@ public static class DocumentNameEndpoints
             return Results.Ok(documentNames);
         })
         .WithName("GetDocumentNamesByType")
+        .RequireAuthorization("Endpoint:GET:/api/documentnames/bytype/{documentTypeId}")
         .Produces<List<DocumentNameDto>>(200);
 
         // GET /api/documentnames/{id}
@@ -46,10 +46,11 @@ public static class DocumentNameEndpoints
             return Results.Ok(documentName);
         })
         .WithName("GetDocumentNameById")
+        .RequireAuthorization("Endpoint:GET:/api/documentnames/{id}")
         .Produces<DocumentNameDto>(200)
         .Produces(404);
 
-        // POST /api/documentnames (SuperUser only)
+        // POST /api/documentnames
         group.MapPost("/", async (CreateDocumentNameDto createDto, IDocumentNameService service) =>
         {
             try
@@ -62,12 +63,12 @@ public static class DocumentNameEndpoints
                 return Results.BadRequest(new { error = ex.Message });
             }
         })
-        .RequireAuthorization("SuperUser")
         .WithName("CreateDocumentName")
+        .RequireAuthorization("Endpoint:POST:/api/documentnames/")
         .Produces<DocumentNameDto>(201)
         .Produces(400);
 
-        // PUT /api/documentnames/{id} (SuperUser only)
+        // PUT /api/documentnames/{id}
         group.MapPut("/{id:int}", async (int id, UpdateDocumentNameDto updateDto, IDocumentNameService service) =>
         {
             if (id != updateDto.Id)
@@ -85,12 +86,12 @@ public static class DocumentNameEndpoints
                 return Results.BadRequest(new { error = ex.Message });
             }
         })
-        .RequireAuthorization("SuperUser")
         .WithName("UpdateDocumentName")
+        .RequireAuthorization("Endpoint:PUT:/api/documentnames/{id}")
         .Produces<DocumentNameDto>(200)
         .Produces(400);
 
-        // DELETE /api/documentnames/{id} (SuperUser only)
+        // DELETE /api/documentnames/{id}
         group.MapDelete("/{id:int}", async (int id, IDocumentNameService service) =>
         {
             try
@@ -103,8 +104,8 @@ public static class DocumentNameEndpoints
                 return Results.BadRequest(new { error = ex.Message });
             }
         })
-        .RequireAuthorization("SuperUser")
         .WithName("DeleteDocumentName")
+        .RequireAuthorization("Endpoint:DELETE:/api/documentnames/{id}")
         .Produces(204)
         .Produces(400);
     }
