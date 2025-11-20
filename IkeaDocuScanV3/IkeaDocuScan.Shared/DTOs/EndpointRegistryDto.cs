@@ -72,6 +72,25 @@ public class EndpointAccessCheckDto
 public class EndpointAccessCheckResult
 {
     public bool HasAccess { get; set; }
-    public List<string> RequiredRoles { get; set; } = new();
+    public List<string> AllowedRoles { get; set; } = new();
     public List<string> UserRoles { get; set; } = new();
+    public string? Error { get; set; }
+}
+
+/// <summary>
+/// DTO for validating permission changes
+/// </summary>
+public class ValidatePermissionChangeDto
+{
+    public int EndpointId { get; set; }
+    public List<string> RoleNames { get; set; } = new();
+}
+
+/// <summary>
+/// Result DTO for permission change validation
+/// </summary>
+public class ValidatePermissionChangeResult
+{
+    public bool IsValid { get; set; }
+    public List<string> ValidationErrors { get; set; } = new();
 }

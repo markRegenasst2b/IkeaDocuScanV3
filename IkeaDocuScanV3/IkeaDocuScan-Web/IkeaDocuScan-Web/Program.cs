@@ -252,6 +252,7 @@ app.MapEmailEndpoints();
 app.MapExcelExportEndpoints();
 app.MapConfigurationEndpoints();
 app.MapLogViewerEndpoints();
+app.MapEndpointAuthorizationEndpoints();
 
 #if DEBUG
 // Test Identity Endpoints (DEVELOPMENT ONLY)
