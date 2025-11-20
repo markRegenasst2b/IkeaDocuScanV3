@@ -27,7 +27,7 @@ public static class EndpointAuthorizationEndpoints
             return Results.Ok(endpoints);
         })
         .WithName("GetAllEndpoints")
-        .RequireAuthorization("Endpoint:GET:/api/endpoint-authorization/endpoints")
+        .RequireAuthorization("SuperUser")
         .Produces<List<EndpointRegistryDto>>(200)
         .Produces(403);
 
@@ -41,7 +41,7 @@ public static class EndpointAuthorizationEndpoints
             return endpoint == null ? Results.NotFound() : Results.Ok(endpoint);
         })
         .WithName("GetEndpointById")
-        .RequireAuthorization("Endpoint:GET:/api/endpoint-authorization/endpoints/{id}")
+        .RequireAuthorization("SuperUser")
         .Produces<EndpointRegistryDto>(200)
         .Produces(404)
         .Produces(403);
@@ -56,7 +56,7 @@ public static class EndpointAuthorizationEndpoints
             return Results.Ok(roles);
         })
         .WithName("GetEndpointRoles")
-        .RequireAuthorization("Endpoint:GET:/api/endpoint-authorization/endpoints/{id}/roles")
+        .RequireAuthorization("SuperUser")
         .Produces<List<string>>(200)
         .Produces(403);
 
@@ -84,7 +84,8 @@ public static class EndpointAuthorizationEndpoints
             }
         })
         .WithName("UpdateEndpointRoles")
-        .RequireAuthorization("Endpoint:POST:/api/endpoint-authorization/endpoints/{id}/roles")
+        .RequireAuthorization("SuperUser")
+        .DisableAntiforgery()
         .Produces(200)
         .Produces(400)
         .Produces(404)
@@ -102,7 +103,7 @@ public static class EndpointAuthorizationEndpoints
             return Results.Ok(roles);
         })
         .WithName("GetAvailableRoles")
-        .RequireAuthorization("Endpoint:GET:/api/endpoint-authorization/roles")
+        .RequireAuthorization("SuperUser")
         .Produces<List<string>>(200)
         .Produces(403);
 
@@ -118,7 +119,7 @@ public static class EndpointAuthorizationEndpoints
             return Results.Ok(logs);
         })
         .WithName("GetPermissionAuditLog")
-        .RequireAuthorization("Endpoint:GET:/api/endpoint-authorization/audit")
+        .RequireAuthorization("SuperUser")
         .Produces<List<PermissionChangeAuditLogDto>>(200)
         .Produces(403);
 
@@ -137,7 +138,8 @@ public static class EndpointAuthorizationEndpoints
             return Results.Ok(new { message = "Cache invalidated successfully" });
         })
         .WithName("InvalidateAuthorizationCache")
-        .RequireAuthorization("Endpoint:POST:/api/endpoint-authorization/cache/invalidate")
+        .RequireAuthorization("SuperUser")
+        .DisableAntiforgery()
         .Produces(200)
         .Produces(403);
 
@@ -149,7 +151,8 @@ public static class EndpointAuthorizationEndpoints
             return Results.Ok(new { message = "Endpoint sync completed (manual seeding still required)" });
         })
         .WithName("SyncEndpointsFromCode")
-        .RequireAuthorization("Endpoint:POST:/api/endpoint-authorization/sync")
+        .RequireAuthorization("SuperUser")
+        .DisableAntiforgery()
         .Produces(200)
         .Produces(403);
 
@@ -224,7 +227,8 @@ public static class EndpointAuthorizationEndpoints
             });
         })
         .WithName("ValidatePermissionChange")
-        .RequireAuthorization("Endpoint:POST:/api/endpoint-authorization/validate")
+        .RequireAuthorization("SuperUser")
+        .DisableAntiforgery()
         .Produces<ValidatePermissionChangeResult>(200)
         .Produces(403);
     }

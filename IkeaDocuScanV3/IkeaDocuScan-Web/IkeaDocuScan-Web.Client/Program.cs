@@ -43,6 +43,7 @@ builder.Services.AddScoped<ILogViewerService, LogViewerHttpService>();
 builder.Services.AddScoped<EmailHttpService>();
 builder.Services.AddScoped<UserIdentityHttpService>();
 builder.Services.AddScoped<EndpointAuthorizationHttpService>();
+builder.Services.AddScoped<EndpointManagementHttpService>();
 
 #if DEBUG
 // Test Identity Service (DEVELOPMENT ONLY)

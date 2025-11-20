@@ -1,0 +1,422 @@
+@page "/endpoint-management"
+@rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
+@attribute [Authorize(Policy = "SuperUser")]
+@using IkeaDocuScan.Shared.DTOs
+@using IkeaDocuScan.Shared.DTOs.UserPermissions
+@using IkeaDocuScan_Web.Client.Services
+@using Microsoft.AspNetCore.Authorization
+@inject EndpointManagementHttpService EndpointManagementService
+@inject UserIdentityHttpService UserIdentityService
+@inject ILogger<EndpointManagement> Logger
+
+<PageTitle>Endpoint Permission Management</PageTitle>
+
+<div class="container-fluid mt-4">
+    <div class="bg-light p-3">
+        <div class="mb-3">
+            <h1 class="mb-0">Endpoint Permission Management</h1>
+            <p class="text-muted mb-0">Manage role-based access control for API endpoints</p>
+        </div>
+
+        @if (!string.IsNullOrEmpty(successMessage))
+        {
+            <div class="alert alert-success alert-dismissible fade show" role="alert">
+                @successMessage
+                <button type="button" class="btn-close" @onclick="() => successMessage = null"></button>
+            </div>
+        }
+
+        @if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                @errorMessage
+                <button type="button" class="btn-close" @onclick="() => errorMessage = null"></button>
+            </div>
+        }
+
+        <div class="card mt-4">
+            <div class="card-header">
+                <div class="row align-items-center">
+                    <div class="col-md-6">
+                        <label class="form-label mb-0">
+                            <strong>Filter by Endpoint:</strong>
+                        </label>
+                        <select class="form-select" @onchange="OnFilterChanged" disabled="@isLoading">
+                            <option value="0">All Endpoints (@allEndpoints.Count)</option>
+                            @foreach (var endpoint in allEndpoints.OrderBy(e => e.EndpointName))
+                            {
+                                <option value="@endpoint.EndpointId">@endpoint.EndpointName</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label mb-0">
+                            <strong>Change Reason (optional):</strong>
+                        </label>
+                        <input type="text"
+                               class="form-control"
+                               @bind="currentChangeReason"
+                               placeholder="e.g., Adding read access for new team members"
+                               disabled="@isLoading" />
+                        <small class="text-muted">This reason will be recorded in the audit log</small>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                @if (isLoading)
+                {
+                    <div class="text-center p-4">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mt-2">Loading endpoints...</p>
+                    </div>
+                }
+                else if (filteredEndpoints.Count > 0)
+                {
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-hover permission-matrix">
+                            <thead class="table-light">
+                                <tr>
+                                    <th style="width: 80px;">Method</th>
+                                    <th style="min-width: 300px;">Route</th>
+                                    <th style="min-width: 200px;">Endpoint Name</th>
+                                    <th style="width: 100px; text-align: center;">Reader</th>
+                                    <th style="width: 100px; text-align: center;">Publisher</th>
+                                    <th style="width: 100px; text-align: center;">ADAdmin</th>
+                                    <th style="width: 100px; text-align: center;">SuperUser</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var endpoint in filteredEndpoints)
+                                {
+                                    <tr>
+                                        <td>
+                                            <span class="badge bg-@GetMethodBadgeColor(endpoint.HttpMethod)">
+                                                @endpoint.HttpMethod
+                                            </span>
+                                        </td>
+                                        <td><code>@endpoint.Route</code></td>
+                                        <td>@endpoint.EndpointName</td>
+
+                                        @foreach (var role in Roles)
+                                        {
+                                            <td style="text-align: center;">
+                                                @if (IsLoadingCell(endpoint.EndpointId, role))
+                                                {
+                                                    <div class="spinner-border spinner-border-sm text-primary" role="status">
+                                                        <span class="visually-hidden">Saving...</span>
+                                                    </div>
+                                                }
+                                                else
+                                                {
+                                                    <input type="checkbox"
+                                                           class="form-check-input role-checkbox"
+                                                           checked="@endpoint.AllowedRoles.Contains(role)"
+                                                           @onchange="@(e => OnRoleChanged(endpoint, role, (bool)e.Value!))"
+                                                           disabled="@IsLoadingCell(endpoint.EndpointId, role)" />
+                                                }
+                                            </td>
+                                        }
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+                else
+                {
+                    <div class="alert alert-info">
+                        No endpoints found.
+                    </div>
+                }
+            </div>
+        </div>
+
+        @* Audit Log Section *@
+        <div class="card mt-4">
+            <div class="card-header">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        Recent Permission Changes (@auditLogs.Count)
+                    </h5>
+                    <button class="btn btn-sm btn-outline-secondary" @onclick="ToggleAuditLog">
+                        <i class="fa @(showAuditLog ? "fa-chevron-up" : "fa-chevron-down")"></i>
+                        @(showAuditLog ? "Hide" : "Show")
+                    </button>
+                </div>
+            </div>
+            @if (showAuditLog)
+            {
+                <div class="card-body">
+                    @if (auditLogs.Count > 0)
+                    {
+                        <div class="table-responsive">
+                            <table class="table table-sm table-striped audit-log">
+                                <thead>
+                                    <tr>
+                                        <th>Date/Time</th>
+                                        <th>Endpoint</th>
+                                        <th>Changed By</th>
+                                        <th>Change Type</th>
+                                        <th>Old Roles</th>
+                                        <th>New Roles</th>
+                                        <th>Reason</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var log in auditLogs.Take(20))
+                                    {
+                                        <tr>
+                                            <td style="white-space: nowrap;">
+                                                @log.ChangedOn.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss")
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-@GetMethodBadgeColor(log.HttpMethod ?? "")">
+                                                    @log.HttpMethod
+                                                </span>
+                                                <code class="ms-1">@log.EndpointRoute</code>
+                                            </td>
+                                            <td>@log.ChangedBy</td>
+                                            <td>@log.ChangeType</td>
+                                            <td>@log.OldValue</td>
+                                            <td>@log.NewValue</td>
+                                            <td>@(log.ChangeReason ?? "-")</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                    else
+                    {
+                        <p class="text-muted mb-0">No recent changes recorded.</p>
+                    }
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    // Data
+    private List<EndpointRegistryDto> allEndpoints = new();
+    private List<EndpointRegistryDto> filteredEndpoints = new();
+    private List<PermissionChangeAuditLogDto> auditLogs = new();
+    private UserIdentityDto? currentUser;
+
+    // Fixed roles
+    private readonly string[] Roles = { "Reader", "Publisher", "ADAdmin", "SuperUser" };
+
+    // UI State
+    private bool isLoading = true;
+    private bool showAuditLog = false;
+    private string currentChangeReason = string.Empty;
+    private string? successMessage;
+    private string? errorMessage;
+    private int selectedEndpointId = 0;
+
+    // Track loading state per checkbox cell
+    private Dictionary<(int EndpointId, string Role), bool> loadingStates = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            await LoadData();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error initializing endpoint management page");
+            errorMessage = $"Failed to load data: {ex.Message}";
+            isLoading = false;
+        }
+    }
+
+    private async Task LoadData()
+    {
+        isLoading = true;
+        StateHasChanged();
+
+        try
+        {
+            // Load current user identity
+            currentUser = await UserIdentityService.GetUserIdentityAsync();
+
+            // Load endpoints
+            allEndpoints = await EndpointManagementService.GetAllEndpointsAsync();
+            filteredEndpoints = allEndpoints;
+
+            // Load audit log
+            await LoadAuditLog();
+
+            Logger.LogInformation("Loaded {Count} endpoints", allEndpoints.Count);
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoadAuditLog()
+    {
+        try
+        {
+            // Load last 20 audit entries
+            var allLogs = await EndpointManagementService.GetAuditLogAsync();
+            auditLogs = allLogs.Take(20).ToList();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "Failed to load audit log (non-critical)");
+        }
+    }
+
+    private void OnFilterChanged(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out int endpointId))
+        {
+            selectedEndpointId = endpointId;
+
+            if (endpointId == 0)
+            {
+                // Show all
+                filteredEndpoints = allEndpoints;
+            }
+            else
+            {
+                // Show single endpoint
+                filteredEndpoints = allEndpoints.Where(ep => ep.EndpointId == endpointId).ToList();
+            }
+
+            StateHasChanged();
+        }
+    }
+
+    private async Task OnRoleChanged(EndpointRegistryDto endpoint, string role, bool isChecked)
+    {
+        // Get current roles
+        var currentRoles = endpoint.AllowedRoles.ToList();
+
+        // Add or remove role
+        if (isChecked && !currentRoles.Contains(role))
+        {
+            currentRoles.Add(role);
+        }
+        else if (!isChecked && currentRoles.Contains(role))
+        {
+            currentRoles.Remove(role);
+        }
+        else
+        {
+            return; // No change needed
+        }
+
+        // Validate before saving
+        var validationResult = await EndpointManagementService.ValidatePermissionChangeAsync(
+            new ValidatePermissionChangeDto
+            {
+                EndpointId = endpoint.EndpointId,
+                RoleNames = currentRoles
+            });
+
+        if (!validationResult.IsValid)
+        {
+            errorMessage = "Validation failed: " + string.Join(", ", validationResult.ValidationErrors);
+            StateHasChanged();
+            return;
+        }
+
+        // Set loading state for this cell
+        SetLoadingState(endpoint.EndpointId, role, true);
+
+        try
+        {
+            // Get current user name
+            var userName = currentUser?.UserName ?? "Unknown";
+
+            // Call API to update
+            await EndpointManagementService.UpdateEndpointRolesAsync(
+                endpoint.EndpointId,
+                new UpdateEndpointRolesDto
+                {
+                    EndpointId = endpoint.EndpointId,
+                    RoleNames = currentRoles,
+                    ChangedBy = userName,
+                    ChangeReason = string.IsNullOrWhiteSpace(currentChangeReason) ? null : currentChangeReason
+                });
+
+            // Update local data
+            endpoint.AllowedRoles = currentRoles;
+
+            // Invalidate cache
+            await EndpointManagementService.InvalidateCacheAsync();
+
+            // Refresh audit log
+            await LoadAuditLog();
+
+            // Show success
+            successMessage = $"Updated {role} permission for {endpoint.EndpointName}";
+
+            // Clear change reason after successful save
+            currentChangeReason = string.Empty;
+
+            Logger.LogInformation(
+                "Updated endpoint {EndpointId} - {Action} role {Role}",
+                endpoint.EndpointId,
+                isChecked ? "Added" : "Removed",
+                role);
+        }
+        catch (Exception ex)
+        {
+            // Revert checkbox on error
+            if (isChecked)
+            {
+                currentRoles.Remove(role);
+            }
+            else
+            {
+                currentRoles.Add(role);
+            }
+            endpoint.AllowedRoles = currentRoles;
+
+            errorMessage = $"Failed to update: {ex.Message}";
+            Logger.LogError(ex, "Error updating endpoint roles");
+        }
+        finally
+        {
+            // Clear loading state
+            SetLoadingState(endpoint.EndpointId, role, false);
+            StateHasChanged();
+        }
+    }
+
+    private bool IsLoadingCell(int endpointId, string role)
+    {
+        return loadingStates.TryGetValue((endpointId, role), out var loading) && loading;
+    }
+
+    private void SetLoadingState(int endpointId, string role, bool isLoading)
+    {
+        loadingStates[(endpointId, role)] = isLoading;
+    }
+
+    private void ToggleAuditLog()
+    {
+        showAuditLog = !showAuditLog;
+    }
+
+    private string GetMethodBadgeColor(string method)
+    {
+        return method.ToUpperInvariant() switch
+        {
+            "GET" => "primary",
+            "POST" => "success",
+            "PUT" => "warning",
+            "DELETE" => "danger",
+            "PATCH" => "info",
+            _ => "secondary"
+        };
+    }
+}

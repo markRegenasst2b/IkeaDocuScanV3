@@ -110,7 +110,7 @@ public class EndpointAuthorizationManagementService : IEndpointAuthorizationMana
         {
             EndpointId = endpointId,
             ChangedBy = changedBy,
-            ChangeType = "RolePermissionUpdate",
+            ChangeType = "EndpointModified",
             OldValue = string.Join(", ", oldRoles),
             NewValue = string.Join(", ", newRoles),
             ChangeReason = changeReason,
@@ -215,7 +215,7 @@ public class EndpointAuthorizationManagementService : IEndpointAuthorizationMana
         {
             EndpointId = endpointId,
             ChangedBy = modifiedBy,
-            ChangeType = "EndpointMetadataUpdate",
+            ChangeType = "EndpointModified",
             OldValue = $"Name: {oldName}, Desc: {oldDescription}, Cat: {oldCategory}",
             NewValue = $"Name: {dto.EndpointName}, Desc: {dto.Description}, Cat: {dto.Category}",
             ChangeReason = "Metadata update",
