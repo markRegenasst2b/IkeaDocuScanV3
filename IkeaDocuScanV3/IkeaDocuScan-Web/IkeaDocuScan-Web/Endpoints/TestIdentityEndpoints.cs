@@ -6,6 +6,7 @@ namespace IkeaDocuScan_Web.Endpoints;
 
 /// <summary>
 /// API endpoints for test identity management (DEVELOPMENT ONLY)
+/// Uses dynamic database-driven authorization
 /// ⚠️ WARNING: THESE ENDPOINTS ONLY EXIST IN DEBUG MODE ⚠️
 /// </summary>
 public static class TestIdentityEndpoints
@@ -14,6 +15,7 @@ public static class TestIdentityEndpoints
     {
 #if DEBUG
         var group = routes.MapGroup("/api/test-identity")
+            .RequireAuthorization()  // Base authentication required
             .WithTags("TestIdentity (DEBUG ONLY)");
 
         // Get all available test identity profiles
@@ -23,6 +25,7 @@ public static class TestIdentityEndpoints
             return Results.Ok(profiles);
         })
         .WithName("GetTestIdentityProfiles")
+        .RequireAuthorization("Endpoint:GET:/api/test-identity/profiles")
         .Produces<List<TestIdentityProfile>>(200);
 
         // Get current test identity status
@@ -32,6 +35,7 @@ public static class TestIdentityEndpoints
             return Results.Ok(status);
         })
         .WithName("GetTestIdentityStatus")
+        .RequireAuthorization("Endpoint:GET:/api/test-identity/status")
         .Produces<TestIdentityStatus>(200);
 
         // Set active test identity
@@ -55,6 +59,7 @@ public static class TestIdentityEndpoints
             }
         })
         .WithName("ActivateTestIdentity")
+        .RequireAuthorization("Endpoint:POST:/api/test-identity/activate/{profileId}")
         .Produces(200)
         .Produces(400)
         .Produces(500);
@@ -66,6 +71,7 @@ public static class TestIdentityEndpoints
             return Results.Ok(new { success = true, message = "Test identity removed" });
         })
         .WithName("ResetTestIdentity")
+        .RequireAuthorization("Endpoint:POST:/api/test-identity/reset")
         .Produces(200);
 #endif
     }

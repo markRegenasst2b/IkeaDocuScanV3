@@ -11,13 +11,14 @@ namespace IkeaDocuScan_Web.Endpoints;
 
 /// <summary>
 /// API endpoints for Excel export functionality
+/// Uses dynamic database-driven authorization
 /// </summary>
 public static class ExcelExportEndpoints
 {
     public static void MapExcelExportEndpoints(this IEndpointRouteBuilder routes)
     {
         var group = routes.MapGroup("/api/excel")
-            .RequireAuthorization("HasAccess")
+            .RequireAuthorization()  // Base authentication required
             .WithTags("Excel Export");
 
         // Export documents to Excel
@@ -73,6 +74,7 @@ public static class ExcelExportEndpoints
             }
         })
         .WithName("ExportDocumentsToExcel")
+        .RequireAuthorization("Endpoint:POST:/api/excel/export/documents")
         .Produces(200, contentType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
         .Produces(400)
         .Produces(500);
@@ -105,6 +107,7 @@ public static class ExcelExportEndpoints
             }
         })
         .WithName("ValidateExportSize")
+        .RequireAuthorization("Endpoint:POST:/api/excel/validate/documents")
         .Produces<ExcelExportValidationResult>(200)
         .Produces(500);
 
@@ -128,6 +131,7 @@ public static class ExcelExportEndpoints
             return Results.Ok(dto);
         })
         .WithName("GetDocumentExportMetadata")
+        .RequireAuthorization("Endpoint:GET:/api/excel/metadata/documents")
         .Produces<List<ExcelColumnMetadataDto>>(200);
 
         // Export documents by IDs to Excel (for search results and selections)
@@ -201,6 +205,7 @@ public static class ExcelExportEndpoints
             }
         })
         .WithName("ExportDocumentsByIdsToExcel")
+        .RequireAuthorization("Endpoint:POST:/api/excel/export/by-ids")
         .Produces(200, contentType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
         .Produces(400)
         .Produces(404)

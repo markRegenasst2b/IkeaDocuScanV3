@@ -10,16 +10,14 @@ namespace IkeaDocuScan_Web.Endpoints;
 
 /// <summary>
 /// API endpoints for special reports
+/// Uses dynamic database-driven authorization
 /// </summary>
 public static class ReportEndpoints
 {
-    /// <summary>
-    /// Map report endpoints to the route builder
-    /// </summary>
     public static void MapReportEndpoints(this IEndpointRouteBuilder routes)
     {
         var group = routes.MapGroup("/api/reports")
-            .RequireAuthorization("HasAccess")
+            .RequireAuthorization()  // Base authentication required
             .WithTags("Reports");
 
         // GET /api/reports/barcode-gaps
@@ -29,6 +27,7 @@ public static class ReportEndpoints
             return Results.Ok(report);
         })
         .WithName("GetBarcodeGapsReport")
+        .RequireAuthorization("Endpoint:GET:/api/reports/barcode-gaps")
         .Produces<List<BarcodeGapReportDto>>(200)
         .WithDescription("Identifies missing barcodes in the sequence");
 
@@ -39,6 +38,7 @@ public static class ReportEndpoints
             return Results.Ok(report);
         })
         .WithName("GetDuplicateDocumentsReport")
+        .RequireAuthorization("Endpoint:GET:/api/reports/duplicate-documents")
         .Produces<List<DuplicateDocumentsReportDto>>(200)
         .WithDescription("Identifies potential duplicate documents");
 
@@ -49,6 +49,7 @@ public static class ReportEndpoints
             return Results.Ok(report);
         })
         .WithName("GetUnlinkedRegistrationsReport")
+        .RequireAuthorization("Endpoint:GET:/api/reports/unlinked-registrations")
         .Produces<List<UnlinkedRegistrationsReportDto>>(200)
         .WithDescription("Identifies documents registered but not linked to files");
 
@@ -59,6 +60,7 @@ public static class ReportEndpoints
             return Results.Ok(report);
         })
         .WithName("GetScanCopiesReport")
+        .RequireAuthorization("Endpoint:GET:/api/reports/scan-copies")
         .Produces<List<ScanCopiesReportDto>>(200)
         .WithDescription("Lists all scanned files and their status");
 
@@ -69,6 +71,7 @@ public static class ReportEndpoints
             return Results.Ok(report);
         })
         .WithName("GetSuppliersReport")
+        .RequireAuthorization("Endpoint:GET:/api/reports/suppliers")
         .Produces<List<SuppliersReportDto>>(200)
         .WithDescription("Provides counterparty/supplier statistics");
 
@@ -79,6 +82,7 @@ public static class ReportEndpoints
             return Results.Ok(report);
         })
         .WithName("GetAllDocumentsReport")
+        .RequireAuthorization("Endpoint:GET:/api/reports/all-documents")
         .Produces<List<AllDocumentsReportDto>>(200)
         .WithDescription("Exports all documents in the system");
 
@@ -96,6 +100,7 @@ public static class ReportEndpoints
             return Results.File(stream, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
         })
         .WithName("ExportBarcodeGapsToExcel")
+        .RequireAuthorization("Endpoint:GET:/api/reports/barcode-gaps/excel")
         .Produces(200, contentType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
         .WithDescription("Exports barcode gaps report to Excel");
 
@@ -111,6 +116,7 @@ public static class ReportEndpoints
             return Results.File(stream, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
         })
         .WithName("ExportDuplicateDocumentsToExcel")
+        .RequireAuthorization("Endpoint:GET:/api/reports/duplicate-documents/excel")
         .Produces(200, contentType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
         .WithDescription("Exports duplicate documents report to Excel");
 
@@ -126,6 +132,7 @@ public static class ReportEndpoints
             return Results.File(stream, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
         })
         .WithName("ExportUnlinkedRegistrationsToExcel")
+        .RequireAuthorization("Endpoint:GET:/api/reports/unlinked-registrations/excel")
         .Produces(200, contentType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
         .WithDescription("Exports unlinked registrations report to Excel");
 
@@ -141,6 +148,7 @@ public static class ReportEndpoints
             return Results.File(stream, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
         })
         .WithName("ExportScanCopiesToExcel")
+        .RequireAuthorization("Endpoint:GET:/api/reports/scan-copies/excel")
         .Produces(200, contentType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
         .WithDescription("Exports scan copies report to Excel");
 
@@ -156,6 +164,7 @@ public static class ReportEndpoints
             return Results.File(stream, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
         })
         .WithName("ExportSuppliersToExcel")
+        .RequireAuthorization("Endpoint:GET:/api/reports/suppliers/excel")
         .Produces(200, contentType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
         .WithDescription("Exports suppliers report to Excel");
 
@@ -171,6 +180,7 @@ public static class ReportEndpoints
             return Results.File(stream, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
         })
         .WithName("ExportAllDocumentsToExcel")
+        .RequireAuthorization("Endpoint:GET:/api/reports/all-documents/excel")
         .Produces(200, contentType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
         .WithDescription("Exports all documents report to Excel");
 
@@ -191,6 +201,7 @@ public static class ReportEndpoints
             return Results.File(stream, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
         })
         .WithName("ExportSearchResultsToExcel")
+        .RequireAuthorization("Endpoint:POST:/api/reports/documents/search/excel")
         .Produces(200, contentType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
         .WithDescription("Exports document search results to Excel");
 
@@ -213,6 +224,7 @@ public static class ReportEndpoints
             return Results.File(stream, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
         })
         .WithName("ExportSelectedDocumentsToExcel")
+        .RequireAuthorization("Endpoint:POST:/api/reports/documents/selected/excel")
         .Produces(200, contentType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
         .WithDescription("Exports selected documents to Excel");
     }

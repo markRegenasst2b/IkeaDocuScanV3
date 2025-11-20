@@ -8,12 +8,14 @@ namespace IkeaDocuScan_Web.Endpoints;
 
 /// <summary>
 /// Diagnostic endpoints for verifying database access (DEBUG mode only)
+/// Uses dynamic database-driven authorization
 /// </summary>
 public static class DiagnosticEndpoints
 {
     public static void MapDiagnosticEndpoints(this IEndpointRouteBuilder app)
     {
         var group = app.MapGroup("/api/diagnostic")
+            .RequireAuthorization()  // Base authentication required
             .WithTags("Diagnostic");
 
         // Test database connection
@@ -50,6 +52,7 @@ public static class DiagnosticEndpoints
             }
         })
         .WithName("TestDatabaseConnection")
+        .RequireAuthorization("Endpoint:GET:/api/diagnostic/db-connection")
         .WithDescription("Test database connectivity");
 
         // Test EndpointRegistry table access
@@ -94,6 +97,7 @@ public static class DiagnosticEndpoints
             }
         })
         .WithName("TestEndpointRegistryAccess")
+        .RequireAuthorization("Endpoint:GET:/api/diagnostic/endpoint-registry")
         .WithDescription("Test EndpointRegistry table access via EF Core");
 
         // Test EndpointRolePermission table access
@@ -150,6 +154,7 @@ public static class DiagnosticEndpoints
             }
         })
         .WithName("TestEndpointRolePermissionAccess")
+        .RequireAuthorization("Endpoint:GET:/api/diagnostic/endpoint-role-permission")
         .WithDescription("Test EndpointRolePermission table access via EF Core");
 
         // Test PermissionChangeAuditLog table access
@@ -195,6 +200,7 @@ public static class DiagnosticEndpoints
             }
         })
         .WithName("TestPermissionAuditLogAccess")
+        .RequireAuthorization("Endpoint:GET:/api/diagnostic/permission-audit-log")
         .WithDescription("Test PermissionChangeAuditLog table access via EF Core");
 
         // Test all authorization tables in one call
@@ -294,6 +300,7 @@ public static class DiagnosticEndpoints
             });
         })
         .WithName("TestAllAuthorizationTables")
+        .RequireAuthorization("Endpoint:GET:/api/diagnostic/all-tables")
         .WithDescription("Test all authorization tables access via EF Core");
 
         // Test endpoint authorization service
@@ -354,6 +361,7 @@ public static class DiagnosticEndpoints
             }
         })
         .WithName("TestEndpointAuthorizationService")
+        .RequireAuthorization("Endpoint:GET:/api/diagnostic/test-authorization-service")
         .WithDescription("Test EndpointAuthorizationService functionality");
     }
 }
