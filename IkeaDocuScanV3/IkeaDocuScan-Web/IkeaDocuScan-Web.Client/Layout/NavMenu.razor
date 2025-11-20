@@ -216,7 +216,7 @@
                             </NavLink>
                         </div>
                     }
-
+                    @*
                     @if (HasAccess("EndpointAuthorization"))
                     {
                         <div class="nav-item px-3">
@@ -225,6 +225,7 @@
                             </NavLink>
                         </div>
                     }
+                    *@
                 }
 
              </Authorized>
@@ -278,7 +279,7 @@
                 { "SystemLogs", ("POST", "/api/logs/search") },
 
                 // Endpoint Authorization (new)
-                { "EndpointAuthorization", ("GET", "/api/endpoint-authorization/endpoints") }
+                { "EndpointAuthorization", ("PUT", "/api/endpoint-authorization/endpoints") }
             };
 
             Console.WriteLine($"NavMenu: Checking access for {endpointsToCheck.Count} menu items...");

@@ -55,15 +55,15 @@ public class TestIdentityService
             },
             new TestIdentityProfile
             {
-                ProfileId = "superuser_ad",
-                DisplayName = "👑 Super User (AD Group)",
-                Username = "TEST\\SuperUserAD",
-                Email = "superuserad@test.local",
-                Description = "Full access via AD SuperUser group membership",
-                ADGroups = new() { "Reader", "Publisher", "SuperUser" },
-                IsSuperUser = true,
+                ProfileId = "adadmin",
+                DisplayName = "🔧 ADAdmin (Read-Only Admin)",
+                Username = "TEST\\ADAdminTest",
+                Email = "adadmin@test.local",
+                Description = "Read-only admin access to user management, logs, and configuration (AD ADAdmin group)",
+                ADGroups = new() { "Reader", "ADAdmin" },
+                IsSuperUser = false,
                 HasAccess = true,
-                DatabaseUserId = 1002
+                DatabaseUserId = 1007
             },
             new TestIdentityProfile
             {
@@ -88,18 +88,6 @@ public class TestIdentityService
                 IsSuperUser = false,
                 HasAccess = true,
                 DatabaseUserId = 1003
-            },
-            new TestIdentityProfile
-            {
-                ProfileId = "adadmin",
-                DisplayName = "🔧 ADAdmin (Read-Only Admin)",
-                Username = "TEST\\ADAdminTest",
-                Email = "adadmin@test.local",
-                Description = "Read-only admin access to user management, logs, and configuration (AD ADAdmin group)",
-                ADGroups = new() { "Reader", "ADAdmin" },
-                IsSuperUser = false,
-                HasAccess = true,
-                DatabaseUserId = 1007
             },
             new TestIdentityProfile
             {
