@@ -11,3 +11,8 @@ When creating powershell scripts do not use graphical characters and do not use 
 
 The test user profile names are reader, publisher, adadmin, and superuser.
 
+Do not build the application, I will do it manually and paste you the errors if any.
+Do not use git, I will commit.
+
+
+
