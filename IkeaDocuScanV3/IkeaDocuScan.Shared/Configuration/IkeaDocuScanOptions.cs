@@ -63,8 +63,16 @@ public class IkeaDocuScanOptions
 
     /// <summary>
     /// Active Directory group for SuperUser role
+    /// NOTE: This is deprecated - SuperUser role is now assigned via database flag only (IsSuperUser = true)
+    /// Keep for backward compatibility but will not assign SuperUser role claim
     /// </summary>
     public string? ADGroupSuperUser { get; set; } = "ADGroup.Builtin.SuperUser";
+
+    /// <summary>
+    /// Active Directory group for ADAdmin role (maps to existing SuperUser AD group)
+    /// Users in this group get ADAdmin role claim for read-only administrative access
+    /// </summary>
+    public string? ADGroupADAdmin { get; set; } = "ADGroup.Builtin.SuperUser";
 
     /// <summary>
     /// Validate configuration options

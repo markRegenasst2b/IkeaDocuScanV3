@@ -3,12 +3,16 @@ using IkeaDocuScan.Shared.DTOs.ScannedFiles;
 
 namespace IkeaDocuScan_Web.Endpoints;
 
+/// <summary>
+/// API endpoints for scanned file management
+/// Uses dynamic database-driven authorization
+/// </summary>
 public static class ScannedFileEndpoints
 {
     public static void MapScannedFileEndpoints(this IEndpointRouteBuilder routes)
     {
         var group = routes.MapGroup("/api/scannedfiles")
-            .RequireAuthorization("HasAccess")
+            .RequireAuthorization()  // Base authentication required
             .WithTags("ScannedFiles");
 
         group.MapGet("/", async (IScannedFileService service) =>
@@ -17,6 +21,7 @@ public static class ScannedFileEndpoints
             return Results.Ok(files);
         })
         .WithName("GetAllScannedFiles")
+        .RequireAuthorization("Endpoint:GET:/api/scannedfiles/")
         .Produces<List<ScannedFileDto>>(200);
 
         group.MapGet("/{fileName}", async (string fileName, IScannedFileService service) =>
@@ -28,6 +33,7 @@ public static class ScannedFileEndpoints
             return Results.Ok(file);
         })
         .WithName("GetScannedFileByName")
+        .RequireAuthorization("Endpoint:GET:/api/scannedfiles/{fileName}")
         .Produces<ScannedFileDto>(200)
         .Produces(404);
 
@@ -55,6 +61,7 @@ public static class ScannedFileEndpoints
             return Results.File(content, contentType, fileName);
         })
         .WithName("GetScannedFileContent")
+        .RequireAuthorization("Endpoint:GET:/api/scannedfiles/{fileName}/content")
         .Produces(200)
         .Produces(404);
 
@@ -64,6 +71,7 @@ public static class ScannedFileEndpoints
             return Results.Ok(exists);
         })
         .WithName("CheckScannedFileExists")
+        .RequireAuthorization("Endpoint:GET:/api/scannedfiles/{fileName}/exists")
         .Produces<bool>(200);
 
         group.MapGet("/{fileName}/stream", async (string fileName, IScannedFileService service) =>
@@ -91,6 +99,7 @@ public static class ScannedFileEndpoints
             return Results.Stream(stream, contentType, fileDownloadName: null, enableRangeProcessing: true);
         })
         .WithName("GetScannedFileStream")
+        .RequireAuthorization("Endpoint:GET:/api/scannedfiles/{fileName}/stream")
         .Produces(200)
         .Produces(404);
 
@@ -122,6 +131,7 @@ public static class ScannedFileEndpoints
             }
         })
         .WithName("DeleteScannedFile")
+        .RequireAuthorization("Endpoint:DELETE:/api/scannedfiles/{fileName}")
         .Produces(200)
         .Produces(404)
         .Produces(403)

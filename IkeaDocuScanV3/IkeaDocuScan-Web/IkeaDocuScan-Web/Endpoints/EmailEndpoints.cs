@@ -6,21 +6,20 @@ namespace IkeaDocuScan_Web.Endpoints;
 
 /// <summary>
 /// Email-related API endpoints
+/// Uses dynamic database-driven authorization
 /// </summary>
 public static class EmailEndpoints
 {
-    /// <summary>
-    /// Maps all email-related endpoints
-    /// </summary>
     public static IEndpointRouteBuilder MapEmailEndpoints(this IEndpointRouteBuilder app)
     {
         var group = app.MapGroup("/api/email")
-            .RequireAuthorization("HasAccess")
+            .RequireAuthorization()  // Base authentication required
             .WithTags("Email");
 
         // POST /api/email/send - Send custom email with HTML body
         group.MapPost("/send", SendEmailAsync)
             .WithName("SendEmail")
+            .RequireAuthorization("Endpoint:POST:/api/email/send")
             .Produces(StatusCodes.Status200OK)
             .Produces(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status500InternalServerError);
@@ -28,6 +27,7 @@ public static class EmailEndpoints
         // POST /api/email/send-with-attachments - Send email with document attachments
         group.MapPost("/send-with-attachments", SendEmailWithAttachmentsAsync)
             .WithName("SendEmailWithAttachments")
+            .RequireAuthorization("Endpoint:POST:/api/email/send-with-attachments")
             .Produces(StatusCodes.Status200OK)
             .Produces(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status500InternalServerError);
@@ -35,6 +35,7 @@ public static class EmailEndpoints
         // POST /api/email/send-with-links - Send email with document links
         group.MapPost("/send-with-links", SendEmailWithLinksAsync)
             .WithName("SendEmailWithLinks")
+            .RequireAuthorization("Endpoint:POST:/api/email/send-with-links")
             .Produces(StatusCodes.Status200OK)
             .Produces(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status500InternalServerError);

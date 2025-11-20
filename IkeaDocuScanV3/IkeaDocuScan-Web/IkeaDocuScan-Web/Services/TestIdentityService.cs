@@ -91,6 +91,18 @@ public class TestIdentityService
             },
             new TestIdentityProfile
             {
+                ProfileId = "adadmin",
+                DisplayName = "🔧 ADAdmin (Read-Only Admin)",
+                Username = "TEST\\ADAdminTest",
+                Email = "adadmin@test.local",
+                Description = "Read-only admin access to user management, logs, and configuration (AD ADAdmin group)",
+                ADGroups = new() { "Reader", "ADAdmin" },
+                IsSuperUser = false,
+                HasAccess = true,
+                DatabaseUserId = 1007
+            },
+            new TestIdentityProfile
+            {
                 ProfileId = "reader",
                 DisplayName = "👁️ Reader 1",
                 Username = "TEST\\ReaderTest",
