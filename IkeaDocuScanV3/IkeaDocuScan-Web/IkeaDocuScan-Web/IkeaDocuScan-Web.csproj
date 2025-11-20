@@ -6,8 +6,8 @@
     <RootNamespace>IkeaDocuScan-Web</RootNamespace>
     <AssemblyName>$(AssemblyName.Replace(' ', '_'))</AssemblyName>
     <UserSecretsId>74a314ee-2410-466f-9b19-15c0dbd38fa9</UserSecretsId>
-    <VersionPrefix>3.1.11</VersionPrefix>
-    <VersionSuffix>testdeploy1119</VersionSuffix>
+    <VersionPrefix>3.1.12</VersionPrefix>
+    <VersionSuffix>testdeploy1120</VersionSuffix>
   </PropertyGroup>
   <!-- Disable HotReload during publish to avoid long path issues while keeping Debug configuration -->
   <PropertyGroup Condition="'$(PublishDir)' != ''">
