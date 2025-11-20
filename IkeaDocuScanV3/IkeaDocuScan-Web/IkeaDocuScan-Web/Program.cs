@@ -87,6 +87,7 @@ builder.Services.AddScoped<IAuthorizationHandler, SuperUserHandler>();
 
 // Register endpoint authorization service for dynamic authorization
 builder.Services.AddScoped<IEndpointAuthorizationService, EndpointAuthorizationService>();
+builder.Services.AddScoped<IEndpointAuthorizationManagementService, EndpointAuthorizationManagementService>();
 
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<UserIdentityService>();
