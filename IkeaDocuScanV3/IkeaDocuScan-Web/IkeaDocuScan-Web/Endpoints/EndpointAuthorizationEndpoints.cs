@@ -159,22 +159,30 @@ public static class EndpointAuthorizationEndpoints
 
         // GET /api/endpoint-authorization/check
         // Check if current user has access to a specific endpoint
-        // This endpoint is accessible to ALL roles for menu visibility checks
+        // This endpoint uses simple "HasAccess" policy to avoid circular dependency
+        // ALL authenticated users can call this endpoint
         group.MapGet("/check", async (
             [FromQuery] string method,
             [FromQuery] string route,
             [FromServices] IEndpointAuthorizationService authService,
+            [FromServices] ILogger<IEndpointAuthorizationService> logger,
             HttpContext httpContext) =>
         {
             try
             {
-                var allowedRoles = await authService.GetAllowedRolesAsync(method, route);
-
                 // Get user's roles from claims
                 var userRoles = httpContext.User.Claims
                     .Where(c => c.Type == System.Security.Claims.ClaimTypes.Role)
                     .Select(c => c.Value)
                     .ToList();
+
+                logger.LogInformation("Checking access for {Method} {Route} for user with roles: {Roles}",
+                    method, route, string.Join(", ", userRoles));
+
+                var allowedRoles = await authService.GetAllowedRolesAsync(method, route);
+
+                logger.LogInformation("Allowed roles for {Method} {Route}: {AllowedRoles}",
+                    method, route, string.Join(", ", allowedRoles));
 
                 // Check if user has any of the allowed roles
                 var hasAccess = allowedRoles.Any(role => userRoles.Contains(role));
@@ -188,6 +196,7 @@ public static class EndpointAuthorizationEndpoints
             }
             catch (Exception ex)
             {
+                logger.LogError(ex, "Error checking endpoint access for {Method} {Route}", method, route);
                 return Results.Ok(new EndpointAccessCheckResult
                 {
                     HasAccess = false,
@@ -198,7 +207,7 @@ public static class EndpointAuthorizationEndpoints
             }
         })
         .WithName("CheckEndpointAccess")
-        .RequireAuthorization("Endpoint:GET:/api/endpoint-authorization/check")
+        .RequireAuthorization("HasAccess")  // Simple policy - all authenticated users with HasAccess claim
         .Produces<EndpointAccessCheckResult>(200);
 
         // POST /api/endpoint-authorization/validate
