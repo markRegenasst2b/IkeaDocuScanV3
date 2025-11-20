@@ -1,0 +1,363 @@
+Created Filestructure
+
+D:\
+├── IkeaDocuScan\                          # Main application root
+│   ├── Deployment\                        # Deployment working directory
+│   │   ├── Archives\                      # Historical deployment packages
+│   │   ├── Current\                       # Current deployment package (unzipped)
+│   │   ├── Scripts\                       # Deployment helper scripts
+│   │   └── Installers\                    # .NET Runtime and other installers (offline)
+│   │
+│   ├── wwwroot\                           # IIS application root
+│   │   └── IkeaDocuScan\                  # Application files (deployed here)
+│   │       ├── IkeaDocuScan-Web.dll
+│   │       ├── web.config
+│   │       ├── wwwroot\
+│   │       ├── appsettings.json
+│   │       ├── appsettings.Production.json
+│   │       ├── appsettings.Local.json     # Server-specific config (create manually)
+│   │       ├── secrets.encrypted.json     # Encrypted secrets (create manually)
+│   │       └── logs\                      # Application stdout logs
+│   │
+│   ├── Tools\                             # Utility tools
+│   │   ├── ConfigEncryptionTool\          # DPAPI encryption utility
+│   │   └── ActionReminder\                # Action Reminder Service (separate deployment)
+│   │
+│   ├── Database\                          # Database migration scripts
+│   │   └── MigrationScripts\              # SQL scripts for database upgrade
+│   │
+│   └── ScannedFiles\                      # Scanned document storage
+│       └── checkin\                       # Check-in directory
+│
+├── Logs\                                  # Application logs root
+│   └── IkeaDocuScan\                      # IkeaDocuScan application logs
+│       └── log-YYYYMMDD.json              # Daily rolling log files
+│
+└── Backups\                               # Backup storage
+    └── IkeaDocuScan\                      # Application backups
+        ├── Database\                      # Database backups
+        └── Config\                        # Configuration file backups
+        
+Verify Server Specs
+
+
+# Verify Windows version
+Get-ComputerInfo | Select-Object WindowsProductName, WindowsVersion, OsHardwareAbstractionLayer
+
+# Expected: Windows Server 2022 Standard
+
+# Check available disk space on D:\ (need at least 10GB)
+Get-PSDrive D | Select-Object Name, Used, Free, @{Name="FreeGB";Expression={[math]::Round($_.Free/1GB,2)}}
+
+# Check RAM (recommended 8GB+)
+Get-CimInstance Win32_ComputerSystem | Select-Object TotalPhysicalMemory, @{Name="TotalRAM_GB";Expression={[math]::Round($_.TotalPhysicalMemory/1GB,2)}}
+
+# Check if server is domain-joined
+Get-ComputerInfo | Select-Object CsDomain, CsDomainRole
+
+# Expected: CsDomain should show ikeadt.com or similar
+
+
+Install IIS
+Features:
+    $features = @(
+        'Web-WebServer',
+        'Web-Common-Http',
+        'Web-Default-Doc',
+        'Web-Dir-Browsing',
+        'Web-Http-Errors',
+        'Web-Static-Content',
+        'Web-Http-Redirect',
+        'Web-Health',
+        'Web-Http-Logging',
+        'Web-Log-Libraries',
+        'Web-Request-Monitor',
+        'Web-Performance',
+        'Web-Stat-Compression',
+        'Web-Dyn-Compression',
+        'Web-Security',
+        'Web-Filtering',
+        'Web-Windows-Auth',
+        'Web-App-Dev',
+        'Web-Net-Ext45',
+        'Web-Asp-Net45',
+        'Web-ISAPI-Ext',
+        'Web-ISAPI-Filter',
+        'Web-WebSockets',
+        'Web-Mgmt-Tools',
+        'Web-Mgmt-Console'
+    )
+    
+test in browser: http://localhost
+
+
+Download and install ASP.NET Core 10.0 Runtime (v10.0.0) - Windows Hosting Bundle Installer
+
+restart powershell
+> dotnet --info
+Expected: Version 10
+
+DB
+---
+
+ALTER DATABASE [YourDatabaseName] SET COMPATIBILITY_LEVEL = 150;
+
+-- CREATE THE USER FOR THE APP
+use master
+CREATE LOGIN docuscanch
+WITH PASSWORD = 'docuscanch25',
+     DEFAULT_DATABASE = PPDOCUSCAN,
+     CHECK_EXPIRATION = OFF,
+     CHECK_POLICY = OFF;
+GO
+
+use PPDOCUSCAN
+GO
+
+CREATE USER docuscanch FOR LOGIN docuscanch;
+GO
+ALTER ROLE db_owner ADD MEMBER docuscanch;
+GO
+
+
+
+RUN THE SCRIPTS (adapt the database use)
+D:\IkeaDocuScan\Database\MigrationScripts\02_Migrate_FK_Data.sql
+D:\IkeaDocuScan\Database\MigrationScripts\03_Finalize_FK_Constraints.sql
+D:\IkeaDocuScan\Database\MigrationScripts\04_Create_DocuScanUser_Table.sql
+D:\IkeaDocuScan\Database\MigrationScripts\05_Migrate_Users_To_DocuScanUser.sql
+D:\IkeaDocuScan\Database\MigrationScripts\06_Add_FK_Constraint_UserPermissions.sql
+D:\IkeaDocuScan\Database\MigrationScripts\07_Remove_AccountName_From_UserPermissions.sql
+
+DELETE UNUSED TABLES
+
+
+APP
+ON DEV 
+delete files in d:/pub
+edit C:\Users\markr\source\repos\markRegenasst2b\IkeaDocuScan-V3\IkeaDocuScanV3\IkeaDocuScan-Web\IkeaDocuScan-Web\IkeaDocuScan-Web.csproj
+    <VersionPrefix>3.1.0</VersionPrefix>
+    <VersionSuffix>testdeploy</VersionSuffix>
+
+cd C:\Users\markr\source\repos\markRegenasst2b\IkeaDocuScan-V3\IkeaDocuScanV3\IkeaDocuScan-Web\IkeaDocuScan-Web
+dotnet clean
+dotnet publish -c Debug -o d:/Pub
+copy d:/Pub/**.*  to PPSEELM-NT447(D:)\\IkeaDocuScan\Deployment\Current
+
+stop web app
+
+```powershell
+# Copy from Current to wwwroot
+$sourcePath = "D:\IkeaDocuScan\Deployment\Current"
+$destPath = "D:\IkeaDocuScan\wwwroot\IkeaDocuScan"
+
+# Create backup of existing deployment (if exists)
+if (Test-Path "$destPath\IkeaDocuScan-Web.dll") {
+    $backupPath = "D:\Backups\IkeaDocuScan\Deployment_Backup_$(Get-Date -Format 'yyyyMMdd_HHmmss')"
+    New-Item -Path $backupPath -ItemType Directory -Force
+    Copy-Item -Path "$destPath\*" -Destination $backupPath -Recurse -Force
+    Write-Host "✅ Existing deployment backed up to: $backupPath" -ForegroundColor Yellow
+}
+
+# Clear destination (except config files)
+Get-ChildItem $destPath |
+    Where-Object {$_.Name -notin @('appsettings.Local.json', 'secrets.encrypted.json', 'logs')} |
+    Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
+
+# Copy new deployment
+Copy-Item -Path "$sourcePath\*" -Destination $destPath -Recurse -Force
+
+Write-Host "✅ Application files copied to: $destPath" -ForegroundColor Green
+
+# Create logs directory if it doesn't exist
+$logsPath = "$destPath\logs"
+if (-not (Test-Path $logsPath)) {
+    New-Item -Path $logsPath -ItemType Directory -Force
+}
+
+# Verify deployment
+Write-Host "`nDeployed application files:" -ForegroundColor Cyan
+Get-ChildItem $destPath -File | Select-Object Name, Length | Format-Table
+```
+
+start webapp
+
+create appsettings.Local.json
+{
+  "IkeaDocuScan": {
+    "ContactEmail": "docuscan-support@ikea.com",
+    "DomainName": "ikeadt.com",
+
+    "UserEmail": {
+      "LDAPRoot": "LDAP://DC=ikeadt,DC=com",
+      "LDAPFilter": "(sAMAccountName={0})"
+    },
+
+    "EmailGroups": {
+      "LDAPRoot": "LDAP://OU=Ikea,OU=Collab,DC=ikeadt,DC=com",
+      "LDAPFilter": "(name=*Reminder*)"
+    },
+
+    "ADGroupReader": "IKEA\\UG-DocScanningReaders-CG@WAL-FIN-CH-GEL",
+    "ADGroupPublisher": "IKEA\\UG-DocScanningPublishers-CG@WAL-FIN-CH-GEL",
+    "ADGroupSuperUser": "IKEA\\UG-DocScanningSuperUsers-CG@WAL-FIN-CH-GEL"
+  },
+
+  "Email": {
+    "SmtpHost": "smtp-gw.ikea.com",
+    "SmtpPort": 25,
+    "UseSsl": false,
+    "SmtpUsername": "",
+    "SmtpPassword": "",
+    "FromAddress": "noreply-docuscan@ikea.com",
+    "FromDisplayName": "IKEA DocuScan System",
+    "AdminEmail": "docuscan-admins@ikea.com",
+    "ApplicationUrl": "https://testdocuscan.ikeadt.com",
+    "EnableEmailNotifications": true
+  },
+
+  "ExcelExport": {
+    "ApplicationUrl": "https://testdocuscan.ikeadt.com"
+  },
+
+  "Serilog": {
+    "WriteTo": [
+      {
+        "Name": "Console"
+      },
+      {
+        "Name": "File",
+        "Args": {
+          "path": "D:\\Logs\\IkeaDocuScan\\log-.json",
+          "rollingInterval": "Day",
+          "retainedFileCountLimit": 30,
+          "formatter": "Serilog.Formatting.Compact.RenderedCompactJsonFormatter, Serilog.Formatting.Compact",
+          "shared": true,
+          "fileSizeLimitBytes": 104857600,
+          "rollOnFileSizeLimit": true
+        }
+      }
+    ]
+  },
+
+  "Logging": {
+    "LogLevel": {
+      "Default": "Information",
+      "Microsoft.AspNetCore": "Warning",
+      "Microsoft.EntityFrameworkCore": "Warning"
+    }
+  }
+}
+
+
+
+$localConfigPath = "D:\IkeaDocuScan\wwwroot\IkeaDocuScan\appsettings.Local.json"
+Copy-Item $localConfigPath -Destination "D:\Backups\IkeaDocuScan\Config\appsettings.Local.json_$(Get-Date -Format 'yyyyMMdd_HHmmss')" -Force
+
+
+
+
+### Step 6.5: Set Permissions for Scanned Files Directory
+
+```powershell
+# Grant read access to scanned files directory
+$scannedFilesPath = "D:\IkeaDocuScan\ScannedFiles\checkin"
+
+# For now, grant Administrators full access
+icacls $scannedFilesPath /grant "Administrators:(OI)(CI)(F)"
+
+Write-Host "✅ Scanned files directory permissions set (temporary)" -ForegroundColor Green
+Write-Host "   Will be updated after IIS AppPool is created" -ForegroundColor Yellow
+```
+
+### Step 6.6: Set Permissions for Logs Directory
+
+```powershell
+# Grant write access to Serilog logs directory
+$logsPath = "D:\Logs\IkeaDocuScan"
+
+# Grant Administrators full access
+icacls $logsPath /grant "Administrators:(OI)(CI)(F)"
+
+Write-Host "✅ Logs directory permissions set (temporary)" -ForegroundColor Green
+Write-Host "   Will be updated after IIS AppPool is created" -ForegroundColor Yellow
+```
+
+
+CREATE APPLICATION POOL
+Name = "IkeaDocuScan"
+ "managedRuntimeVersion" -Value ""
+ "managedPipelineMode" -Value "Integrated"
+ "startMode" -Value "AlwaysRunning"
+ "processModel.idleTimeout" -Value ([TimeSpan]::FromMinutes(0))
+ "processModel.loadUserProfile" -Value $true
+ "recycling.periodicRestart.time" -Value ([TimeSpan]::FromMinutes(1740))
+
+Create WEB SITE
+ siteName = "IkeaDocuScan"
+ physicalPath = "D:\IkeaDocuScan\wwwroot\IkeaDocuScan"
+ hostHeader = "testdocuscan.ikeadt.com"
+ appPoolName = IkeaDocuScan
+ ADD CERTIFICATE
+ 
+Configure AUTHENTICATION
+    disable anonymousAuthentication
+    enable windowsAuthentication
+        useKernelMode
+        accept tokenChecking
+
+
+
+### Step 7.4: Apply File Permissions (Now that AppPool Exists)
+
+```powershell
+$appRoot = "D:\IkeaDocuScan\wwwroot\IkeaDocuScan"
+$appPoolIdentity = "IIS APPPOOL\IkeaDocuScan"
+
+# Grant read & execute to application root
+icacls $appRoot /grant "${appPoolIdentity}:(OI)(CI)(RX)" /T
+
+# Grant modify to logs directory
+icacls "$appRoot\logs" /grant "${appPoolIdentity}:(OI)(CI)(M)"
+
+# Restrict config files
+icacls "$appRoot\appsettings.Local.json" /inheritance:r
+icacls "$appRoot\appsettings.Local.json" /grant "Administrators:(F)"
+icacls "$appRoot\appsettings.Local.json" /grant "${appPoolIdentity}:(R)"
+
+icacls "$appRoot\secrets.encrypted.json" /inheritance:r
+icacls "$appRoot\secrets.encrypted.json" /grant "Administrators:(F)"
+icacls "$appRoot\secrets.encrypted.json" /grant "${appPoolIdentity}:(R)"
+
+# Grant read to scanned files
+icacls "D:\IkeaDocuScan\ScannedFiles\checkin" /grant "${appPoolIdentity}:(OI)(CI)(RX)"
+
+# Grant modify to Serilog logs directory
+icacls "D:\Logs\IkeaDocuScan" /grant "${appPoolIdentity}:(OI)(CI)(M)"
+
+Write-Host "✅ File permissions applied" -ForegroundColor Green
+```
+
+
+
+
+# Verify AppPool is running
+$appPoolName = "IkeaDocuScan"
+$appPoolState = (Get-WebAppPoolState -Name $appPoolName).Value
+Write-Host "Application Pool state: $appPoolState" -ForegroundColor $(if($appPoolState -eq "Started"){"Green"}else{"Red"})
+
+
+TODOs
+- host entry    127.0.0.1    testdocuscan.ikeadt.com
+- configure checkin folder broken?
+
+BUGS
+- Menu dropdown on searchresult does not react
+- NavMenu is to narrow (scrollbar makes item titles brake)
+
+
+ENHANCEMENTS
+- search page: make document types badge like (selecting a dt adds it as a badge to a list of badges)
+- only show docuscan relevant claims on the test user control
+- add a view on all configurations on the configuration page
+

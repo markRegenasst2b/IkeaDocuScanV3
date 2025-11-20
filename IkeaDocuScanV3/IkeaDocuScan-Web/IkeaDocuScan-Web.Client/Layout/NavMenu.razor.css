@@ -48,11 +48,11 @@
 
 .nav-item {
     font-size: 0.9rem;
-    padding-bottom: 0.5rem;
+    padding-bottom: 0.0rem;
 }
 
     .nav-item:first-of-type {
-        padding-top: 1rem;
+        padding-top: .5rem;
     }
 
     .nav-item:last-of-type {
@@ -69,6 +69,7 @@
         align-items: center;
         line-height: 3rem;
         width: 100%;
+        white-space: nowrap;
     }
 
 .nav-item ::deep a.active {

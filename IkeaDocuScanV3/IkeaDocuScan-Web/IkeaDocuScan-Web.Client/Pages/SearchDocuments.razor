@@ -56,14 +56,40 @@
                     </div>
                     <div class="row g-2 mt-1">
                         <div class="col-md-6">
-                            <div class="d-flex align-items-center gap-2">
-                                <label class="form-label-inline">Doc Types:</label>
-                                <select class="form-select form-select-sm flex-grow-1 doc-types-select" size="2" multiple @onchange="OnDocumentTypesChanged">
-                                    @foreach (var dt in documentTypes)
+                            <div class="d-flex align-items-start gap-2">
+                                <label class="form-label-inline" style="padding-top: 0.25rem;">Doc Types:</label>
+                                <div class="flex-grow-1">
+                                    @* Selected tags display *@
+                                    @if (searchRequest.DocumentTypeIds.Any())
                                     {
-                                        <option value="@dt.DtId" selected="@searchRequest.DocumentTypeIds.Contains(dt.DtId)">@dt.DtName</option>
+                                        <div class="selected-tags mb-2">
+                                            @foreach (var typeId in searchRequest.DocumentTypeIds)
+                                            {
+                                                var docType = documentTypes.FirstOrDefault(dt => dt.DtId == typeId);
+                                                if (docType != null)
+                                                {
+                                                    <span class="badge bg-primary me-1 mb-1">
+                                                        @docType.DtName
+                                                        <button type="button" class="btn-close btn-close-white ms-1"
+                                                                style="font-size: 0.6rem; padding: 0.1rem;"
+                                                                @onclick="@(() => RemoveDocumentType(typeId))"
+                                                                aria-label="Remove"></button>
+                                                    </span>
+                                                }
+                                            }
+                                        </div>
                                     }
-                                </select>
+                                    @* Dropdown to add document types *@
+                                    <select class="form-select form-select-sm doc-types-select"
+                                            @onchange="AddDocumentType"
+                                            value="">
+                                        <option value="">-- Select to add --</option>
+                                        @foreach (var dt in documentTypes.Where(dt => !searchRequest.DocumentTypeIds.Contains(dt.DtId)))
+                                        {
+                                            <option value="@dt.DtId">@dt.DtName</option>
+                                        }
+                                    </select>
+                                </div>
                             </div>
                         </div>
                         <div class="col-md-6">
@@ -639,9 +665,28 @@
         max-width: 30em;
     }
 
-    /* Double height for Doc Types multi-select */
-    .filter-section .doc-types-select {
-        height: 4.5em;
+    /* Tag display styling */
+    .selected-tags {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.25rem;
+    }
+
+    .selected-tags .badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.35rem 0.5rem;
+        font-size: 0.875rem;
+        font-weight: 500;
+    }
+
+    .selected-tags .btn-close {
+        margin-left: 0.35rem;
+        opacity: 0.8;
+    }
+
+    .selected-tags .btn-close:hover {
+        opacity: 1;
     }
 
     /* 18em max-width for Currency */

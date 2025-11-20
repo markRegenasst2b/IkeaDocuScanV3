@@ -527,7 +527,7 @@ public class DocumentService : IDocumentService
         var maxLimitReached = totalCount >= maxResults;
 
         // Apply pagination
-        var pagedQuery = totalQuery
+        var pagedQuery = query.Take(maxResults)
             .Skip((request.PageNumber - 1) * request.PageSize)
             .Take(request.PageSize);
 
