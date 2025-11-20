@@ -84,6 +84,7 @@ builder.Services.AddSingleton<IAuthorizationPolicyProvider, DynamicAuthorization
 // Register authorization handlers
 builder.Services.AddScoped<IAuthorizationHandler, UserAccessHandler>();
 builder.Services.AddScoped<IAuthorizationHandler, SuperUserHandler>();
+builder.Services.AddScoped<IAuthorizationHandler, EndpointAuthorizationHandler>();
 
 // Register endpoint authorization service for dynamic authorization
 builder.Services.AddScoped<IEndpointAuthorizationService, EndpointAuthorizationService>();

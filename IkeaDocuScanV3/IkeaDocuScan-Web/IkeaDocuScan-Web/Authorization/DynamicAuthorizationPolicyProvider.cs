@@ -47,41 +47,20 @@ public class DynamicAuthorizationPolicyProvider : IAuthorizationPolicyProvider
                     var method = parts[1];
                     var route = parts[2];
 
-                    _logger.LogDebug("Resolving dynamic policy for {PolicyName}", policyName);
+                    _logger.LogDebug("Creating dynamic authorization policy for {Method} {Route}", method, route);
 
-                    // Create a scoped service provider to get the authorization service
-                    using var scope = _serviceProvider.CreateScope();
-                    var authService = scope.ServiceProvider.GetRequiredService<IEndpointAuthorizationService>();
-
-                    // Get allowed roles from database
-                    var allowedRoles = await authService.GetAllowedRolesAsync(method, route);
-
-                    if (allowedRoles.Any())
-                    {
-                        _logger.LogInformation("Dynamic policy {PolicyName} resolved to roles: {Roles}",
-                            policyName, string.Join(", ", allowedRoles));
-
-                        // Build a policy that requires any of the allowed roles
-                        return new AuthorizationPolicyBuilder()
-                            .RequireAuthenticatedUser()
-                            .RequireRole(allowedRoles.ToArray())
-                            .Build();
-                    }
-                    else
-                    {
-                        _logger.LogWarning("No roles configured for endpoint {Method} {Route} - denying access",
-                            method, route);
-
-                        // No roles configured - deny access by creating an impossible-to-satisfy policy
-                        return new AuthorizationPolicyBuilder()
-                            .RequireAssertion(context => false)
-                            .Build();
-                    }
+                    // Create a policy that uses the EndpointAuthorizationHandler
+                    // The handler will use endpoint metadata to get the actual route template
+                    // and check it against the database at authorization time
+                    return new AuthorizationPolicyBuilder()
+                        .RequireAuthenticatedUser()
+                        .AddRequirements(new EndpointAuthorizationRequirement(method, route))
+                        .Build();
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error resolving dynamic policy {PolicyName}", policyName);
+                _logger.LogError(ex, "Error creating dynamic policy for {PolicyName}", policyName);
                 // Fall through to default provider
             }
         }
