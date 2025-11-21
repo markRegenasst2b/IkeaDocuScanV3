@@ -37,12 +37,12 @@
         <div class="card mt-4">
             <div class="card-header">
                 <div class="row align-items-center">
-                    <div class="col-md-6">
+                    <div class="col-md-4">
                         <label class="form-label mb-0">
                             <strong>Filter by Route:</strong>
                         </label>
-                        <select class="form-select" @onchange="OnFilterChanged" disabled="@isLoading">
-                            <option value="">All Endpoints (@allEndpoints.Count)</option>
+                        <select class="form-select" @onchange="OnRouteFilterChanged" disabled="@isLoading">
+                            <option value="">All Routes (@allEndpoints.Count)</option>
                             @foreach (var prefix in routePrefixes)
                             {
                                 var count = allEndpoints.Count(e => GetRoutePrefix(e.Route) == prefix);
@@ -50,7 +50,23 @@
                             }
                         </select>
                     </div>
-                    <div class="col-md-6">
+                    <div class="col-md-4">
+                        <label class="form-label mb-0">
+                            <strong>Filter by Method:</strong>
+                        </label>
+                        <select class="form-select" @onchange="OnMethodFilterChanged" disabled="@isLoading">
+                            <option value="">All Methods</option>
+                            @foreach (var method in HttpMethods)
+                            {
+                                var count = allEndpoints.Count(e => e.HttpMethod == method);
+                                if (count > 0)
+                                {
+                                    <option value="@method">@method (@count)</option>
+                                }
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-4">
                         <label class="form-label mb-0">
                             <strong>Change Reason (optional):</strong>
                         </label>
@@ -207,8 +223,9 @@
     private List<string> routePrefixes = new();
     private UserIdentityDto? currentUser;
 
-    // Fixed roles
+    // Fixed roles and methods
     private readonly string[] Roles = { "Reader", "Publisher", "ADAdmin", "SuperUser" };
+    private readonly string[] HttpMethods = { "GET", "POST", "PUT", "DELETE", "PATCH" };
 
     // UI State
     private bool isLoading = true;
@@ -217,6 +234,7 @@
     private string? successMessage;
     private string? errorMessage;
     private string selectedRoutePrefix = string.Empty;
+    private string selectedMethod = string.Empty;
 
     // Track loading state per checkbox cell
     private Dictionary<(int EndpointId, string Role), bool> loadingStates = new();
@@ -282,23 +300,35 @@
         }
     }
 
-    private void OnFilterChanged(ChangeEventArgs e)
+    private void OnRouteFilterChanged(ChangeEventArgs e)
     {
         selectedRoutePrefix = e.Value?.ToString() ?? string.Empty;
+        ApplyFilters();
+    }
 
-        if (string.IsNullOrEmpty(selectedRoutePrefix))
+    private void OnMethodFilterChanged(ChangeEventArgs e)
+    {
+        selectedMethod = e.Value?.ToString() ?? string.Empty;
+        ApplyFilters();
+    }
+
+    private void ApplyFilters()
+    {
+        var result = allEndpoints.AsEnumerable();
+
+        // Apply route prefix filter
+        if (!string.IsNullOrEmpty(selectedRoutePrefix))
         {
-            // Show all
-            filteredEndpoints = allEndpoints;
-        }
-        else
-        {
-            // Filter by route prefix
-            filteredEndpoints = allEndpoints
-                .Where(ep => GetRoutePrefix(ep.Route) == selectedRoutePrefix)
-                .ToList();
+            result = result.Where(ep => GetRoutePrefix(ep.Route) == selectedRoutePrefix);
         }
 
+        // Apply method filter
+        if (!string.IsNullOrEmpty(selectedMethod))
+        {
+            result = result.Where(ep => ep.HttpMethod == selectedMethod);
+        }
+
+        filteredEndpoints = result.ToList();
         StateHasChanged();
     }
 
