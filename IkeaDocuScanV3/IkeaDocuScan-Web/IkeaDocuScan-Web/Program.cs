@@ -2,6 +2,7 @@ using IkeaDocuScan_Web;
 using IkeaDocuScan_Web.Components;
 using IkeaDocuScan_Web.Middleware;
 using IkeaDocuScan_Web.Services;
+using IkeaDocuScan_Web.Client.Services;
 using IkeaDocuScan_Web.Endpoints;
 using IkeaDocuScan_Web.Hubs;
 using IkeaDocuScan_Web.Authorization;
@@ -89,6 +90,10 @@ builder.Services.AddScoped<IAuthorizationHandler, EndpointAuthorizationHandler>(
 // Register endpoint authorization service for dynamic authorization
 builder.Services.AddScoped<IEndpointAuthorizationService, EndpointAuthorizationService>();
 builder.Services.AddScoped<IEndpointAuthorizationManagementService, EndpointAuthorizationManagementService>();
+
+// Register server-side adapter for EndpointAuthorizationHttpService (used by Blazor components in InteractiveAuto mode)
+builder.Services.AddHttpClient<EndpointAuthorizationHttpService>();
+builder.Services.AddScoped<EndpointAuthorizationHttpService, EndpointAuthorizationServerAdapter>();
 
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<UserIdentityService>();

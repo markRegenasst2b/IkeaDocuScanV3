@@ -3,8 +3,10 @@
 @attribute [Authorize(Policy = "HasAccess")]
 @using IkeaDocuScan.Shared.DTOs.Countries
 @using IkeaDocuScan.Shared.Interfaces
+@using IkeaDocuScan_Web.Client.Services
 @using Microsoft.AspNetCore.Authorization
 @inject ICountryService CountryService
+@inject EndpointAuthorizationHttpService EndpointAuthService
 @inject ILogger<CountryAdministration> Logger
 
 <PageTitle>Country Administration</PageTitle>
@@ -16,9 +18,12 @@
                 <h1 class="mb-0">Country Administration</h1>
                 <p class="text-muted mb-0">Manage country codes and names</p>
             </div>
-            <button class="btn btn-primary" @onclick="OpenCreateModal">
-                <i class="fa fa-plus me-2"></i>Add New Country
-            </button>
+            @if (hasWriteAccess)
+            {
+                <button class="btn btn-primary" @onclick="OpenCreateModal">
+                    <i class="fa fa-plus me-2"></i>Add New Country
+                </button>
+            }
         </div>
 
         @if (!string.IsNullOrEmpty(successMessage))
@@ -104,12 +109,15 @@
                                         <td><strong>@country.CountryCode</strong></td>
                                         <td>@country.Name</td>
                                         <td>
-                                            <button class="btn btn-sm btn-outline-primary me-2" @onclick="() => OpenEditModal(country)">
-                                                <i class="fa fa-edit"></i> Edit
-                                            </button>
-                                            <button class="btn btn-sm btn-outline-danger" @onclick="() => OpenDeleteModal(country)">
-                                                <i class="fa fa-trash"></i> Delete
-                                            </button>
+                                            @if (hasWriteAccess)
+                                            {
+                                                <button class="btn btn-sm btn-outline-primary me-2" @onclick="() => OpenEditModal(country)">
+                                                    <i class="fa fa-edit"></i> Edit
+                                                </button>
+                                                <button class="btn btn-sm btn-outline-danger" @onclick="() => OpenDeleteModal(country)">
+                                                    <i class="fa fa-trash"></i> Delete
+                                                </button>
+                                            }
                                         </td>
                                     </tr>
                                 }
@@ -286,6 +294,7 @@
     private string? errorMessage;
     private string? successMessage;
     private string? modalErrorMessage;
+    private bool hasWriteAccess = false;
 
     // Edit/Create modal
     private bool showEditModal = false;
@@ -301,6 +310,7 @@
 
     protected override async Task OnInitializedAsync()
     {
+        hasWriteAccess = await EndpointAuthService.CheckAccessAsync("POST", "/api/countries/");
         await LoadCountries();
     }
 

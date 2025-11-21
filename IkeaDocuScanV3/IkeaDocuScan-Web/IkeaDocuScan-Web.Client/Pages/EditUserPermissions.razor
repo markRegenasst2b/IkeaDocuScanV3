@@ -5,8 +5,10 @@
 @using IkeaDocuScan.Shared.DTOs.CounterParties
 @using IkeaDocuScan.Shared.Interfaces
 @using IkeaDocuScan_Web.Client.Components
+@using IkeaDocuScan_Web.Client.Services
 @using Microsoft.AspNetCore.Authorization
 @inject IUserPermissionService UserPermissionService
+@inject EndpointAuthorizationHttpService EndpointAuthService
 @inject ILogger<EditUserPermissions> Logger
 @implements IDisposable
 
@@ -55,11 +57,14 @@
             </div>
         </div>
 
-        <div class="mt-3 mb-3">
-            <button class="btn btn-primary" @onclick="ShowAddUserForm">
-                <i class="fa fa-user-plus"></i> Add New User
-            </button>
-        </div>
+        @if (hasWriteAccess)
+        {
+            <div class="mt-3 mb-3">
+                <button class="btn btn-primary" @onclick="ShowAddUserForm">
+                    <i class="fa fa-user-plus"></i> Add New User
+                </button>
+            </div>
+        }
 
         <div class="card mt-4">
             <div class="card-header">
@@ -194,25 +199,31 @@
                     </div>
                 </div>
 
-                <div class="alert alert-info d-flex justify-content-between align-items-center">
-                    <div>
-                        <i class="fa fa-info-circle"></i> <strong>User Management:</strong> Delete this user and all their permissions
+                @if (hasWriteAccess)
+                {
+                    <div class="alert alert-info d-flex justify-content-between align-items-center">
+                        <div>
+                            <i class="fa fa-info-circle"></i> <strong>User Management:</strong> Delete this user and all their permissions
+                        </div>
+                        <button type="button" class="btn btn-danger" @onclick="InitiateDeleteUser">
+                            <i class="fa fa-user-times"></i> Delete User
+                        </button>
                     </div>
-                    <button type="button" class="btn btn-danger" @onclick="InitiateDeleteUser">
-                        <i class="fa fa-user-times"></i> Delete User
-                    </button>
-                </div>
+                }
 
                 <hr />
 
                 @if (!showPermissionForm)
                 {
                     <!-- Permissions List -->
-                    <div class="mb-3">
-                        <button class="btn btn-success" @onclick="ShowAddPermissionForm">
-                            <i class="fa fa-plus"></i> Add New Permission
-                        </button>
-                    </div>
+                    @if (hasWriteAccess)
+                    {
+                        <div class="mb-3">
+                            <button class="btn btn-success" @onclick="ShowAddPermissionForm">
+                                <i class="fa fa-plus"></i> Add New Permission
+                            </button>
+                        </div>
+                    }
 
                     @if (isLoadingPermissions)
                     {
@@ -268,14 +279,20 @@
                                                 }
                                             </td>
                                             <td>
-                                                <button class="btn btn-sm btn-primary" @onclick="() => EditPermission(permission)">
-                                                    <i class="fa fa-edit"></i> Edit
-                                                </button>
+                                                @if (hasWriteAccess)
+                                                {
+                                                    <button class="btn btn-sm btn-primary" @onclick="() => EditPermission(permission)">
+                                                        <i class="fa fa-edit"></i> Edit
+                                                    </button>
+                                                }
                                             </td>
                                             <td>
-                                                <button class="btn btn-sm btn-danger" @onclick="() => DeletePermission(permission)">
-                                                    <i class="fa fa-trash"></i> Delete
-                                                </button>
+                                                @if (hasWriteAccess)
+                                                {
+                                                    <button class="btn btn-sm btn-danger" @onclick="() => DeletePermission(permission)">
+                                                        <i class="fa fa-trash"></i> Delete
+                                                    </button>
+                                                }
                                             </td>
                                         </tr>
                                     }
@@ -576,6 +593,9 @@
     private string? saveErrorMessage = null;
     private string? saveSuccessMessage = null;
 
+    // Write access
+    private bool hasWriteAccess = false;
+
     // Search
     private string searchTerm = string.Empty;
     private Timer? _debounceTimer;
@@ -597,6 +617,7 @@
 
     protected override async Task OnInitializedAsync()
     {
+        hasWriteAccess = await EndpointAuthService.CheckAccessAsync("POST", "/api/userpermissions/");
         await LoadUsers();
     }
 

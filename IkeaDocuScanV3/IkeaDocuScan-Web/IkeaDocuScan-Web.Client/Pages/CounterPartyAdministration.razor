@@ -2,7 +2,9 @@
 @rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
 @using IkeaDocuScan.Shared.DTOs.CounterParties
 @using IkeaDocuScan.Shared.Interfaces
+@using IkeaDocuScan_Web.Client.Services
 @inject ICounterPartyService CounterPartyService
+@inject EndpointAuthorizationHttpService EndpointAuthService
 @inject ILogger<CounterPartyAdministration> Logger
 
 <PageTitle>Counter Party Administration</PageTitle>
@@ -41,9 +43,12 @@
             </div>
         </div>
         <div class="col-md-4 text-end">
-            <button class="btn btn-primary" @onclick="OpenCreateModal">
-                <i class="fa fa-plus me-2"></i>Create New Counter Party
-            </button>
+            @if (hasWriteAccess)
+            {
+                <button class="btn btn-primary" @onclick="OpenCreateModal">
+                    <i class="fa fa-plus me-2"></i>Create New Counter Party
+                </button>
+            }
         </div>
     </div>
 
@@ -156,14 +161,17 @@
                                         </td>
                                         <td>@counterParty.Since.ToString("yyyy-MM-dd")</td>
                                         <td>
-                                            <button class="btn btn-sm btn-outline-primary me-2"
-                                                    @onclick="() => OpenEditModal(counterParty)">
-                                                <i class="fa fa-edit"></i>
-                                            </button>
-                                            <button class="btn btn-sm btn-outline-danger"
-                                                    @onclick="() => OpenDeleteModal(counterParty)">
-                                                <i class="fa fa-trash"></i>
-                                            </button>
+                                            @if (hasWriteAccess)
+                                            {
+                                                <button class="btn btn-sm btn-outline-primary me-2"
+                                                        @onclick="() => OpenEditModal(counterParty)">
+                                                    <i class="fa fa-edit"></i>
+                                                </button>
+                                                <button class="btn btn-sm btn-outline-danger"
+                                                        @onclick="() => OpenDeleteModal(counterParty)">
+                                                    <i class="fa fa-trash"></i>
+                                                </button>
+                                            }
                                         </td>
                                     </tr>
                                 }
@@ -463,6 +471,7 @@
     private string sortColumn = nameof(CounterPartyDto.Name);
     private bool sortAscending = true;
     private int recordLimit = 300;
+    private bool hasWriteAccess = false;
 
     private bool isLoading = true;
     private bool showModal = false;
@@ -483,6 +492,7 @@
 
     protected override async Task OnInitializedAsync()
     {
+        hasWriteAccess = await EndpointAuthService.CheckAccessAsync("POST", "/api/counterparties/");
         await LoadCounterParties();
     }
 

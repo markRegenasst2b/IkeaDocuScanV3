@@ -26,7 +26,7 @@ public class EndpointAuthorizationHttpService
     /// <param name="method">HTTP method (GET, POST, etc.)</param>
     /// <param name="route">Endpoint route (e.g., /api/documents/)</param>
     /// <returns>True if user has access, false otherwise</returns>
-    public async Task<bool> CheckAccessAsync(string method, string route)
+    public virtual async Task<bool> CheckAccessAsync(string method, string route)
     {
         try
         {
