@@ -1,0 +1,15 @@
+/* Selected Log Entry */
+.log-entry.log-selected {
+    background-color: #e9ecef !important;
+    border-left-width: 6px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.log-entry.log-selected:hover {
+    background-color: #dee2e6 !important;
+}
+
+/* Selected Log Actions Panel */
+.selected-log-actions {
+    border-left: 4px solid #0051ba;
+}

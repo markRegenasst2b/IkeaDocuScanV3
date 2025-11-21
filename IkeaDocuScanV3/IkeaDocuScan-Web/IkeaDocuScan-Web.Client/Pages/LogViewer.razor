@@ -71,14 +71,14 @@
     <div class="filters-panel card">
         <div class="card-body">
             <div class="row g-3">
-                <!-- Date Range -->
+                <!-- Date/Time Range -->
                 <div class="col-md-3">
-                    <label class="form-label">From Date</label>
-                    <input type="date" class="form-control" @bind="fromDate" @bind:event="oninput" />
+                    <label class="form-label">From Date/Time</label>
+                    <input type="datetime-local" class="form-control" @bind="fromDateTime" @bind:event="oninput" />
                 </div>
                 <div class="col-md-3">
-                    <label class="form-label">To Date</label>
-                    <input type="date" class="form-control" @bind="toDate" @bind:event="oninput" />
+                    <label class="form-label">To Date/Time</label>
+                    <input type="datetime-local" class="form-control" @bind="toDateTime" @bind:event="oninput" />
                 </div>
 
                 <!-- Log Level -->
@@ -176,10 +176,33 @@
             </div>
         </div>
 
+        @if (selectedLog != null)
+        {
+            <div class="selected-log-actions mt-3 p-3 bg-light border rounded d-flex align-items-center gap-3">
+                <span class="text-muted">
+                    <i class="fas fa-clock"></i> Selected: @selectedLog.Timestamp.ToString("yyyy-MM-dd HH:mm:ss")
+                </span>
+                <button class="btn btn-primary btn-sm" @onclick="() => FilterAroundSelectedLog(1)">
+                    <i class="fas fa-filter"></i> +/- 1 min
+                </button>
+                <button class="btn btn-primary btn-sm" @onclick="() => FilterAroundSelectedLog(5)">
+                    <i class="fas fa-filter"></i> +/- 5 min
+                </button>
+                <button class="btn btn-primary btn-sm" @onclick="() => FilterAroundSelectedLog(15)">
+                    <i class="fas fa-filter"></i> +/- 15 min
+                </button>
+                <button class="btn btn-outline-secondary btn-sm" @onclick="ClearSelection">
+                    <i class="fas fa-times"></i> Clear Selection
+                </button>
+            </div>
+        }
+
         <div class="logs-list mt-3">
             @foreach (var log in searchResult.Logs)
             {
-                <div class="log-entry card mb-2 log-level-@log.Level.ToLower()">
+                <div class="log-entry card mb-2 log-level-@log.Level.ToLower() @(IsLogSelected(log) ? "log-selected" : "")"
+                     @onclick="() => SelectLog(log)"
+                     style="cursor: pointer;">
                     <div class="card-body">
                         <div class="log-header d-flex justify-content-between align-items-start">
                             <div class="flex-grow-1">
@@ -202,7 +225,7 @@
                             </div>
                             @if (!string.IsNullOrEmpty(log.Exception))
                             {
-                                <button class="btn btn-sm btn-outline-danger" @onclick="() => ToggleException(log)">
+                                <button class="btn btn-sm btn-outline-danger" @onclick="() => ToggleException(log)" @onclick:stopPropagation="true">
                                     <i class="fas @(expandedExceptions.Contains(log) ? "fa-chevron-up" : "fa-chevron-down")"></i>
                                     Exception
                                 </button>
@@ -275,8 +298,8 @@
 </div>
 
 @code {
-    private DateTime fromDate = DateTime.Today.AddDays(-7);
-    private DateTime toDate = DateTime.Today;
+    private DateTime fromDateTime = DateTime.Today.AddDays(-7);
+    private DateTime toDateTime = DateTime.Today.AddHours(23).AddMinutes(59);
     private string selectedLevel = "";
     private string selectedSource = "";
     private string searchText = "";
@@ -289,6 +312,7 @@
     private LogStatisticsDto? statistics;
     private List<string> availableSources = new();
     private HashSet<LogEntryDto> expandedExceptions = new();
+    private LogEntryDto? selectedLog;
 
     protected override async Task OnInitializedAsync()
     {
@@ -330,8 +354,8 @@
         {
             var request = new LogSearchRequest
             {
-                FromDate = fromDate,
-                ToDate = toDate.AddDays(1).AddSeconds(-1), // Include entire day
+                FromDate = fromDateTime,
+                ToDate = toDateTime,
                 Level = string.IsNullOrEmpty(selectedLevel) ? null : selectedLevel,
                 Source = string.IsNullOrEmpty(selectedSource) ? null : selectedSource,
                 SearchText = string.IsNullOrEmpty(searchText) ? null : searchText,
@@ -364,12 +388,13 @@
 
     private async Task ResetFilters()
     {
-        fromDate = DateTime.Today.AddDays(-7);
-        toDate = DateTime.Today;
+        fromDateTime = DateTime.Today.AddDays(-7);
+        toDateTime = DateTime.Today.AddHours(23).AddMinutes(59);
         selectedLevel = "";
         selectedSource = "";
         searchText = "";
         currentPage = 1;
+        selectedLog = null;
         await SearchLogs();
     }
 
@@ -383,11 +408,11 @@
                 $"format={format}"
             };
 
-            if (fromDate != default)
-                queryParams.Add($"fromDate={fromDate:yyyy-MM-dd}");
+            if (fromDateTime != default)
+                queryParams.Add($"fromDate={fromDateTime:yyyy-MM-ddTHH:mm}");
 
-            if (toDate != default)
-                queryParams.Add($"toDate={toDate:yyyy-MM-dd}");  // Server handles end-of-day adjustment
+            if (toDateTime != default)
+                queryParams.Add($"toDate={toDateTime:yyyy-MM-ddTHH:mm}");
 
             if (!string.IsNullOrEmpty(selectedLevel))
                 queryParams.Add($"level={Uri.EscapeDataString(selectedLevel)}");
@@ -449,5 +474,49 @@
             return "";
 
         return value.Length <= maxLength ? value : value.Substring(0, maxLength) + "...";
+    }
+
+    private void SelectLog(LogEntryDto log)
+    {
+        if (selectedLog == log)
+        {
+            selectedLog = null;
+        }
+        else
+        {
+            selectedLog = log;
+        }
+    }
+
+    private void ClearSelection()
+    {
+        selectedLog = null;
+    }
+
+    private bool IsLogSelected(LogEntryDto log)
+    {
+        return selectedLog != null &&
+               selectedLog.Timestamp == log.Timestamp &&
+               selectedLog.Message == log.Message;
+    }
+
+    private async Task FilterAroundSelectedLog(int minutes)
+    {
+        if (selectedLog == null) return;
+
+        // Set time range to specified minutes before and after the selected log
+        fromDateTime = selectedLog.Timestamp.AddMinutes(-minutes);
+        toDateTime = selectedLog.Timestamp.AddMinutes(minutes);
+
+        // Set level to All
+        selectedLevel = "";
+
+        // Reset page to 1
+        currentPage = 1;
+
+        // Clear selection since we're about to search
+        selectedLog = null;
+
+        await SearchLogs();
     }
 }
