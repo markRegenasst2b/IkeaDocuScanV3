@@ -119,22 +119,10 @@ public class CountryService : ICountryService
             .Where(cp => cp.Country == countryCode)
             .CountAsync();
 
-        var userPermissionCount = await context.UserPermissions
-            .Where(up => up.CountryCode == countryCode)
-            .CountAsync();
-
-        var totalUsage = counterPartyCount + userPermissionCount;
-
-        if (totalUsage > 0)
+        if (counterPartyCount > 0)
         {
-            var usageDetails = new List<string>();
-            if (counterPartyCount > 0)
-                usageDetails.Add($"{counterPartyCount} counter part{(counterPartyCount != 1 ? "ies" : "y")}");
-            if (userPermissionCount > 0)
-                usageDetails.Add($"{userPermissionCount} user permission{(userPermissionCount != 1 ? "s" : "")}");
-
             throw new ValidationException(
-                $"Cannot delete country '{countryCode}'. It is currently used by {string.Join(" and ", usageDetails)}. " +
+                $"Cannot delete country '{countryCode}'. It is currently used by {counterPartyCount} counter part{(counterPartyCount != 1 ? "ies" : "y")}. " +
                 "Please remove or update all references before deleting it.");
         }
 
@@ -151,10 +139,7 @@ public class CountryService : ICountryService
         await using var context = await _contextFactory.CreateDbContextAsync();
 
         var counterPartyUsage = await context.CounterParties.AnyAsync(cp => cp.Country == countryCode);
-        if (counterPartyUsage) return true;
-
-        var userPermissionUsage = await context.UserPermissions.AnyAsync(up => up.CountryCode == countryCode);
-        return userPermissionUsage;
+        return counterPartyUsage;
     }
 
     public async Task<(int counterPartyCount, int userPermissionCount)> GetUsageCountAsync(string countryCode)
@@ -167,11 +152,7 @@ public class CountryService : ICountryService
             .Where(cp => cp.Country == countryCode)
             .CountAsync();
 
-        var userPermissionCount = await context.UserPermissions
-            .Where(up => up.CountryCode == countryCode)
-            .CountAsync();
-
-        return (counterPartyCount, userPermissionCount);
+        return (counterPartyCount, 0);
     }
 
     private static CountryDto MapToDto(Country entity)

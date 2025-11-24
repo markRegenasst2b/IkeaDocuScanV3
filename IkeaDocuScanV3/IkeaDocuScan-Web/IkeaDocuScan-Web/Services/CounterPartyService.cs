@@ -205,22 +205,10 @@ public class CounterPartyService : ICounterPartyService
             .Where(d => d.CounterPartyId == id)
             .CountAsync();
 
-        var userPermissionCount = await context.UserPermissions
-            .Where(up => up.CounterPartyId == id)
-            .CountAsync();
-
-        var totalUsage = documentCount + userPermissionCount;
-
-        if (totalUsage > 0)
+        if (documentCount > 0)
         {
-            var usageDetails = new List<string>();
-            if (documentCount > 0)
-                usageDetails.Add($"{documentCount} document{(documentCount != 1 ? "s" : "")}");
-            if (userPermissionCount > 0)
-                usageDetails.Add($"{userPermissionCount} user permission{(userPermissionCount != 1 ? "s" : "")}");
-
             throw new ValidationException(
-                $"Cannot delete counter party. It is currently used by {string.Join(" and ", usageDetails)}.");
+                $"Cannot delete counter party. It is currently used by {documentCount} document{(documentCount != 1 ? "s" : "")}.");
         }
 
         var entity = await context.CounterParties
@@ -244,8 +232,7 @@ public class CounterPartyService : ICounterPartyService
 
         await using var context = await _contextFactory.CreateDbContextAsync();
 
-        var isInUse = await context.Documents.AnyAsync(d => d.CounterPartyId == id) ||
-                      await context.UserPermissions.AnyAsync(up => up.CounterPartyId == id);
+        var isInUse = await context.Documents.AnyAsync(d => d.CounterPartyId == id);
 
         return isInUse;
     }
@@ -260,11 +247,7 @@ public class CounterPartyService : ICounterPartyService
             .Where(d => d.CounterPartyId == id)
             .CountAsync();
 
-        var userPermissionCount = await context.UserPermissions
-            .Where(up => up.CounterPartyId == id)
-            .CountAsync();
-
-        return (documentCount, userPermissionCount);
+        return (documentCount, 0);
     }
 
     /// <summary>

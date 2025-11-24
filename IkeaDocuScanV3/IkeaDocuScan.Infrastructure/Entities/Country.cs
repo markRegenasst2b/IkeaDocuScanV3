@@ -20,7 +20,4 @@ public partial class Country
 
     [InverseProperty("CountryNavigation")]
     public virtual ICollection<CounterParty> CounterParties { get; set; } = new List<CounterParty>();
-
-    [InverseProperty("CountryCodeNavigation")]
-    public virtual ICollection<UserPermission> UserPermissions { get; set; } = new List<UserPermission>();
 }

@@ -144,8 +144,6 @@
                                             <tr>
                                                 <th>ID</th>
                                                 <th>Document Type</th>
-                                                <th>Counter Party</th>
-                                                <th>Country</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -157,26 +155,6 @@
                                                         @if (permission.DocumentTypeId.HasValue)
                                                         {
                                                             <span>@permission.DocumentTypeName (@permission.DocumentTypeId)</span>
-                                                        }
-                                                        else
-                                                        {
-                                                            <span class="text-muted">All</span>
-                                                        }
-                                                    </td>
-                                                    <td>
-                                                        @if (permission.CounterPartyId.HasValue)
-                                                        {
-                                                            <span>@permission.CounterPartyName (@permission.CounterPartyNoAlpha)</span>
-                                                        }
-                                                        else
-                                                        {
-                                                            <span class="text-muted">All</span>
-                                                        }
-                                                    </td>
-                                                    <td>
-                                                        @if (!string.IsNullOrWhiteSpace(permission.CountryCode))
-                                                        {
-                                                            <span>@permission.CountryName (@permission.CountryCode)</span>
                                                         }
                                                         else
                                                         {

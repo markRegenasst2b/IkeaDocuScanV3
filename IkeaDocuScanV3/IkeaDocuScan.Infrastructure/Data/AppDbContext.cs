@@ -209,12 +209,6 @@ public partial class AppDbContext : DbContext
         {
             entity.HasKey(e => e.Id).HasName("USERACCOUNT_PK");
 
-            entity.Property(e => e.CountryCode).IsFixedLength();
-
-            entity.HasOne(d => d.CounterParty).WithMany(p => p.UserPermissions).HasConstraintName("FK__UserPermi__Count__6A30C649");
-
-            entity.HasOne(d => d.CountryCodeNavigation).WithMany(p => p.UserPermissions).HasConstraintName("FK__UserPermi__Count__693CA210");
-
             entity.HasOne(d => d.DocumentType).WithMany(p => p.UserPermissions).HasConstraintName("FK__UserPermi__Docum__6A30C649");
 
             entity.HasOne(d => d.User).WithMany(p => p.UserPermissions).HasConstraintName("FK_UserPermissions_DocuScanUser");

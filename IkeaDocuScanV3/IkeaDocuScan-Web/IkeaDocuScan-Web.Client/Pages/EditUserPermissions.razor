@@ -2,9 +2,7 @@
 @rendermode InteractiveAuto
 @attribute [Authorize(Policy = "HasAccess")]
 @using IkeaDocuScan.Shared.DTOs.UserPermissions
-@using IkeaDocuScan.Shared.DTOs.CounterParties
 @using IkeaDocuScan.Shared.Interfaces
-@using IkeaDocuScan_Web.Client.Components
 @using IkeaDocuScan_Web.Client.Services
 @using Microsoft.AspNetCore.Authorization
 @inject IUserPermissionService UserPermissionService
@@ -16,7 +14,7 @@
 
 <div class="container-fluid mt-4">
     <h1>User Permissions Management</h1>
-    <p class="text-muted">Manage user permissions for Counter Parties, Countries, and Document Types</p>
+    <p class="text-muted">Manage user permissions for Document Types</p>
 
     @if (selectedUser == null)
     {
@@ -242,8 +240,6 @@
                                     <tr>
                                         <th>ID</th>
                                         <th>Document Type</th>
-                                        <th>Counter Party</th>
-                                        <th>Country</th>
                                         <th style="width: 80px;">Edit</th>
                                         <th style="width: 80px;">Delete</th>
                                     </tr>
@@ -254,30 +250,6 @@
                                         <tr>
                                             <td>@permission.Id</td>
                                             <td>@(permission.DocumentTypeName ?? "-")</td>
-                                            <td>
-                                                @if (!string.IsNullOrEmpty(permission.CounterPartyName))
-                                                {
-                                                    <span>@permission.CounterPartyName</span>
-                                                    @if (!string.IsNullOrEmpty(permission.CounterPartyNoAlpha))
-                                                    {
-                                                        <br /><small class="text-muted">(@permission.CounterPartyNoAlpha)</small>
-                                                    }
-                                                }
-                                                else
-                                                {
-                                                    <span>-</span>
-                                                }
-                                            </td>
-                                            <td>
-                                                @if (!string.IsNullOrEmpty(permission.CountryName))
-                                                {
-                                                    <span>@permission.CountryName (@permission.CountryCode)</span>
-                                                }
-                                                else
-                                                {
-                                                    <span>-</span>
-                                                }
-                                            </td>
                                             <td>
                                                 @if (hasWriteAccess)
                                                 {
@@ -324,25 +296,6 @@
                                 </div>
                             </div>
 
-                            <div class="row">
-                                <div class="col-md-12 mb-3">
-                                    <label class="form-label">Counter Party</label>
-                                    <CounterPartySearch
-                                        SelectedCounterParty="@selectedCounterParty"
-                                        SelectedCounterPartyChanged="@OnCounterPartySelected"
-                                        MinSearchLength="3" />
-                                </div>
-                            </div>
-
-                            <div class="row">
-                                <div class="col-md-12 mb-3">
-                                    <CountrySelect
-                                        Label="Country"
-                                        SelectedCountryCode="@selectedCountryCode"
-                                        SelectedCountryCodeChanged="@OnCountrySelected" />
-                                </div>
-                            </div>
-
                             <div class="mt-4">
                                 <button class="btn btn-success me-2" @onclick="SavePermission" disabled="@isSaving">
                                     @if (isSaving)
@@ -384,14 +337,6 @@
                                 @if (!string.IsNullOrEmpty(permissionToDelete.DocumentTypeName))
                                 {
                                     <li><strong>Document Type:</strong> @permissionToDelete.DocumentTypeName</li>
-                                }
-                                @if (!string.IsNullOrEmpty(permissionToDelete.CounterPartyName))
-                                {
-                                    <li><strong>Counter Party:</strong> @permissionToDelete.CounterPartyName</li>
-                                }
-                                @if (!string.IsNullOrEmpty(permissionToDelete.CountryName))
-                                {
-                                    <li><strong>Country:</strong> @permissionToDelete.CountryName</li>
                                 }
                             </ul>
                         </div>
@@ -518,7 +463,7 @@
                         </div>
 
                         <div class="alert alert-info">
-                            <i class="fa fa-info-circle"></i> <strong>Note:</strong> After creating the user, you can add specific permissions for Document Types, Counter Parties, and Countries.
+                            <i class="fa fa-info-circle"></i> <strong>Note:</strong> After creating the user, you can add specific permissions for Document Types.
                         </div>
                     </div>
                     <div class="modal-footer">
@@ -604,8 +549,6 @@
 
     // Edit form values
     private int? selectedDocumentTypeId;
-    private CounterPartyDto? selectedCounterParty;
-    private string? selectedCountryCode;
 
     // User form
     private bool showUserFormModal = false;
@@ -725,22 +668,6 @@
     {
         editingPermission = permission;
         selectedDocumentTypeId = permission.DocumentTypeId;
-        selectedCountryCode = permission.CountryCode;
-
-        // Set selected counter party
-        if (permission.CounterPartyId.HasValue)
-        {
-            selectedCounterParty = new CounterPartyDto
-            {
-                CounterPartyId = permission.CounterPartyId.Value,
-                Name = permission.CounterPartyName,
-                CounterPartyNoAlpha = permission.CounterPartyNoAlpha
-            };
-        }
-        else
-        {
-            selectedCounterParty = null;
-        }
 
         showPermissionForm = true;
         saveErrorMessage = null;
@@ -757,8 +684,6 @@
     private void ClearFormFields()
     {
         selectedDocumentTypeId = null;
-        selectedCounterParty = null;
-        selectedCountryCode = null;
     }
 
     private async Task SavePermission()
@@ -779,9 +704,7 @@
                 var createDto = new CreateUserPermissionDto
                 {
                     UserId = selectedUser.UserId,
-                    DocumentTypeId = selectedDocumentTypeId,
-                    CounterPartyId = selectedCounterParty?.CounterPartyId,
-                    CountryCode = selectedCountryCode
+                    DocumentTypeId = selectedDocumentTypeId
                 };
 
                 await UserPermissionService.CreateAsync(createDto);
@@ -796,9 +719,7 @@
                 var updateDto = new UpdateUserPermissionDto
                 {
                     Id = editingPermission.Id,
-                    DocumentTypeId = selectedDocumentTypeId,
-                    CounterPartyId = selectedCounterParty?.CounterPartyId,
-                    CountryCode = selectedCountryCode
+                    DocumentTypeId = selectedDocumentTypeId
                 };
 
                 await UserPermissionService.UpdateAsync(updateDto);
@@ -941,16 +862,6 @@
     private void OnDocumentTypeSelected(int? documentTypeId)
     {
         selectedDocumentTypeId = documentTypeId;
-    }
-
-    private void OnCounterPartySelected(CounterPartyDto counterParty)
-    {
-        selectedCounterParty = counterParty;
-    }
-
-    private void OnCountrySelected(string? countryCode)
-    {
-        selectedCountryCode = countryCode;
     }
 
     private void ShowAddUserForm()

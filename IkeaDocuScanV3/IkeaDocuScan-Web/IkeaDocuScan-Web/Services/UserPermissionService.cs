@@ -64,8 +64,6 @@ public class UserPermissionService : IUserPermissionService
         var query = context.UserPermissions
             .Include(up => up.User)
             .Include(up => up.DocumentType)
-            .Include(up => up.CounterParty)
-            .Include(up => up.CountryCodeNavigation)
             .AsNoTracking();
 
         if (!string.IsNullOrWhiteSpace(accountNameFilter))
@@ -90,8 +88,6 @@ public class UserPermissionService : IUserPermissionService
         var permission = await context.UserPermissions
             .Include(up => up.User)
             .Include(up => up.DocumentType)
-            .Include(up => up.CounterParty)
-            .Include(up => up.CountryCodeNavigation)
             .AsNoTracking()
             .FirstOrDefaultAsync(up => up.Id == id);
 
@@ -112,8 +108,6 @@ public class UserPermissionService : IUserPermissionService
         var permissions = await context.UserPermissions
             .Include(up => up.User)
             .Include(up => up.DocumentType)
-            .Include(up => up.CounterParty)
-            .Include(up => up.CountryCodeNavigation)
             .AsNoTracking()
             .Where(up => up.UserId == userId)
             .OrderBy(up => up.Id)
@@ -138,9 +132,7 @@ public class UserPermissionService : IUserPermissionService
         var entity = new UserPermission
         {
             UserId = dto.UserId,
-            DocumentTypeId = dto.DocumentTypeId,
-            CounterPartyId = dto.CounterPartyId,
-            CountryCode = dto.CountryCode
+            DocumentTypeId = dto.DocumentTypeId
         };
 
         context.UserPermissions.Add(entity);
@@ -165,8 +157,6 @@ public class UserPermissionService : IUserPermissionService
         }
 
         entity.DocumentTypeId = dto.DocumentTypeId;
-        entity.CounterPartyId = dto.CounterPartyId;
-        entity.CountryCode = dto.CountryCode;
 
         await context.SaveChangesAsync();
 
@@ -316,12 +306,7 @@ public class UserPermissionService : IUserPermissionService
             UserId = entity.UserId,
             AccountName = entity.User?.AccountName ?? string.Empty,
             DocumentTypeId = entity.DocumentTypeId,
-            DocumentTypeName = entity.DocumentType?.DtName,
-            CounterPartyId = entity.CounterPartyId,
-            CounterPartyName = entity.CounterParty?.Name,
-            CounterPartyNoAlpha = entity.CounterParty?.CounterPartyNoAlpha,
-            CountryCode = entity.CountryCode,
-            CountryName = entity.CountryCodeNavigation?.Name
+            DocumentTypeName = entity.DocumentType?.DtName
         };
     }
 }

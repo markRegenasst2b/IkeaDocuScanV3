@@ -242,11 +242,7 @@ public class DocumentService : IDocumentService
                     // Same logic as FilterByUserPermissions but applied pre-creation
                     hasPermission = userPermissions.Any(perm =>
                         // DocumentType filter: match if both null OR values equal
-                        (dto.DocumentTypeId == null || perm.DocumentTypeId == null || dto.DocumentTypeId == perm.DocumentTypeId) &&
-                        // CounterParty filter: match if both null OR values equal
-                        (dto.CounterPartyId == null || perm.CounterPartyId == null || dto.CounterPartyId == perm.CounterPartyId)
-                        // Note: Country validation is complex (requires loading CounterParty entity)
-                        // and is typically validated at the UI level. Omitted here for performance.
+                        dto.DocumentTypeId == null || perm.DocumentTypeId == null || dto.DocumentTypeId == perm.DocumentTypeId
                     );
                 }
             }
