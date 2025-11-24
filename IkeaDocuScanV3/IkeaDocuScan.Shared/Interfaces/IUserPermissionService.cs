@@ -57,4 +57,11 @@ public interface IUserPermissionService
     /// Update an existing DocuScan user
     /// </summary>
     Task<DocuScanUserDto> UpdateUserAsync(UpdateDocuScanUserDto dto);
+
+    /// <summary>
+    /// Batch update document type permissions for a user.
+    /// Adds permissions for document types in the list that don't exist.
+    /// Removes permissions for document types not in the list.
+    /// </summary>
+    Task<BatchUpdateResultDto> BatchUpdateDocumentTypePermissionsAsync(BatchUpdateDocumentTypePermissionsDto dto);
 }

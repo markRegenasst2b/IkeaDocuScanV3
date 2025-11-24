@@ -82,9 +82,7 @@ public class CurrentUserService : ICurrentUserService
                     IsSuperUser = true,
                     HasAccess = true,
                     LastLogon = docuScanUser.LastLogon,
-                    AllowedDocumentTypes = null, // null = all
-                    AllowedCounterParties = null,
-                    AllowedCountries = null
+                    AllowedDocumentTypes = null // null = all
                 };
                 _loaded = true;
                 return _cachedUser;
@@ -118,18 +116,6 @@ public class CurrentUserService : ICurrentUserService
                 .Distinct()
                 .ToList();
 
-            var allowedCounterParties = permissions
-                .Where(p => p.CounterPartyId.HasValue)
-                .Select(p => p.CounterPartyId!.Value)
-                .Distinct()
-                .ToList();
-
-            var allowedCountries = permissions
-                .Where(p => !string.IsNullOrWhiteSpace(p.CountryCode))
-                .Select(p => p.CountryCode!)
-                .Distinct()
-                .ToList();
-
             _cachedUser = new CurrentUser
             {
                 UserId = docuScanUser.UserId,
@@ -137,9 +123,7 @@ public class CurrentUserService : ICurrentUserService
                 IsSuperUser = false,
                 HasAccess = true,
                 LastLogon = docuScanUser.LastLogon,
-                AllowedDocumentTypes = allowedDocTypes.Count > 0 ? allowedDocTypes : null,
-                AllowedCounterParties = allowedCounterParties.Count > 0 ? allowedCounterParties : null,
-                AllowedCountries = allowedCountries.Count > 0 ? allowedCountries : null
+                AllowedDocumentTypes = allowedDocTypes.Count > 0 ? allowedDocTypes : null
             };
 
             _logger.LogInformation("User {Username} loaded with {PermissionCount} permissions",

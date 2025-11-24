@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
@@ -14,21 +14,7 @@ public partial class UserPermission
 
     public int? DocumentTypeId { get; set; }
 
-    public int? CounterPartyId { get; set; }
-
-    [StringLength(2)]
-    [Unicode(false)]
-    public string? CountryCode { get; set; }
-
     public int UserId { get; set; }
-
-    [ForeignKey("CounterPartyId")]
-    [InverseProperty("UserPermissions")]
-    public virtual CounterParty? CounterParty { get; set; }
-
-    [ForeignKey("CountryCode")]
-    [InverseProperty("UserPermissions")]
-    public virtual Country? CountryCodeNavigation { get; set; }
 
     [ForeignKey("DocumentTypeId")]
     [InverseProperty("UserPermissions")]

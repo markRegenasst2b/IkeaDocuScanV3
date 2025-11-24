@@ -12,10 +12,8 @@ public static class QueryExtensions
 {
     /// <summary>
     /// Filters documents based on user permissions.
-    /// A document is accessible if ANY of the user's permissions match ALL three criteria:
+    /// A document is accessible if ANY of the user's permissions match:
     /// - DocumentType matches (or is null in either document or permission)
-    /// - CounterParty matches (or is null in either document or permission)
-    /// - Country matches (or is null in either document or permission)
     ///
     /// SuperUser bypass: If user is SuperUser, no filtering is applied.
     /// No access: If user has no access, returns empty result.
@@ -39,22 +37,13 @@ public static class QueryExtensions
 
         int userId = currentUser.UserId;
 
-        // Filter documents where ANY permission matches ALL criteria
+        // Filter documents where ANY permission matches DocumentType
         return query.Where(doc =>
             context.UserPermissions
                 .Where(p => p.UserId == userId)
                 .Any(perm =>
                     // DocumentType filter: match if both null OR values equal
-                    (doc.DtId == null || perm.DocumentTypeId == null || doc.DtId == perm.DocumentTypeId)
-                    &&
-                    // CounterParty filter: match if both null OR values equal
-                    (doc.CounterPartyId == null || perm.CounterPartyId == null || doc.CounterPartyId == perm.CounterPartyId)
-                    &&
-                    // Country filter: match if document has no CP, CP has no country, permission has no country, or values equal
-                    (doc.CounterParty == null ||
-                     doc.CounterParty.Country == null ||
-                     perm.CountryCode == null ||
-                     doc.CounterParty.Country == perm.CountryCode)
+                    doc.DtId == null || perm.DocumentTypeId == null || doc.DtId == perm.DocumentTypeId
                 )
         );
     }
