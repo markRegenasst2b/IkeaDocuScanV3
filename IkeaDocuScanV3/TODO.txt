@@ -1,4 +1,3 @@
-    remove issuperuser from gui, keep it hidden.
 
 
 Question
@@ -6,7 +5,27 @@ Question
     
 Propositions
     in search restrict the document types to the permissions of the user (show all if the user has no permissions or a permission with null document type)
+    default actions per document type
     
     
 Issues
     When adding a new document type and then looking this new document type up in manage document names, adding document names is not possible.
+
+
+TODOs
+- add about
+- host entry    127.0.0.1    testdocuscan.ikeadt.com
+- configure checkin folder broken?
+- remove user identity, user claims, user permissions from home when user is not identified
+- restrict the list of claims only to those relevant to docuscan
+
+BUGS
+- Menu dropdown on searchresult does not react
+- NavMenu is to narrow (scrollbar makes item titles brake)
+- remove view pdf from search result dropdown if no pdf is available
+- put dropdown on resutl list before all others
+- system version not shown correctly
+
+
+ENHANCEMENTS
+- add a view on all configurations on the configuration page

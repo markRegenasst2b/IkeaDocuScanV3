@@ -4,7 +4,6 @@
 @inject ILogViewerService LogService
 @inject NavigationManager Navigation
 @inject IJSRuntime JS
-@attribute [Authorize(Policy = "SuperUser")]
 @rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
 
 <PageTitle>System Logs - IkeaDocuScan</PageTitle>
