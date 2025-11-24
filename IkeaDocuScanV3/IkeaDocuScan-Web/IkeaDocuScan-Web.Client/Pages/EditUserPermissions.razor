@@ -220,10 +220,7 @@
                     <!-- Permissions List -->
                     @if (hasWriteAccess)
                     {
-                        <div class="mb-3 d-flex gap-2">
-                            <button class="btn btn-success" @onclick="ShowAddPermissionForm">
-                                <i class="fa fa-plus"></i> Add New Permission
-                            </button>
+                        <div class="mb-3">
                             <button class="btn btn-primary" @onclick="ShowBatchDocumentTypeModal">
                                 <i class="fa fa-list-check"></i> Batch Edit Document Types
                             </button>
@@ -247,8 +244,6 @@
                                     <tr>
                                         <th>ID</th>
                                         <th>Document Type</th>
-                                        <th style="width: 80px;">Edit</th>
-                                        <th style="width: 80px;">Delete</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -257,22 +252,6 @@
                                         <tr>
                                             <td>@permission.Id</td>
                                             <td>@(permission.DocumentTypeName ?? "-")</td>
-                                            <td>
-                                                @if (hasWriteAccess)
-                                                {
-                                                    <button class="btn btn-sm btn-primary" @onclick="() => EditPermission(permission)">
-                                                        <i class="fa fa-edit"></i> Edit
-                                                    </button>
-                                                }
-                                            </td>
-                                            <td>
-                                                @if (hasWriteAccess)
-                                                {
-                                                    <button class="btn btn-sm btn-danger" @onclick="() => DeletePermission(permission)">
-                                                        <i class="fa fa-trash"></i> Delete
-                                                    </button>
-                                                }
-                                            </td>
                                         </tr>
                                     }
                                 </tbody>
@@ -282,7 +261,7 @@
                     else
                     {
                         <div class="alert alert-info">
-                            This user has no permissions yet. Click "Add New Permission" to create one.
+                            This user has no permissions yet. Click "Batch Edit Document Types" to assign permissions.
                         </div>
                     }
                 }
