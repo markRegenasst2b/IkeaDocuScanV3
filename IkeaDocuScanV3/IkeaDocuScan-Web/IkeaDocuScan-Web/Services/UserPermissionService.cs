@@ -298,6 +298,82 @@ public class UserPermissionService : IUserPermissionService
         };
     }
 
+    public async Task<BatchUpdateResultDto> BatchUpdateDocumentTypePermissionsAsync(BatchUpdateDocumentTypePermissionsDto dto)
+    {
+        _logger.LogInformation("Batch updating document type permissions for user ID: {UserId}, DocumentTypes: {Count}",
+            dto.UserId, dto.DocumentTypeIds.Count);
+
+        await using var context = await _contextFactory.CreateDbContextAsync();
+
+        // Validate user exists
+        var userExists = await context.DocuScanUsers.AnyAsync(u => u.UserId == dto.UserId);
+        if (!userExists)
+        {
+            throw new ValidationException($"User with ID {dto.UserId} not found");
+        }
+
+        // Get current permissions for this user (only those with DocumentTypeId set)
+        var currentPermissions = await context.UserPermissions
+            .Where(p => p.UserId == dto.UserId && p.DocumentTypeId.HasValue)
+            .ToListAsync();
+
+        var currentDocTypeIds = currentPermissions
+            .Where(p => p.DocumentTypeId.HasValue)
+            .Select(p => p.DocumentTypeId!.Value)
+            .ToHashSet();
+
+        var requestedDocTypeIds = dto.DocumentTypeIds.ToHashSet();
+
+        // Calculate what to add and remove
+        var toAdd = requestedDocTypeIds.Except(currentDocTypeIds).ToList();
+        var toRemove = currentDocTypeIds.Except(requestedDocTypeIds).ToList();
+
+        int added = 0;
+        int removed = 0;
+
+        // Remove permissions no longer needed
+        if (toRemove.Count > 0)
+        {
+            var permissionsToRemove = currentPermissions
+                .Where(p => p.DocumentTypeId.HasValue && toRemove.Contains(p.DocumentTypeId.Value))
+                .ToList();
+
+            context.UserPermissions.RemoveRange(permissionsToRemove);
+            removed = permissionsToRemove.Count;
+            _logger.LogInformation("Removing {Count} permissions for user {UserId}", removed, dto.UserId);
+        }
+
+        // Add new permissions
+        if (toAdd.Count > 0)
+        {
+            var newPermissions = toAdd.Select(docTypeId => new UserPermission
+            {
+                UserId = dto.UserId,
+                DocumentTypeId = docTypeId
+            }).ToList();
+
+            context.UserPermissions.AddRange(newPermissions);
+            added = newPermissions.Count;
+            _logger.LogInformation("Adding {Count} permissions for user {UserId}", added, dto.UserId);
+        }
+
+        await context.SaveChangesAsync();
+
+        // Get final count
+        var totalPermissions = await context.UserPermissions
+            .CountAsync(p => p.UserId == dto.UserId);
+
+        _logger.LogInformation("Batch update complete for user {UserId}: Added={Added}, Removed={Removed}, Total={Total}",
+            dto.UserId, added, removed, totalPermissions);
+
+        return new BatchUpdateResultDto
+        {
+            PermissionsAdded = added,
+            PermissionsRemoved = removed,
+            TotalPermissions = totalPermissions
+        };
+    }
+
     private static UserPermissionDto MapToDto(UserPermission entity)
     {
         return new UserPermissionDto
