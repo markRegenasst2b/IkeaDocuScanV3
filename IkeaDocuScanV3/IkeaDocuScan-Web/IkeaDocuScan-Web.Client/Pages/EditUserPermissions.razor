@@ -221,8 +221,11 @@
                     @if (hasWriteAccess)
                     {
                         <div class="mb-3">
-                            <button class="btn btn-primary" @onclick="ShowBatchDocumentTypeModal">
+                            <button class="btn btn-primary me-2" @onclick="ShowBatchDocumentTypeModal">
                                 <i class="fa fa-list-check"></i> Batch Edit Document Types
+                            </button>
+                            <button class="btn btn-success" @onclick="GrantAllDocumentTypesAccess">
+                                <i class="fa fa-unlock"></i> Grant All Document Types Access
                             </button>
                         </div>
                     }
@@ -1414,6 +1417,21 @@
 
         try
         {
+            // Step 1: Remove any "all document types" permission (DocumentTypeId = null)
+            // This ensures that batch edit overrides the global access
+            var currentPermissions = await UserPermissionService.GetByUserIdAsync(selectedUser.UserId);
+            var nullPermissions = currentPermissions.Where(p => !p.DocumentTypeId.HasValue).ToList();
+
+            int nullPermissionsDeleted = 0;
+            foreach (var nullPermission in nullPermissions)
+            {
+                await UserPermissionService.DeleteAsync(nullPermission.Id);
+                nullPermissionsDeleted++;
+                Logger.LogInformation("Deleted 'all document types' permission {PermissionId} for user {UserId}",
+                    nullPermission.Id, selectedUser.UserId);
+            }
+
+            // Step 2: Apply batch update for specific document types
             var dto = new BatchUpdateDocumentTypePermissionsDto
             {
                 UserId = selectedUser.UserId,
@@ -1422,11 +1440,24 @@
 
             var result = await UserPermissionService.BatchUpdateDocumentTypePermissionsAsync(dto);
 
-            Logger.LogInformation("Batch update complete: Added={Added}, Removed={Removed}, Total={Total}",
-                result.PermissionsAdded, result.PermissionsRemoved, result.TotalPermissions);
+            Logger.LogInformation("Batch update complete: Added={Added}, Removed={Removed}, NullRemoved={NullRemoved}, Total={Total}",
+                result.PermissionsAdded, result.PermissionsRemoved, nullPermissionsDeleted, result.TotalPermissions);
 
             // Show success and close modal
-            saveSuccessMessage = $"Batch update complete: {result.PermissionsAdded} added, {result.PermissionsRemoved} removed. Total: {result.TotalPermissions} permissions.";
+            if (selectedDocTypeIds.Count == 0)
+            {
+                saveSuccessMessage = $"All permissions revoked. User no longer has access to any document types.";
+            }
+            else
+            {
+                var message = $"Batch update complete: {result.PermissionsAdded} added, {result.PermissionsRemoved} removed";
+                if (nullPermissionsDeleted > 0)
+                {
+                    message += $", removed 'all document types' access";
+                }
+                message += $". Total: {result.TotalPermissions} permission(s).";
+                saveSuccessMessage = message;
+            }
 
             // Reload permissions list and user count
             await LoadUserPermissions();
@@ -1449,6 +1480,64 @@
         finally
         {
             isSavingBatch = false;
+        }
+    }
+
+    private async Task GrantAllDocumentTypesAccess()
+    {
+        if (selectedUser == null) return;
+
+        // Confirm with user before proceeding
+        var confirmed = await JSRuntime.InvokeAsync<bool>(
+            "confirm",
+            $"This will replace ALL existing permissions for {selectedUser.AccountName} with a single permission granting access to ALL document types. Continue?"
+        );
+
+        if (!confirmed) return;
+
+        saveErrorMessage = null;
+        saveSuccessMessage = null;
+
+        try
+        {
+            Logger.LogInformation("Granting all document types access to user {UserId}", selectedUser.UserId);
+
+            // Step 1: Get all current permissions
+            var currentPermissions = await UserPermissionService.GetByUserIdAsync(selectedUser.UserId);
+
+            // Step 2: Delete all existing permissions
+            foreach (var permission in currentPermissions)
+            {
+                await UserPermissionService.DeleteAsync(permission.Id);
+                Logger.LogInformation("Deleted permission {PermissionId} for user {UserId}", permission.Id, selectedUser.UserId);
+            }
+
+            // Step 3: Create a single permission with DocumentTypeId = null
+            var createDto = new CreateUserPermissionDto
+            {
+                UserId = selectedUser.UserId,
+                DocumentTypeId = null
+            };
+
+            await UserPermissionService.CreateAsync(createDto);
+            Logger.LogInformation("Created 'all document types' permission for user {UserId}", selectedUser.UserId);
+
+            saveSuccessMessage = $"Successfully granted {selectedUser.AccountName} access to all document types!";
+
+            // Reload permissions list and user count
+            await LoadUserPermissions();
+            await LoadUsers();
+
+            // Update selectedUser's permission count in UI
+            if (selectedUser != null)
+            {
+                selectedUser.PermissionCount = 1;
+            }
+        }
+        catch (Exception ex)
+        {
+            saveErrorMessage = $"Error granting all document types access: {ex.Message}";
+            Logger.LogError(ex, "Error granting all document types access for user {UserId}", selectedUser.UserId);
         }
     }
 
