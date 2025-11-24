@@ -53,7 +53,4 @@ public partial class CounterParty
 
     [InverseProperty("CounterParty")]
     public virtual ICollection<Document> Documents { get; set; } = new List<Document>();
-
-    [InverseProperty("CounterParty")]
-    public virtual ICollection<UserPermission> UserPermissions { get; set; } = new List<UserPermission>();
 }

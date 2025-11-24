@@ -17,16 +17,6 @@ public class CurrentUser
     public List<int>? AllowedDocumentTypes { get; set; }
 
     /// <summary>
-    /// List of counter party IDs the user can access (null = all)
-    /// </summary>
-    public List<int>? AllowedCounterParties { get; set; }
-
-    /// <summary>
-    /// List of country codes the user can access (null = all)
-    /// </summary>
-    public List<string>? AllowedCountries { get; set; }
-
-    /// <summary>
     /// Check if user can access a specific document type
     /// </summary>
     public bool CanAccessDocumentType(int? documentTypeId)
@@ -47,9 +37,9 @@ public class CurrentUser
     }
 
     /// <summary>
-    /// Check if user can access a specific counter party
+    /// Check if user can access a document based on its document type
     /// </summary>
-    public bool CanAccessCounterParty(int? counterPartyId)
+    public bool CanAccessDocument(int? documentTypeId)
     {
         if (IsSuperUser)
             return true;
@@ -57,48 +47,6 @@ public class CurrentUser
         if (!HasAccess)
             return false;
 
-        if (!counterPartyId.HasValue)
-            return true;
-
-        if (AllowedCounterParties == null || AllowedCounterParties.Count == 0)
-            return true;
-
-        return AllowedCounterParties.Contains(counterPartyId.Value);
-    }
-
-    /// <summary>
-    /// Check if user can access a specific country
-    /// </summary>
-    public bool CanAccessCountry(string? countryCode)
-    {
-        if (IsSuperUser)
-            return true;
-
-        if (!HasAccess)
-            return false;
-
-        if (string.IsNullOrWhiteSpace(countryCode))
-            return true;
-
-        if (AllowedCountries == null || AllowedCountries.Count == 0)
-            return true;
-
-        return AllowedCountries.Contains(countryCode, StringComparer.OrdinalIgnoreCase);
-    }
-
-    /// <summary>
-    /// Check if user can access a document based on all its attributes
-    /// </summary>
-    public bool CanAccessDocument(int? documentTypeId, int? counterPartyId, string? countryCode)
-    {
-        if (IsSuperUser)
-            return true;
-
-        if (!HasAccess)
-            return false;
-
-        return CanAccessDocumentType(documentTypeId) &&
-               CanAccessCounterParty(counterPartyId) &&
-               CanAccessCountry(countryCode);
+        return CanAccessDocumentType(documentTypeId);
     }
 }

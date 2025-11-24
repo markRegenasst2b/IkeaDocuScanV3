@@ -50,22 +50,21 @@
                         </div>
                     }
 
-                    @* Search Documents - Dynamic authorization check *@
-                    @if (HasAccess("SearchDocuments"))
-                    {
-                        <div class="nav-item px-3">
-                            <NavLink class="nav-link" href="documents/search">
-                                <span class="bi bi-search" aria-hidden="true"></span> Search Documents
-                            </NavLink>
-                        </div>
-                    }
-
                     @* Check-in Scanned - Dynamic authorization check *@
                     @if (HasAccess("CheckinScanned"))
                     {
                         <div class="nav-item px-3">
                             <NavLink class="nav-link" href="checkin-scanned">
                                 <span class="bi bi-folder-nav-menu" aria-hidden="true"></span> Check-in Scanned
+                            </NavLink>
+                        </div>
+                    }
+
+                    @* Search Documents - Dynamic authorization check *@
+                    @if (HasAccess("SearchDocuments")) {
+                        <div class="nav-item px-3">
+                            <NavLink class="nav-link" href="documents/search">
+                                <span class="bi bi-search" aria-hidden="true"></span> Search Documents
                             </NavLink>
                         </div>
                     }

@@ -37,6 +37,13 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Migration", "Migration", "{
 		..\DbMigration\db-scripts\05_Migrate_Users_To_DocuScanUser.sql = ..\DbMigration\db-scripts\05_Migrate_Users_To_DocuScanUser.sql
 		..\DbMigration\db-scripts\06_Add_FK_Constraint_UserPermissions.sql = ..\DbMigration\db-scripts\06_Add_FK_Constraint_UserPermissions.sql
 		..\DbMigration\db-scripts\07_Remove_AccountName_From_UserPermissions.sql = ..\DbMigration\db-scripts\07_Remove_AccountName_From_UserPermissions.sql
+		..\DbMigration\db-scripts\10_AddPermissionFilteringIndexes.sql = ..\DbMigration\db-scripts\10_AddPermissionFilteringIndexes.sql
+		..\DbMigration\db-scripts\13_AddConfigurationTables.sql = ..\DbMigration\db-scripts\13_AddConfigurationTables.sql
+		..\DbMigration\db-scripts\20_SeedTestIdentities.sql = ..\DbMigration\db-scripts\20_SeedTestIdentities.sql
+		..\DbMigration\db-scripts\30_SyncEndpointsFromSourceCode.sql = ..\DbMigration\db-scripts\30_SyncEndpointsFromSourceCode.sql
+		..\DbMigration\db-scripts\31_TESTDBONLY_SeedTestIdentityEndpoints.sql = ..\DbMigration\db-scripts\31_TESTDBONLY_SeedTestIdentityEndpoints.sql
+		..\DbMigration\db-scripts\32_Seed_EndpointAuthorization_Endpoints_CORRECTED.sql = ..\DbMigration\db-scripts\32_Seed_EndpointAuthorization_Endpoints_CORRECTED.sql
+		..\DbMigration\db-scripts\32_Update_EndpointAuthorization_Permissions.sql = ..\DbMigration\db-scripts\32_Update_EndpointAuthorization_Permissions.sql
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Documentation", "Documentation", "{3CA0CEEC-0948-4133-825D-A4EBA58802F9}"

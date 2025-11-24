@@ -159,5 +159,21 @@ public static class UserPermissionEndpoints
         .Produces(400)
         .Produces(403)
         .Produces(404);
+
+        // Batch update document type permissions for a user (SuperUser only)
+        group.MapPost("/user/{userId}/batch-document-types", async (int userId, BatchUpdateDocumentTypePermissionsDto dto, IUserPermissionService service) =>
+        {
+            if (userId != dto.UserId)
+                return Results.BadRequest(new { error = "ID mismatch between URL and body" });
+
+            var result = await service.BatchUpdateDocumentTypePermissionsAsync(dto);
+            return Results.Ok(result);
+        })
+        .WithName("BatchUpdateDocumentTypePermissions")
+        .RequireAuthorization("Endpoint:POST:/api/userpermissions/user/{userId}/batch-document-types")
+        .Produces<BatchUpdateResultDto>(200)
+        .Produces(400)
+        .Produces(403)
+        .Produces(404);
     }
 }

@@ -64,8 +64,6 @@ public class UserPermissionService : IUserPermissionService
         var query = context.UserPermissions
             .Include(up => up.User)
             .Include(up => up.DocumentType)
-            .Include(up => up.CounterParty)
-            .Include(up => up.CountryCodeNavigation)
             .AsNoTracking();
 
         if (!string.IsNullOrWhiteSpace(accountNameFilter))
@@ -90,8 +88,6 @@ public class UserPermissionService : IUserPermissionService
         var permission = await context.UserPermissions
             .Include(up => up.User)
             .Include(up => up.DocumentType)
-            .Include(up => up.CounterParty)
-            .Include(up => up.CountryCodeNavigation)
             .AsNoTracking()
             .FirstOrDefaultAsync(up => up.Id == id);
 
@@ -112,8 +108,6 @@ public class UserPermissionService : IUserPermissionService
         var permissions = await context.UserPermissions
             .Include(up => up.User)
             .Include(up => up.DocumentType)
-            .Include(up => up.CounterParty)
-            .Include(up => up.CountryCodeNavigation)
             .AsNoTracking()
             .Where(up => up.UserId == userId)
             .OrderBy(up => up.Id)
@@ -138,9 +132,7 @@ public class UserPermissionService : IUserPermissionService
         var entity = new UserPermission
         {
             UserId = dto.UserId,
-            DocumentTypeId = dto.DocumentTypeId,
-            CounterPartyId = dto.CounterPartyId,
-            CountryCode = dto.CountryCode
+            DocumentTypeId = dto.DocumentTypeId
         };
 
         context.UserPermissions.Add(entity);
@@ -165,8 +157,6 @@ public class UserPermissionService : IUserPermissionService
         }
 
         entity.DocumentTypeId = dto.DocumentTypeId;
-        entity.CounterPartyId = dto.CounterPartyId;
-        entity.CountryCode = dto.CountryCode;
 
         await context.SaveChangesAsync();
 
@@ -308,6 +298,82 @@ public class UserPermissionService : IUserPermissionService
         };
     }
 
+    public async Task<BatchUpdateResultDto> BatchUpdateDocumentTypePermissionsAsync(BatchUpdateDocumentTypePermissionsDto dto)
+    {
+        _logger.LogInformation("Batch updating document type permissions for user ID: {UserId}, DocumentTypes: {Count}",
+            dto.UserId, dto.DocumentTypeIds.Count);
+
+        await using var context = await _contextFactory.CreateDbContextAsync();
+
+        // Validate user exists
+        var userExists = await context.DocuScanUsers.AnyAsync(u => u.UserId == dto.UserId);
+        if (!userExists)
+        {
+            throw new ValidationException($"User with ID {dto.UserId} not found");
+        }
+
+        // Get current permissions for this user (only those with DocumentTypeId set)
+        var currentPermissions = await context.UserPermissions
+            .Where(p => p.UserId == dto.UserId && p.DocumentTypeId.HasValue)
+            .ToListAsync();
+
+        var currentDocTypeIds = currentPermissions
+            .Where(p => p.DocumentTypeId.HasValue)
+            .Select(p => p.DocumentTypeId!.Value)
+            .ToHashSet();
+
+        var requestedDocTypeIds = dto.DocumentTypeIds.ToHashSet();
+
+        // Calculate what to add and remove
+        var toAdd = requestedDocTypeIds.Except(currentDocTypeIds).ToList();
+        var toRemove = currentDocTypeIds.Except(requestedDocTypeIds).ToList();
+
+        int added = 0;
+        int removed = 0;
+
+        // Remove permissions no longer needed
+        if (toRemove.Count > 0)
+        {
+            var permissionsToRemove = currentPermissions
+                .Where(p => p.DocumentTypeId.HasValue && toRemove.Contains(p.DocumentTypeId.Value))
+                .ToList();
+
+            context.UserPermissions.RemoveRange(permissionsToRemove);
+            removed = permissionsToRemove.Count;
+            _logger.LogInformation("Removing {Count} permissions for user {UserId}", removed, dto.UserId);
+        }
+
+        // Add new permissions
+        if (toAdd.Count > 0)
+        {
+            var newPermissions = toAdd.Select(docTypeId => new UserPermission
+            {
+                UserId = dto.UserId,
+                DocumentTypeId = docTypeId
+            }).ToList();
+
+            context.UserPermissions.AddRange(newPermissions);
+            added = newPermissions.Count;
+            _logger.LogInformation("Adding {Count} permissions for user {UserId}", added, dto.UserId);
+        }
+
+        await context.SaveChangesAsync();
+
+        // Get final count
+        var totalPermissions = await context.UserPermissions
+            .CountAsync(p => p.UserId == dto.UserId);
+
+        _logger.LogInformation("Batch update complete for user {UserId}: Added={Added}, Removed={Removed}, Total={Total}",
+            dto.UserId, added, removed, totalPermissions);
+
+        return new BatchUpdateResultDto
+        {
+            PermissionsAdded = added,
+            PermissionsRemoved = removed,
+            TotalPermissions = totalPermissions
+        };
+    }
+
     private static UserPermissionDto MapToDto(UserPermission entity)
     {
         return new UserPermissionDto
@@ -316,12 +382,7 @@ public class UserPermissionService : IUserPermissionService
             UserId = entity.UserId,
             AccountName = entity.User?.AccountName ?? string.Empty,
             DocumentTypeId = entity.DocumentTypeId,
-            DocumentTypeName = entity.DocumentType?.DtName,
-            CounterPartyId = entity.CounterPartyId,
-            CounterPartyName = entity.CounterParty?.Name,
-            CounterPartyNoAlpha = entity.CounterParty?.CounterPartyNoAlpha,
-            CountryCode = entity.CountryCode,
-            CountryName = entity.CountryCodeNavigation?.Name
+            DocumentTypeName = entity.DocumentType?.DtName
         };
     }
 }

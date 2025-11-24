@@ -206,4 +206,21 @@ public class UserPermissionHttpService : IUserPermissionService
             throw;
         }
     }
+
+    public async Task<BatchUpdateResultDto> BatchUpdateDocumentTypePermissionsAsync(BatchUpdateDocumentTypePermissionsDto dto)
+    {
+        try
+        {
+            _logger.LogInformation("Batch updating document type permissions for user {UserId} via API", dto.UserId);
+            var response = await _http.PostAsJsonAsync($"/api/userpermissions/user/{dto.UserId}/batch-document-types", dto);
+            response.EnsureSuccessStatusCode();
+            var result = await response.Content.ReadFromJsonAsync<BatchUpdateResultDto>();
+            return result!;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error batch updating document type permissions for user {UserId}", dto.UserId);
+            throw;
+        }
+    }
 }

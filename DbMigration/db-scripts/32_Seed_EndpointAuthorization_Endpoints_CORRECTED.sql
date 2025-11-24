@@ -223,6 +223,30 @@ BEGIN
     PRINT 'Already exists: POST /api/endpoint-authorization/validate'
 END
 
+-- =============================================
+-- USER PERMISSION BATCH OPERATIONS
+-- Category: User Permissions
+-- =============================================
+
+-- 11. POST /api/userpermissions/user/{userId}/batch-document-types
+-- Batch update document type permissions for a user (SuperUser only)
+IF NOT EXISTS (SELECT 1 FROM EndpointRegistry WHERE HttpMethod = 'POST' AND Route = '/api/userpermissions/user/{userId}/batch-document-types')
+BEGIN
+    INSERT INTO EndpointRegistry (HttpMethod, Route, EndpointName, Description, Category, IsActive, CreatedOn)
+    VALUES ('POST', '/api/userpermissions/user/{userId}/batch-document-types', 'BatchUpdateDocumentTypePermissions', 'Batch update document type permissions for a user', 'User Permissions', 1, GETUTCDATE());
+
+    SET @EndpointId = SCOPE_IDENTITY();
+
+    -- SuperUser ONLY
+    INSERT INTO EndpointRolePermission (EndpointId, RoleName) VALUES (@EndpointId, 'SuperUser');
+
+    PRINT 'Added: POST /api/userpermissions/user/{userId}/batch-document-types (SuperUser only)'
+END
+ELSE
+BEGIN
+    PRINT 'Already exists: POST /api/userpermissions/user/{userId}/batch-document-types'
+END
+
 PRINT ''
 PRINT '========================================'
 PRINT 'Endpoint Authorization Seeding Complete'
@@ -231,6 +255,7 @@ PRINT ''
 PRINT 'Security Summary:'
 PRINT '  - 9 management endpoints: SuperUser ONLY'
 PRINT '  - 1 check endpoint: ALL ROLES (for menu visibility)'
+PRINT '  - 1 batch permission endpoint: SuperUser ONLY'
 PRINT ''
 
 -- Summary query
