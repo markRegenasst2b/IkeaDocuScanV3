@@ -150,18 +150,6 @@ public class TestIdentityService
                 IsSuperUser = false,
                 HasAccess = false,
                 DatabaseUserId = 1006
-            },
-            new TestIdentityProfile
-            {
-                ProfileId = "no_access2",
-                DisplayName = "🚫 No Access2",
-                Username = "TEST\\NoAccessTest2",
-                Email = "noaccess@test.local",
-                Description = "User exists in database but has no permissions or AD groups",
-                ADGroups = new(),
-                IsSuperUser = false,
-                HasAccess = false,
-                DatabaseUserId = 1006
             }
 
         };

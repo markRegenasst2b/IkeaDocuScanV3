@@ -48,23 +48,6 @@
                                 </p>
                             </div>
                         </div>
-                    }
-                    else
-                    {
-                        <div class="card mt-4 border-warning">
-                            <div class="card-header bg-warning text-dark">
-                                <h5 class="mb-0">Limited Access</h5>
-                            </div>
-                            <div class="card-body">
-                                <p>
-                                    You are authenticated, but you do not have permissions to access the document management system.
-                                </p>
-                                <p>
-                                    <a href="/access-denied" class="btn btn-primary">Request Access</a>
-                                </p>
-                            </div>
-                        </div>
-                    }
 
                     <!-- User Identity Section -->
                     <div class="card mt-4">
@@ -219,6 +202,23 @@
                             }
                         </div>
                     </div>
+                    }
+                    else
+                    {
+                        <div class="card mt-4 border-warning">
+                            <div class="card-header bg-warning text-dark">
+                                <h5 class="mb-0">Limited Access</h5>
+                            </div>
+                            <div class="card-body">
+                                <p>
+                                    You are authenticated, but you do not have permissions to access the document management system.
+                                </p>
+                                <p>
+                                    <a href="/access-denied" class="btn btn-primary">Request Access</a>
+                                </p>
+                            </div>
+                        </div>
+                    }
                 </Authorized>
                 <NotAuthorized>
                     <div class="alert alert-danger mt-3">
