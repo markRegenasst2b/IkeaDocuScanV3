@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using IkeaDocuScan.Infrastructure.Data;
 using IkeaDocuScan.Shared.DTOs;
 using IkeaDocuScan.Shared.Interfaces;
@@ -31,23 +32,33 @@ public class EndpointAuthorizationService : IEndpointAuthorizationService
     /// <summary>
     /// Get the list of roles allowed to access a specific endpoint
     /// Results are cached for performance
+    /// Routes are normalized to strip type constraints (e.g., {id:int} becomes {id})
     /// </summary>
     public async Task<List<string>> GetAllowedRolesAsync(string httpMethod, string route)
     {
-        var cacheKey = $"{CacheKeyPrefix}{httpMethod}:{route}";
+        // Normalize route to strip type constraints for consistent matching
+        // e.g., /api/documentnames/bytype/{documentTypeId:int} -> /api/documentnames/bytype/{documentTypeId}
+        var normalizedRoute = NormalizeRoute(route);
+        var cacheKey = $"{CacheKeyPrefix}{httpMethod}:{normalizedRoute}";
+
+        // Log if normalization changed the route (helps with debugging)
+        if (route != normalizedRoute)
+        {
+            _logger.LogDebug("Route normalized: {OriginalRoute} -> {NormalizedRoute}", route, normalizedRoute);
+        }
 
         // Try to get from cache
         if (_cache.TryGetValue<List<string>>(cacheKey, out var cachedRoles))
         {
-            _logger.LogDebug("Endpoint authorization cache hit for {Method} {Route}", httpMethod, route);
+            _logger.LogDebug("Endpoint authorization cache hit for {Method} {Route}", httpMethod, normalizedRoute);
             return cachedRoles ?? new List<string>();
         }
 
         // Not in cache, query database
-        _logger.LogDebug("Endpoint authorization cache miss for {Method} {Route}", httpMethod, route);
+        _logger.LogDebug("Endpoint authorization cache miss for {Method} {Route}", httpMethod, normalizedRoute);
 
         var roles = await _dbContext.EndpointRegistries
-            .Where(e => e.HttpMethod == httpMethod && e.Route == route && e.IsActive)
+            .Where(e => e.HttpMethod == httpMethod && e.Route == normalizedRoute && e.IsActive)
             .SelectMany(e => e.RolePermissions.Select(rp => rp.RoleName))
             .Distinct()
             .ToListAsync();
@@ -59,7 +70,7 @@ public class EndpointAuthorizationService : IEndpointAuthorizationService
         _cache.Set(cacheKey, roles, cacheOptions);
 
         _logger.LogInformation("Loaded endpoint authorization for {Method} {Route}: {Roles}",
-            httpMethod, route, string.Join(", ", roles));
+            httpMethod, normalizedRoute, string.Join(", ", roles));
 
         return roles;
     }
@@ -171,5 +182,35 @@ public class EndpointAuthorizationService : IEndpointAuthorizationService
         // and create/update EndpointRegistry entries
         // For now, we rely on manual SQL scripts to seed the data
         return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Normalizes a route by stripping type constraints from route parameters.
+    /// This ensures consistent matching between ASP.NET Core's RoutePattern.RawText
+    /// (which includes constraints like :int, :guid) and database storage (which doesn't).
+    /// Examples:
+    ///   /api/items/{id:int} -> /api/items/{id}
+    ///   /api/items/{id:int:min(1)} -> /api/items/{id}
+    ///   /api/items/{documentTypeId:int} -> /api/items/{documentTypeId}
+    /// </summary>
+    /// <param name="route">The route pattern, possibly containing type constraints</param>
+    /// <returns>The normalized route without type constraints</returns>
+    private static string NormalizeRoute(string route)
+    {
+        if (string.IsNullOrEmpty(route))
+            return route;
+
+        // Pattern explanation:
+        // \{           - Opening brace (escaped)
+        // (\w+)        - Capture group 1: parameter name (word characters)
+        // (?::[^}]+)?  - Non-capturing optional group: colon followed by constraints (anything except closing brace)
+        // \}           - Closing brace (escaped)
+        //
+        // This handles:
+        //   {id:int} -> {id}
+        //   {id:int:min(1)} -> {id}
+        //   {id:guid} -> {id}
+        //   {id} -> {id} (unchanged)
+        return Regex.Replace(route, @"\{(\w+)(?::[^}]+)?\}", "{$1}");
     }
 }
