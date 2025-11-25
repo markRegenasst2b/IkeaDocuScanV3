@@ -7,7 +7,7 @@
 -- WARNING: For development/test databases only!
 -- =============================================
 
-USE [IkeaDocuScan]
+USE IkeaDocuScan
 GO
 
 -- =============================================
@@ -50,7 +50,7 @@ DECLARE @TestIdentityBaseId INT;
 SELECT @TestIdentityBaseId = ISNULL(MAX(EndpointId), 0) + 1 FROM [dbo].[EndpointRegistry];
 
 SET IDENTITY_INSERT [dbo].[EndpointRegistry] ON
-GO
+
 
 INSERT INTO [dbo].[EndpointRegistry] ([EndpointId], [HttpMethod], [Route], [EndpointName], [Description], [Category], [IsActive])
 VALUES
