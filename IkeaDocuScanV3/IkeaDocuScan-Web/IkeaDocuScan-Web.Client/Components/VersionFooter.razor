@@ -18,10 +18,7 @@
 @code {
     private string GetVersion()
     {
-        var assembly = System.Reflection.Assembly.GetExecutingAssembly();
-        //var version = assembly.GetName().Version;
-        string version = assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? "-unknown-";
-        return version;
+        return Constants.DisplayVersion;
     }
 
     private string GetEnvironment()

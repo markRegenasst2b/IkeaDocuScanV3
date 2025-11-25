@@ -164,6 +164,34 @@ function Update-ProjectVersion-Client {
 
     return "$newVersion-$newVersionSuffix"
 }
+function Update-ConstantsDisplayVersion {
+    param([string]$newVersion)
+    Write-Step "Updating Constants.DisplayVersion..."
+
+    $constantsFilePath = Join-Path $sourceFolder "IkeaDocuScanV3\IkeaDocuScan-Web\IkeaDocuScan-Web.Client\Constants.cs"
+
+    if (-not (Test-Path $constantsFilePath)) {
+        throw "Constants.cs file not found: $constantsFilePath"
+    }
+
+    # Read the file content with UTF8 encoding
+    $content = Get-Content $constantsFilePath -Raw -Encoding UTF8
+
+    # Replace the DisplayVersion value using regex
+    $pattern = 'public const string DisplayVersion = ".*?";'
+    $replacement = "public const string DisplayVersion = `"$newVersion`";"
+    $newContent = $content -replace $pattern, $replacement
+
+    # Verify the replacement was made
+    if ($content -eq $newContent) {
+        Write-Warning "DisplayVersion pattern not found or no change made in Constants.cs"
+    }
+
+    # Save the file back with UTF8 encoding
+    Set-Content -Path $constantsFilePath -Value $newContent -Encoding UTF8 -NoNewline
+
+    Write-Success "Updated DisplayVersion to: $newVersion"
+}
 function Invoke-DotNetPublish {
     Write-Step "Publishing application..."
 
@@ -299,13 +327,16 @@ try {
     $newVersion = Update-ProjectVersion-Server
     $newVersion = Update-ProjectVersion-Client $newVersion
 
-    # Step 4: Clean and publish
+    # Step 4: Update Constants.DisplayVersion
+    Update-ConstantsDisplayVersion $newVersion
+
+    # Step 5: Clean and publish
     Invoke-DotNetPublish
 
-    # Step 5: Create zip archive
+    # Step 6: Create zip archive
     New-PublishZip -Version $newVersion
-    
-    # Step 6: Commit the version change
+
+    # Step 7: Commit the version change
     Invoke-GitCommitAndPush "Publish Debug $newVersion"
 
     # Show summary
