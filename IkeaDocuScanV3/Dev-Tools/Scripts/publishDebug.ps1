@@ -120,7 +120,7 @@ function Update-ProjectVersion-Server {
 
     Write-Success "Updated version: $newVersion-$newVersionSuffix"
 
-    return "$newVersion-$newVersionSuffix"
+    return "$newVersion"
 }
 function Update-ProjectVersion-Client {
     param([string]$newVersion)
@@ -297,7 +297,7 @@ try {
 
     # Step 3: Update version in .csproj
     $newVersion = Update-ProjectVersion-Server
-    Update-ProjectVersion-Client $newVersion
+    $newVersion = Update-ProjectVersion-Client $newVersion
 
     # Step 4: Clean and publish
     Invoke-DotNetPublish
