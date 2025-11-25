@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk.BlazorWebAssembly">
+<Project Sdk="Microsoft.NET.Sdk.BlazorWebAssembly">
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
@@ -7,9 +7,9 @@
     <StaticWebAssetProjectMode>Default</StaticWebAssetProjectMode>
     <RootNamespace>IkeaDocuScan-Web.Client</RootNamespace>
     <AssemblyName>$(AssemblyName.Replace(' ', '_'))</AssemblyName>
-    <VersionPrefix>3.1.16</VersionPrefix>
+    <VersionPrefix>3.1.17</VersionPrefix>
     <VersionSuffix>testdeploy1125</VersionSuffix>
-	<IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
+    <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\IkeaDocuScan.Shared\IkeaDocuScan.Shared.csproj" />
