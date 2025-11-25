@@ -7,7 +7,7 @@
     <StaticWebAssetProjectMode>Default</StaticWebAssetProjectMode>
     <RootNamespace>IkeaDocuScan-Web.Client</RootNamespace>
     <AssemblyName>$(AssemblyName.Replace(' ', '_'))</AssemblyName>
-    <VersionPrefix>3.1.20</VersionPrefix>
+    <VersionPrefix>3.1.21</VersionPrefix>
     <VersionSuffix>testdeploy1125</VersionSuffix>
     <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
   </PropertyGroup>
