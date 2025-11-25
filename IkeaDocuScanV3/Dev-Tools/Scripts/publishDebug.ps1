@@ -5,8 +5,10 @@
 $ErrorActionPreference = "Stop"
 $sourceFolder = "C:\Users\markr\source\repos\markRegenasst2b\IkeaDocuScan-V3"
 $publishFolder = "d:\Pub"
-$projectPath = Join-Path $sourceFolder "IkeaDocuScanV3\IkeaDocuScan-Web\IkeaDocuScan-Web"
-$csprojFile = Join-Path $projectPath "IkeaDocuScan-Web.csproj"
+$projectPathS = Join-Path $sourceFolder "IkeaDocuScanV3\IkeaDocuScan-Web\IkeaDocuScan-Web"
+$csprojFileS = Join-Path $projectPathS "IkeaDocuScan-Web.csproj"
+$projectPathC = Join-Path $sourceFolder "IkeaDocuScanV3\IkeaDocuScan-Web\IkeaDocuScan-Web.Client\"
+$csprojFileC = Join-Path $projectPathC "IkeaDocuScan-Web.Client.csproj"
 $outputZip = "d:\IkeaDocuScan-Debug-$(Get-Date -Format 'yyyyMMdd-HHmmss').zip"
 
 # ============================================================================
@@ -66,15 +68,15 @@ function Test-GitPendingChanges {
         Pop-Location
     }
 }
-function Update-ProjectVersion {
+function Update-ProjectVersion-Server {
     Write-Step "Updating project version..."
 
-    if (-not (Test-Path $csprojFile)) {
-        throw "Project file not found: $csprojFile"
+    if (-not (Test-Path $csprojFileS)) {
+        throw "Project file not found: $csprojFileS"
     }
 
     # FIX 1: Load XML using explicit UTF8 encoding to prevent parsing/saving errors.
-    [xml]$csproj = Get-Content $csprojFile -Encoding UTF8
+    [xml]$csproj = Get-Content $csprojFileS -Encoding UTF8
 
     # Find PropertyGroup with VersionPrefix
     $propertyGroup = $csproj.Project.PropertyGroup | Where-Object { $_.VersionPrefix -ne $null } | Select-Object -First 1
@@ -114,7 +116,49 @@ function Update-ProjectVersion {
     }
 
     # Save XML (This saves it with the encoding it was read with, which is now UTF8)
-    $csproj.Save($csprojFile)
+    $csproj.Save($csprojFileS)
+
+    Write-Success "Updated version: $newVersion-$newVersionSuffix"
+
+    return "$newVersion-$newVersionSuffix"
+}
+function Update-ProjectVersion-Client {
+    param([string]$newVersion)
+    Write-Step "Updating project version..."
+
+    if (-not (Test-Path $csprojFileC)) {
+        throw "Project file not found: $csprojFilec"
+    }
+
+    # FIX 1: Load XML using explicit UTF8 encoding to prevent parsing/saving errors.
+    [xml]$csproj = Get-Content $csprojFileC -Encoding UTF8
+
+    # Find PropertyGroup with VersionPrefix
+    $propertyGroup = $csproj.Project.PropertyGroup | Where-Object { $_.VersionPrefix -ne $null } | Select-Object -First 1
+
+    if (-not $propertyGroup) {
+        throw "Could not find VersionPrefix in project file"
+    }
+
+    # Update VersionPrefix
+    $propertyGroup.VersionPrefix = $newVersion
+
+    # Update VersionSuffix with current date
+    $dateSuffix = Get-Date -Format "MMdd"
+    $newVersionSuffix = "testdeploy$dateSuffix"
+
+    if ($propertyGroup.VersionSuffix -eq $null) {
+        # Create VersionSuffix element if it doesn't exist
+        $versionSuffixElement = $csproj.CreateElement("VersionSuffix")
+        $versionSuffixElement.InnerText = $newVersionSuffix
+        $propertyGroup.AppendChild($versionSuffixElement) | Out-Null
+    }
+    else {
+        $propertyGroup.VersionSuffix = $newVersionSuffix
+    }
+
+    # Save XML (This saves it with the encoding it was read with, which is now UTF8)
+    $csproj.Save($csprojFileC)
 
     Write-Success "Updated version: $newVersion-$newVersionSuffix"
 
@@ -123,7 +167,7 @@ function Update-ProjectVersion {
 function Invoke-DotNetPublish {
     Write-Step "Publishing application..."
 
-    Push-Location $projectPath
+    Push-Location $projectPathS
     try {
         # Clean
         Write-Host "  Running dotnet clean..." -ForegroundColor Gray
@@ -252,7 +296,8 @@ try {
     Remove-PublishFolder
 
     # Step 3: Update version in .csproj
-    $newVersion = Update-ProjectVersion
+    $newVersion = Update-ProjectVersion-Server
+    Update-ProjectVersion-Client $newVersion
 
     # Step 4: Clean and publish
     Invoke-DotNetPublish

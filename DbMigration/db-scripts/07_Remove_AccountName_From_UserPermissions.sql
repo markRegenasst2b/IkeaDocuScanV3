@@ -33,7 +33,7 @@ SELECT
 FROM [dbo].[UserPermissions];
 GO
 
--- Step 3: Drop AccountName column
+-- Step 3a: Drop AccountName column
 PRINT 'Removing AccountName column from UserPermissions...';
 GO
 
@@ -50,6 +50,44 @@ BEGIN
     PRINT 'AccountName column does not exist in UserPermissions table.';
 END
 GO
+
+-- Step 3b: Drop CounterPartyId column
+PRINT 'Removing CounterPartyId column from UserPermissions...';
+GO
+
+IF EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[UserPermissions]') AND name = 'CounterPartyId')
+BEGIN
+    -- Drop the column
+    ALTER TABLE [dbo].[UserPermissions]
+    DROP COLUMN CounterPartyId;
+
+    PRINT 'CounterPartyId column removed successfully from UserPermissions table.';
+END
+ELSE
+BEGIN
+    PRINT 'CounterPartyId column does not exist in UserPermissions table.';
+END
+GO
+
+-- Step 3c: Drop CountryCode column
+PRINT 'Removing CountryCode column from UserPermissions...';
+GO
+
+IF EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[UserPermissions]') AND name = 'CountryCode')
+BEGIN
+    -- Drop the column
+    ALTER TABLE [dbo].[UserPermissions]
+    DROP COLUMN CountryCode;
+
+    PRINT 'CountryCode column removed successfully from UserPermissions table.';
+END
+ELSE
+BEGIN
+    PRINT 'CountryCode column does not exist in UserPermissions table.';
+END
+GO
+
+
 
 -- Step 4: Verify final table structure
 PRINT 'Verifying final table structure...';

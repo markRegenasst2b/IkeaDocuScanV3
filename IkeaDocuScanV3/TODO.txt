@@ -13,6 +13,7 @@ Issues
 
 
 TODOs
+- full text search on test
 - add about
 - host entry    127.0.0.1    testdocuscan.ikeadt.com
 - configure checkin folder broken?
