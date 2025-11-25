@@ -1,5 +1,4 @@
 <Project Sdk="Microsoft.NET.Sdk.BlazorWebAssembly">
-
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
@@ -8,21 +7,18 @@
     <StaticWebAssetProjectMode>Default</StaticWebAssetProjectMode>
     <RootNamespace>IkeaDocuScan-Web.Client</RootNamespace>
     <AssemblyName>$(AssemblyName.Replace(' ', '_'))</AssemblyName>
-    <VersionPrefix>3.1.14</VersionPrefix>
-	<VersionSuffix>testdeploy1125</VersionSuffix>
+    <VersionPrefix>3.1.15-testdeploy1125</VersionPrefix>
+    <VersionSuffix>testdeploy1125</VersionSuffix>
   </PropertyGroup>
-
   <ItemGroup>
     <ProjectReference Include="..\..\IkeaDocuScan.Shared\IkeaDocuScan.Shared.csproj" />
     <PackageReference Include="Microsoft.AspNetCore.Components.Authorization" Version="9.0.10" />
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="9.0.10" />
     <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="9.0.10" />
   </ItemGroup>
-
   <ItemGroup>
     <Content Update="wwwroot\js\navigationInterceptor.js">
       <CopyToOutputDirectory>Never</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
-
 </Project>
