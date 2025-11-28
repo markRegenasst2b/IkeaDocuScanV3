@@ -89,15 +89,20 @@
                             <label for="newDocumentName" class="form-label">Document Name:</label>
                             <input id="newDocumentName"
                                    type="text"
-                                   class="form-control"
+                                   class="form-control @(addValidationError != null ? "is-invalid" : "")"
                                    @bind="newDocumentName"
+                                   @bind:after="ClearAddValidationError"
                                    placeholder="Enter document name"
                                    maxlength="255" />
+                            @if (addValidationError != null)
+                            {
+                                <div class="invalid-feedback">@addValidationError</div>
+                            }
                         </div>
                         <div class="col-md-4 d-flex align-items-end">
                             <button class="btn btn-success"
                                     @onclick="AddDocumentName"
-                                    disabled="@(string.IsNullOrWhiteSpace(newDocumentName) || isSaving)">
+                                    disabled="@isSaving">
                                 @if (isSaving)
                                 {
                                     <span class="spinner-border spinner-border-sm me-2" role="status"></span>
@@ -312,6 +317,7 @@
 
     // Add new document name
     private string newDocumentName = string.Empty;
+    private string? addValidationError;
 
     // Edit document name
     private int? editingDocumentNameId;
@@ -410,8 +416,11 @@
 
     private async Task AddDocumentName()
     {
+        addValidationError = null;
+
         if (string.IsNullOrWhiteSpace(newDocumentName))
         {
+            addValidationError = "Please enter a document name.";
             return;
         }
 
@@ -451,6 +460,11 @@
         {
             isSaving = false;
         }
+    }
+
+    private void ClearAddValidationError()
+    {
+        addValidationError = null;
     }
 
     private void StartEdit(DocumentNameDto docName)
