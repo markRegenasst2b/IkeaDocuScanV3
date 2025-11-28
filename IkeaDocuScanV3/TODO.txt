@@ -1,11 +1,6 @@
-
-
-Question
-    Is document registering and check-in constraint by users permissions? can a user register a document type she/he is not permitted to?
-    
 Propositions
     in search restrict the document types to the permissions of the user (show all if the user has no permissions or a permission with null document type)
-    default actions per document type
+    are ther default actions per document type? can we support this in the document registry.
     
     
 Issues
@@ -15,8 +10,8 @@ Issues
 TODOs
 - full text search on test
 - add about
+- add view audit log
 - host entry    127.0.0.1    testdocuscan.ikeadt.com
-- configure checkin folder broken?
 - restrict the list of claims only to those relevant to docuscan
 
 BUGS

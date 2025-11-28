@@ -249,4 +249,17 @@ public class DocumentNameService : IDocumentNameService
         _logger.LogInformation("Document name ID {Id} ('{Name}') deleted by user {User}",
             id, entity.Name, currentUser.AccountName);
     }
+
+    /// <summary>
+    /// Get count of documents using this document name
+    /// </summary>
+    public async Task<int> GetUsageCountAsync(int id)
+    {
+        _logger.LogInformation("Getting usage count for document name ID {Id}", id);
+
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        return await context.Documents
+            .Where(d => d.DocumentNameId == id)
+            .CountAsync();
+    }
 }

@@ -134,4 +134,24 @@ public class DocumentNameHttpService : IDocumentNameService
             throw;
         }
     }
+
+    /// <summary>
+    /// Get count of documents using this document name
+    /// </summary>
+    public async Task<int> GetUsageCountAsync(int id)
+    {
+        try
+        {
+            _logger.LogInformation("Getting usage count for document name ID {Id}", id);
+            var response = await _http.GetFromJsonAsync<UsageResponse>($"/api/documentnames/{id}/usage");
+            return response?.UsageCount ?? 0;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting usage count for document name ID {Id}", id);
+            throw;
+        }
+    }
+
+    private record UsageResponse(int DocumentNameId, int UsageCount);
 }

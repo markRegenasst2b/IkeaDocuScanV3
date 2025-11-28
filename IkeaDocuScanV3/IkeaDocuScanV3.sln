@@ -43,6 +43,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Migration", "Migration", "{
 		..\DbMigration\db-scripts\29_CreateEndpointTables.sql = ..\DbMigration\db-scripts\29_CreateEndpointTables.sql
 		..\DbMigration\db-scripts\30_InsertEndpointPermissions.sql = ..\DbMigration\db-scripts\30_InsertEndpointPermissions.sql
 		..\DbMigration\db-scripts\31_TESTDBONLY_SeedTestIdentityEndpoints.sql = ..\DbMigration\db-scripts\31_TESTDBONLY_SeedTestIdentityEndpoints.sql
+		..\DbMigration\db-scripts\32_AddAccessAuditEndpoints.sql = ..\DbMigration\db-scripts\32_AddAccessAuditEndpoints.sql
+		..\DbMigration\db-scripts\33_AddDocumentNameUsageEndpoint.sql = ..\DbMigration\db-scripts\33_AddDocumentNameUsageEndpoint.sql
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Documentation", "Documentation", "{3CA0CEEC-0948-4133-825D-A4EBA58802F9}"

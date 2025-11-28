@@ -234,27 +234,53 @@
                 <button type="button" class="btn-close" @onclick="CancelDelete" disabled="@isDeleting"></button>
             </div>
             <div class="modal-body">
-                <p>Are you sure you want to delete the following document name?</p>
-                <p class="fw-bold">@deleteDocumentName</p>
-                <p class="text-muted mb-0">
-                    <small>Note: This document name can only be deleted if it's not being used by any documents.</small>
-                </p>
+                @if (isCheckingUsage)
+                {
+                    <div class="text-center p-4">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Checking...</span>
+                        </div>
+                        <p class="mt-2">Checking document name usage...</p>
+                    </div>
+                }
+                else if (deleteUsageCount > 0)
+                {
+                    <div class="alert alert-warning">
+                        <i class="bi bi-exclamation-triangle me-2"></i>
+                        <strong>Warning: Document name is in use!</strong>
+                        <p class="mb-0 mt-2">
+                            Document name <strong>@deleteDocumentName</strong> is currently used by <strong>@deleteUsageCount</strong> document(s).
+                        </p>
+                        <p class="mb-0 mt-2">
+                            You must remove or update all documents using this document name before it can be deleted.
+                        </p>
+                    </div>
+                }
+                else
+                {
+                    <p>Are you sure you want to delete the following document name?</p>
+                    <p class="fw-bold">@deleteDocumentName</p>
+                    <p class="text-muted mb-0">This action cannot be undone.</p>
+                }
             </div>
             <div class="modal-footer">
                 <button class="btn btn-secondary" @onclick="CancelDelete" disabled="@isDeleting">
                     Cancel
                 </button>
-                <button class="btn btn-danger" @onclick="ConfirmDelete" disabled="@isDeleting">
-                    @if (isDeleting)
-                    {
-                        <span class="spinner-border spinner-border-sm me-2" role="status"></span>
-                    }
-                    else
-                    {
-                        <i class="bi bi-trash me-2"></i>
-                    }
-                    Delete
-                </button>
+                @if (deleteUsageCount == 0 && !isCheckingUsage)
+                {
+                    <button class="btn btn-danger" @onclick="ConfirmDelete" disabled="@isDeleting">
+                        @if (isDeleting)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                        }
+                        else
+                        {
+                            <i class="bi bi-trash me-2"></i>
+                        }
+                        Delete
+                    </button>
+                }
             </div>
         </div>
     </div>
@@ -292,6 +318,8 @@
     private bool showDeleteConfirmation = false;
     private int deleteDocumentNameId;
     private string deleteDocumentName = string.Empty;
+    private bool isCheckingUsage = false;
+    private int deleteUsageCount = 0;
 
     protected override async Task OnInitializedAsync()
     {
@@ -463,14 +491,33 @@
         }
     }
 
-    private void DeleteDocumentName(int id, string name)
+    private async Task DeleteDocumentName(int id, string name)
     {
         Logger.LogInformation("Delete requested for document name ID {Id}", id);
         deleteDocumentNameId = id;
         deleteDocumentName = name;
         showDeleteConfirmation = true;
+        isCheckingUsage = true;
+        deleteUsageCount = 0;
         errorMessage = null;
         successMessage = null;
+        StateHasChanged();
+
+        try
+        {
+            deleteUsageCount = await DocumentNameService.GetUsageCountAsync(id);
+            Logger.LogInformation("Document name ID {Id} is used by {Count} documents", id, deleteUsageCount);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error checking document name usage");
+            errorMessage = $"Error checking document name usage: {ex.Message}";
+        }
+        finally
+        {
+            isCheckingUsage = false;
+            StateHasChanged();
+        }
     }
 
     private void CancelDelete()
@@ -478,6 +525,7 @@
         showDeleteConfirmation = false;
         deleteDocumentNameId = 0;
         deleteDocumentName = string.Empty;
+        deleteUsageCount = 0;
     }
 
     private async Task ConfirmDelete()

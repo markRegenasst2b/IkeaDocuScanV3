@@ -108,5 +108,15 @@ public static class DocumentNameEndpoints
         .RequireAuthorization("Endpoint:DELETE:/api/documentnames/{id}")
         .Produces(204)
         .Produces(400);
+
+        // GET /api/documentnames/{id}/usage
+        group.MapGet("/{id:int}/usage", async (int id, IDocumentNameService service) =>
+        {
+            var count = await service.GetUsageCountAsync(id);
+            return Results.Ok(new { documentNameId = id, usageCount = count });
+        })
+        .WithName("GetDocumentNameUsage")
+        .RequireAuthorization("Endpoint:GET:/api/documentnames/{id}/usage")
+        .Produces<object>(200);
     }
 }

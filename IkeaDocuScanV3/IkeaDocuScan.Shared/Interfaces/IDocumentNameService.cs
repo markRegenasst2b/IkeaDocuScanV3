@@ -38,4 +38,9 @@ public interface IDocumentNameService
     /// Delete a document name (SuperUser only)
     /// </summary>
     Task DeleteAsync(int id);
+
+    /// <summary>
+    /// Get count of documents using this document name
+    /// </summary>
+    Task<int> GetUsageCountAsync(int id);
 }
