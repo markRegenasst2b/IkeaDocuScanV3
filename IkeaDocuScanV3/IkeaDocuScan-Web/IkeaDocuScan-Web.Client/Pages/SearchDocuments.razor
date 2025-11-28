@@ -433,12 +433,22 @@
                             <button class="btn btn-primary" @onclick="ExportSelectedToExcel">
                                 <i class="bi bi-printer-fill"></i> Print Detailed
                             </button>
-                            <button class="btn btn-success" @onclick="BulkEmailAttach">
-                                <i class="bi bi-envelope"></i> Email (Attach)
-                            </button>
-                            <button class="btn btn-success" @onclick="BulkEmailLink">
-                                <i class="bi bi-link-45deg"></i> Email (Link)
-                            </button>
+                            @if (HasSelectedDocumentWithoutFile())
+                            {
+                                <button type="button" class="btn btn-warning" disabled
+                                        title="Cannot send email: one or more selected documents have no PDF file">
+                                    <i class="bi bi-exclamation-triangle-fill text-dark"></i> Some selected documents have no PDF
+                                </button>
+                            }
+                            else
+                            {
+                                <button class="btn btn-success" @onclick="BulkEmailAttach">
+                                    <i class="bi bi-envelope"></i> Email (Attach)
+                                </button>
+                                <button class="btn btn-success" @onclick="BulkEmailLink">
+                                    <i class="bi bi-link-45deg"></i> Email (Link)
+                                </button>
+                            }
                         </div>
                     </div>
                 }
@@ -545,9 +555,9 @@
                                                 @if (doc.HasFile)
                                                 {
                                                     <li><button type="button" class="dropdown-item" @onclick="@(() => SendEmailAttach(doc.Id))"><i class="bi bi-envelope"></i> Email (Attach)</button></li>
+                                                    <li><button type="button" class="dropdown-item" @onclick="@(() => SendEmailLink(doc.Id))"><i class="bi bi-link-45deg"></i> Email (Link)</button></li>
+                                                    <li><hr class="dropdown-divider"></li>
                                                 }
-                                                <li><button type="button" class="dropdown-item" @onclick="@(() => SendEmailLink(doc.Id))"><i class="bi bi-link-45deg"></i> Email (Link)</button></li>
-                                                <li><hr class="dropdown-divider"></li>
                                                 <li><button type="button" class="dropdown-item text-danger" @onclick="@(() => DeleteDocument(doc.Id, doc.BarCode))"><i class="bi bi-trash"></i> Delete</button></li>
                                             </ul>
                                         </div>

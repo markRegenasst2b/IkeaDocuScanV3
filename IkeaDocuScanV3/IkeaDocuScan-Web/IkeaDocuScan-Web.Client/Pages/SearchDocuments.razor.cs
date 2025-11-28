@@ -1300,6 +1300,19 @@ public partial class SearchDocuments : ComponentBase
     }
 
     /// <summary>
+    /// Checks if any selected document does not have a file (HasFile = false)
+    /// </summary>
+    private bool HasSelectedDocumentWithoutFile()
+    {
+        if (searchResults == null || !selectedDocumentIds.Any())
+            return false;
+
+        return searchResults.Items
+            .Where(d => selectedDocumentIds.Contains(d.Id))
+            .Any(d => !d.HasFile);
+    }
+
+    /// <summary>
     /// Event handler when a counter party is selected from the CP Name autocomplete
     /// </summary>
     private void OnCounterPartyNameSelected(CounterPartyDto? counterParty)
