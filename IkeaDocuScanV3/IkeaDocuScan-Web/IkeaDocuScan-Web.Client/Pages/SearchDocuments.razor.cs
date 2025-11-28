@@ -185,6 +185,23 @@ public partial class SearchDocuments : ComponentBase
         }
     }
 
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        // Initialize dropdowns with fixed positioning after each render
+        // This ensures dropdowns in the results table escape overflow containers
+        if (searchResults != null && searchResults.Items.Any())
+        {
+            try
+            {
+                await JSRuntime.InvokeVoidAsync("dropdownHelper.initializeFixedDropdowns", ".table-responsive");
+            }
+            catch (Exception ex)
+            {
+                Logger.LogWarning(ex, "Failed to initialize fixed dropdowns");
+            }
+        }
+    }
+
     private async Task LoadReferenceData()
     {
         Logger.LogInformation("Loading reference data for search filters");
