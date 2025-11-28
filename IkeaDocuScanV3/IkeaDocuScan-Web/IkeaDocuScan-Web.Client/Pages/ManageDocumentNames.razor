@@ -62,7 +62,8 @@
                             <option value="0">-- Select Document Type --</option>
                             @foreach (var type in documentTypes)
                             {
-                                <option value="@type.DtId">@type.DtName</option>
+                                var count = documentNameCountByType.GetValueOrDefault(type.DtId, 0);
+                                <option value="@type.DtId">@type.DtName@(count > 0 ? $" ({count})" : "")</option>
                             }
                         </select>
                     </div>
@@ -296,6 +297,8 @@
     // Data
     private List<DocumentTypeDto> documentTypes = new();
     private List<DocumentNameDto> documentNames = new();
+    private List<DocumentNameDto> allDocumentNames = new();
+    private Dictionary<int, int> documentNameCountByType = new();
     private int selectedDocumentTypeId = 0;
 
     // UI State
@@ -324,24 +327,40 @@
     protected override async Task OnInitializedAsync()
     {
         hasWriteAccess = await EndpointAuthService.CheckAccessAsync("POST", "/api/documentnames/");
-        await LoadDocumentTypes();
+        await LoadDocumentTypesAndNames();
     }
 
-    private async Task LoadDocumentTypes()
+    private async Task LoadDocumentTypesAndNames()
     {
         try
         {
             isLoadingTypes = true;
             errorMessage = null;
 
-            Logger.LogInformation("Loading document types");
-            documentTypes = await DocumentTypeService.GetAllAsync();
-            Logger.LogInformation("Loaded {Count} document types", documentTypes.Count);
+            Logger.LogInformation("Loading document types and all document names");
+
+            // Load document types and all document names in parallel
+            var typesTask = DocumentTypeService.GetAllAsync();
+            var namesTask = DocumentNameService.GetAllAsync();
+
+            await Task.WhenAll(typesTask, namesTask);
+
+            documentTypes = await typesTask;
+            allDocumentNames = await namesTask;
+
+            // Compute counts by document type
+            documentNameCountByType = allDocumentNames
+                .Where(dn => dn.DocumentTypeId.HasValue)
+                .GroupBy(dn => dn.DocumentTypeId!.Value)
+                .ToDictionary(g => g.Key, g => g.Count());
+
+            Logger.LogInformation("Loaded {TypeCount} document types and {NameCount} document names",
+                documentTypes.Count, allDocumentNames.Count);
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Error loading document types");
-            errorMessage = $"Failed to load document types: {ex.Message}";
+            Logger.LogError(ex, "Error loading document types and names");
+            errorMessage = $"Failed to load data: {ex.Message}";
         }
         finally
         {
@@ -415,6 +434,9 @@
 
             // Reload the list
             await LoadDocumentNames();
+
+            // Update the count in the dropdown
+            UpdateDocumentNameCount(selectedDocumentTypeId, 1);
 
             // Clear input and show success
             newDocumentName = string.Empty;
@@ -528,6 +550,25 @@
         deleteUsageCount = 0;
     }
 
+    /// <summary>
+    /// Updates the document name count for a document type in the dropdown
+    /// </summary>
+    private void UpdateDocumentNameCount(int documentTypeId, int delta)
+    {
+        if (documentNameCountByType.ContainsKey(documentTypeId))
+        {
+            documentNameCountByType[documentTypeId] += delta;
+            if (documentNameCountByType[documentTypeId] <= 0)
+            {
+                documentNameCountByType.Remove(documentTypeId);
+            }
+        }
+        else if (delta > 0)
+        {
+            documentNameCountByType[documentTypeId] = delta;
+        }
+    }
+
     private async Task ConfirmDelete()
     {
         try
@@ -546,6 +587,9 @@
 
             // Reload the list
             await LoadDocumentNames();
+
+            // Update the count in the dropdown
+            UpdateDocumentNameCount(selectedDocumentTypeId, -1);
 
             // Show success
             successMessage = $"Document name '{deleteDocumentName}' deleted successfully!";
