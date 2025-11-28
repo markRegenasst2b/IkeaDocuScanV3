@@ -89,8 +89,12 @@
 
                     <!-- User Claims Section -->
                     <div class="card mt-4">
-                        <div class="card-header">
+                        <div class="card-header d-flex justify-content-between align-items-center">
                             <h5 class="mb-0">User Claims</h5>
+                            <button class="btn btn-sm btn-outline-secondary" @onclick="ToggleShowAllClaims">
+                                <i class="bi @(showAllClaims ? "bi-funnel-fill" : "bi-funnel")"></i>
+                                @(showAllClaims ? "Show Relevant" : "Show All")
+                            </button>
                         </div>
                         <div class="card-body">
                             @if (isLoadingIdentity)
@@ -99,6 +103,7 @@
                             }
                             else if (userIdentity?.Claims != null && userIdentity.Claims.Any())
                             {
+                                var displayClaims = showAllClaims ? userIdentity.Claims : GetRelevantClaims(userIdentity.Claims);
                                 <div class="table-responsive">
                                     <table class="table table-sm table-striped table-bordered">
                                         <thead>
@@ -108,16 +113,20 @@
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            @foreach (var claim in userIdentity.Claims)
+                                            @foreach (var claim in displayClaims)
                                             {
                                                 <tr>
-                                                    <td>@claim.Type</td>
+                                                    <td>@FormatClaimType(claim.Type)</td>
                                                     <td>@claim.Value</td>
                                                 </tr>
                                             }
                                         </tbody>
                                     </table>
                                 </div>
+                                @if (!showAllClaims)
+                                {
+                                    <small class="text-muted">Showing @displayClaims.Count of @userIdentity.Claims.Count claims</small>
+                                }
                             }
                             else
                             {
@@ -215,6 +224,30 @@
     private bool isLoadingPermissions = true;
     private string? identityError;
     private string? permissionsError;
+    private bool showAllClaims = false;
+
+    // Claims that are relevant to the IkeaDocuScan application
+    private static readonly HashSet<string> RelevantClaimTypes = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "HasAccess",
+        "IsSuperUser",
+        "http://schemas.microsoft.com/ws/2008/06/identity/claims/role",
+        "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name",
+        "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier",
+        "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress"
+    };
+
+    // Friendly names for claim types
+    private static readonly Dictionary<string, string> ClaimTypeDisplayNames = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["HasAccess"] = "HasAccess",
+        ["IsSuperUser"] = "IsSuperUser",
+        ["http://schemas.microsoft.com/ws/2008/06/identity/claims/role"] = "Role",
+        ["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name"] = "Name",
+        ["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier"] = "NameIdentifier",
+        ["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress"] = "Email"
+    };
+
 #if DEBUG
     private bool ISDEBUG = true;
 #endif
@@ -268,5 +301,20 @@
         {
             isLoadingPermissions = false;
         }
+    }
+
+    private void ToggleShowAllClaims()
+    {
+        showAllClaims = !showAllClaims;
+    }
+
+    private List<UserClaimDto> GetRelevantClaims(List<UserClaimDto> claims)
+    {
+        return claims.Where(c => RelevantClaimTypes.Contains(c.Type)).ToList();
+    }
+
+    private string FormatClaimType(string claimType)
+    {
+        return ClaimTypeDisplayNames.TryGetValue(claimType, out var displayName) ? displayName : claimType;
     }
 }
