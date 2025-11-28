@@ -10,7 +10,8 @@
       "Bash(sudo apt-get install:*)",
       "Bash(dotnet add:*)",
       "Bash(dotnet add package:*)",
-      "WebSearch"
+      "WebSearch",
+      "Bash(find:*)"
     ],
     "deny": [],
     "ask": []
