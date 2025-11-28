@@ -64,4 +64,10 @@ public interface IUserPermissionService
     /// Removes permissions for document types not in the list.
     /// </summary>
     Task<BatchUpdateResultDto> BatchUpdateDocumentTypePermissionsAsync(BatchUpdateDocumentTypePermissionsDto dto);
+
+    /// <summary>
+    /// Get the current user's own permissions.
+    /// Returns permissions for the authenticated user making the request.
+    /// </summary>
+    Task<List<UserPermissionDto>> GetMyPermissionsAsync();
 }

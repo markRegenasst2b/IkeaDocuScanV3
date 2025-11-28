@@ -13,13 +13,16 @@ namespace IkeaDocuScan_Web.Services;
 public class UserPermissionService : IUserPermissionService
 {
     private readonly IDbContextFactory<AppDbContext> _contextFactory;
+    private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly ILogger<UserPermissionService> _logger;
 
     public UserPermissionService(
         IDbContextFactory<AppDbContext> contextFactory,
+        IHttpContextAccessor httpContextAccessor,
         ILogger<UserPermissionService> logger)
     {
         _contextFactory = contextFactory;
+        _httpContextAccessor = httpContextAccessor;
         _logger = logger;
     }
 
@@ -372,6 +375,31 @@ public class UserPermissionService : IUserPermissionService
             PermissionsRemoved = removed,
             TotalPermissions = totalPermissions
         };
+    }
+
+    public async Task<List<UserPermissionDto>> GetMyPermissionsAsync()
+    {
+        var username = _httpContextAccessor.HttpContext?.User?.Identity?.Name;
+
+        if (string.IsNullOrEmpty(username))
+        {
+            _logger.LogWarning("GetMyPermissionsAsync called but no authenticated user found");
+            return new List<UserPermissionDto>();
+        }
+
+        _logger.LogInformation("Fetching permissions for current user: {Username}", username);
+
+        await using var context = await _contextFactory.CreateDbContextAsync();
+
+        var permissions = await context.UserPermissions
+            .Include(up => up.User)
+            .Include(up => up.DocumentType)
+            .AsNoTracking()
+            .Where(up => up.User.AccountName == username)
+            .OrderBy(up => up.Id)
+            .ToListAsync();
+
+        return permissions.Select(MapToDto).ToList();
     }
 
     private static UserPermissionDto MapToDto(UserPermission entity)

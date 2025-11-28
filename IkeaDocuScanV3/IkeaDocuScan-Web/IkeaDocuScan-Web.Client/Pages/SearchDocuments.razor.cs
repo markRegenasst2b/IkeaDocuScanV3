@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.Extensions.Options;
 using Microsoft.JSInterop;
 using System.Net.Http.Json;
@@ -9,6 +10,7 @@ using IkeaDocuScan.Shared.DTOs.CounterParties;
 using IkeaDocuScan.Shared.DTOs.Currencies;
 using IkeaDocuScan.Shared.DTOs.Countries;
 using IkeaDocuScan.Shared.DTOs.Excel;
+using IkeaDocuScan.Shared.DTOs.UserPermissions;
 using IkeaDocuScan.Shared.Interfaces;
 using IkeaDocuScan.Shared.Configuration;
 using IkeaDocuScan_Web.Client.Models;
@@ -24,6 +26,8 @@ public partial class SearchDocuments : ComponentBase
     [Inject] private ICounterPartyService CounterPartyService { get; set; } = default!;
     [Inject] private ICurrencyService CurrencyService { get; set; } = default!;
     [Inject] private ICountryService CountryService { get; set; } = default!;
+    [Inject] private IUserPermissionService UserPermissionService { get; set; } = default!;
+    [Inject] private AuthenticationStateProvider AuthenticationStateProvider { get; set; } = default!;
     [Inject] private ILogger<SearchDocuments> Logger { get; set; } = default!;
     [Inject] private NavigationManager NavigationManager { get; set; } = default!;
     [Inject] private ExcelPreviewDataService PreviewDataService { get; set; } = default!;
@@ -191,24 +195,79 @@ public partial class SearchDocuments : ComponentBase
         var counterPartiesTask = CounterPartyService.GetAllAsync();
         var currenciesTask = CurrencyService.GetAllAsync();
         var countriesTask = CountryService.GetAllAsync();
+        var userPermissionsTask = UserPermissionService.GetMyPermissionsAsync();
+        var authStateTask = AuthenticationStateProvider.GetAuthenticationStateAsync();
 
         await Task.WhenAll(
             documentTypesTask,
             documentNamesTask,
             counterPartiesTask,
             currenciesTask,
-            countriesTask
+            countriesTask,
+            userPermissionsTask,
+            authStateTask
         );
 
-        documentTypes = await documentTypesTask;
+        var allDocumentTypes = await documentTypesTask;
         allDocumentNames = await documentNamesTask;
         counterParties = await counterPartiesTask;
         currencies = await currenciesTask;
         countries = await countriesTask;
+        var userPermissions = await userPermissionsTask;
+        var authState = await authStateTask;
+
+        // Filter document types based on user permissions
+        documentTypes = FilterDocumentTypesByPermissions(allDocumentTypes, userPermissions, authState);
 
         Logger.LogInformation(
-            "Loaded reference data: {DocTypes} document types, {DocNames} document names, {CounterParties} counter parties, {Currencies} currencies, {Countries} countries",
-            documentTypes.Count, allDocumentNames.Count, counterParties.Count, currencies.Count, countries.Count);
+            "Loaded reference data: {DocTypes} document types (of {AllDocTypes} total), {DocNames} document names, {CounterParties} counter parties, {Currencies} currencies, {Countries} countries",
+            documentTypes.Count, allDocumentTypes.Count, allDocumentNames.Count, counterParties.Count, currencies.Count, countries.Count);
+    }
+
+    /// <summary>
+    /// Filters document types based on user permissions.
+    /// SuperUsers and users with global access (null DocumentTypeId permission) see all document types.
+    /// Other users only see document types they have explicit permission for.
+    /// </summary>
+    private List<DocumentTypeDto> FilterDocumentTypesByPermissions(
+        List<DocumentTypeDto> allDocumentTypes,
+        List<UserPermissionDto> userPermissions,
+        AuthenticationState authState)
+    {
+        // Check if user is SuperUser via claims
+        var isSuperUserClaim = authState.User.FindFirst("IsSuperUser")?.Value;
+        var isSuperUser = bool.TryParse(isSuperUserClaim, out var result) && result;
+
+        if (isSuperUser)
+        {
+            Logger.LogInformation("User is SuperUser - showing all {Count} document types", allDocumentTypes.Count);
+            return allDocumentTypes;
+        }
+
+        // Check if user has global access (a permission with null DocumentTypeId)
+        var hasGlobalAccess = userPermissions.Any(p => p.DocumentTypeId == null);
+
+        if (hasGlobalAccess)
+        {
+            Logger.LogInformation("User has global document type access - showing all {Count} document types", allDocumentTypes.Count);
+            return allDocumentTypes;
+        }
+
+        // Filter to only document types the user has explicit permission for
+        var allowedDocumentTypeIds = userPermissions
+            .Where(p => p.DocumentTypeId.HasValue)
+            .Select(p => p.DocumentTypeId!.Value)
+            .ToHashSet();
+
+        var filteredTypes = allDocumentTypes
+            .Where(dt => allowedDocumentTypeIds.Contains(dt.DtId))
+            .ToList();
+
+        Logger.LogInformation(
+            "User has {PermissionCount} document type permissions - filtered from {AllCount} to {FilteredCount} document types",
+            allowedDocumentTypeIds.Count, allDocumentTypes.Count, filteredTypes.Count);
+
+        return filteredTypes;
     }
 
     private void InitializeSearchFromQueryParameters()
