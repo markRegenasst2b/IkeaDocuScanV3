@@ -17,8 +17,18 @@
 <PageTitle>Edit User Permissions</PageTitle>
 
 <div class="container-fluid mt-4">
-    <h1>User Permissions Management</h1>
-    <p class="text-muted">Manage user permissions for Document Types</p>
+    <div class="d-flex justify-content-between align-items-start mb-2">
+        <div>
+            <h1>User Permissions Management</h1>
+            <p class="text-muted">Manage user permissions for Document Types</p>
+        </div>
+        @if (hasAccessAuditAccess)
+        {
+            <a href="access-audit" class="btn btn-outline-info">
+                <i class="fa fa-eye"></i> Access Audit Report
+            </a>
+        }
+    </div>
 
     @if (selectedUser == null)
     {
@@ -714,6 +724,7 @@
 
     // Write access
     private bool hasWriteAccess = false;
+    private bool hasAccessAuditAccess = false;
 
     // Search
     private string searchTerm = string.Empty;
@@ -752,6 +763,7 @@
     protected override async Task OnInitializedAsync()
     {
         hasWriteAccess = await EndpointAuthService.CheckAccessAsync("POST", "/api/userpermissions/");
+        hasAccessAuditAccess = await EndpointAuthService.CheckAccessAsync("GET", "/api/access-audit/users");
         await LoadUsers();
     }
 

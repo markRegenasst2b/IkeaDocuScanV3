@@ -1,0 +1,772 @@
+@page "/access-audit"
+@rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
+@attribute [Authorize(Policy = "SuperUser")]
+@using IkeaDocuScan.Shared.DTOs.AccessAudit
+@using IkeaDocuScan.Shared.DTOs.DocumentTypes
+@inject HttpClient Http
+@inject ILogger<AccessAudit> Logger
+@inject IJSRuntime JSRuntime
+
+<PageTitle>Access Audit - IkeaDocuScan</PageTitle>
+
+<div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <h1 class="mb-0">
+                <i class="fa fa-eye text-primary"></i> Access Audit
+            </h1>
+            <p class="text-muted mb-0">Review document type access permissions for compliance and audit purposes</p>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <strong><i class="fa fa-exclamation-triangle"></i> Error:</strong> @errorMessage
+            <button type="button" class="btn-close" @onclick="() => errorMessage = null"></button>
+        </div>
+    }
+
+    <!-- Tab Navigation -->
+    <ul class="nav nav-tabs mb-3">
+        <li class="nav-item">
+            <button class="nav-link @(activeTab == "documentType" ? "active" : "")" @onclick="SwitchToDocumentTypeTab">
+                <i class="fa fa-file-alt"></i> By Document Type
+            </button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link @(activeTab == "user" ? "active" : "")" @onclick="SwitchToUserTab">
+                <i class="fa fa-user"></i> By User
+            </button>
+        </li>
+    </ul>
+
+    <!-- Tab Content -->
+    @if (activeTab == "documentType")
+    {
+        @* ========================================
+           TAB 1: BY DOCUMENT TYPE
+           ======================================== *@
+        <div class="card mb-3">
+            <div class="card-header">
+                <strong><i class="fa fa-search"></i> Select Document Type</strong>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Document Type</label>
+                        <select class="form-select" @bind="selectedDocumentTypeId">
+                            <option value="0">-- Select a document type --</option>
+                            @if (documentTypes != null)
+                            {
+                                @foreach (var dt in documentTypes.Where(d => d.IsEnabled))
+                                {
+                                    <option value="@dt.DtId">@dt.DtName</option>
+                                }
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-6 d-flex align-items-end">
+                        <button class="btn btn-primary" @onclick="LoadDocumentTypeAccessAsync" disabled="@(isLoading || selectedDocumentTypeId == 0)">
+                            <i class="fa fa-search"></i> View Access
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Filters -->
+                <div class="row g-3 mt-2">
+                    <div class="col-md-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" @bind="dtShowOnlyActiveUsers" id="dtActiveUsers">
+                            <label class="form-check-label" for="dtActiveUsers">
+                                Show only active users (last 90 days)
+                            </label>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" @bind="dtShowOnlySuperUsers" id="dtSuperUsers">
+                            <label class="form-check-label" for="dtSuperUsers">
+                                Show only SuperUsers
+                            </label>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <input type="text" class="form-control" placeholder="Search by account name..." @bind="dtAccountNameFilter" />
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        @if (isLoading)
+        {
+            <div class="text-center p-5">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <p class="mt-2">Loading access data...</p>
+            </div>
+        }
+        else if (documentTypeAccessResult != null)
+        {
+            <!-- Summary -->
+            <div class="card mb-3">
+                <div class="card-header bg-primary text-white">
+                    <strong>Access Summary for "@documentTypeAccessResult.DocumentTypeName"</strong>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4 text-center">
+                            <h3 class="mb-0">@documentTypeAccessResult.TotalUsersWithAccess</h3>
+                            <small class="text-muted">Total Users with Access</small>
+                        </div>
+                        <div class="col-md-4 text-center">
+                            <h3 class="mb-0 text-info">@documentTypeAccessResult.GlobalAccessUserCount</h3>
+                            <small class="text-muted">Global Access (All Doc Types)</small>
+                        </div>
+                        <div class="col-md-4 text-center">
+                            <h3 class="mb-0 text-success">@documentTypeAccessResult.DirectAccessUserCount</h3>
+                            <small class="text-muted">Direct Access</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Global Access Users -->
+            @if (documentTypeAccessResult.GlobalAccessUsers.Any())
+            {
+                <div class="card mb-3">
+                    <div class="card-header bg-info text-white">
+                        <i class="fa fa-globe"></i> Global Access (@documentTypeAccessResult.GlobalAccessUserCount users)
+                        <small class="ms-2">- These users have access to ALL document types</small>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>#</th>
+                                        <th>Account Name</th>
+                                        <th>Last Logon</th>
+                                        <th>Super User</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @{ var globalIndex = 0; }
+                                    @foreach (var user in documentTypeAccessResult.GlobalAccessUsers)
+                                    {
+                                        globalIndex++;
+                                        <tr>
+                                            <td>@globalIndex</td>
+                                            <td><i class="fa fa-user"></i> @user.AccountName</td>
+                                            <td>@(user.LastLogon?.ToString("yyyy-MM-dd HH:mm") ?? "-")</td>
+                                            <td>
+                                                @if (user.IsSuperUser)
+                                                {
+                                                    <span class="badge bg-warning text-dark"><i class="fa fa-star"></i> Yes</span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="text-muted">No</span>
+                                                }
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            }
+
+            <!-- Direct Access Users -->
+            @if (documentTypeAccessResult.DirectAccessUsers.Any())
+            {
+                <div class="card mb-3">
+                    <div class="card-header bg-success text-white">
+                        <i class="fa fa-check-circle"></i> Direct Access (@documentTypeAccessResult.DirectAccessUserCount users)
+                        <small class="ms-2">- These users have explicit permission for "@documentTypeAccessResult.DocumentTypeName"</small>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>#</th>
+                                        <th>Account Name</th>
+                                        <th>Last Logon</th>
+                                        <th>Super User</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @{ var directIndex = 0; }
+                                    @foreach (var user in documentTypeAccessResult.DirectAccessUsers)
+                                    {
+                                        directIndex++;
+                                        <tr>
+                                            <td>@directIndex</td>
+                                            <td><i class="fa fa-user"></i> @user.AccountName</td>
+                                            <td>@(user.LastLogon?.ToString("yyyy-MM-dd HH:mm") ?? "-")</td>
+                                            <td>
+                                                @if (user.IsSuperUser)
+                                                {
+                                                    <span class="badge bg-warning text-dark"><i class="fa fa-star"></i> Yes</span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="text-muted">No</span>
+                                                }
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            }
+
+            <!-- Export Button -->
+            <div class="card">
+                <div class="card-body">
+                    <button class="btn btn-success" @onclick="ExportDocumentTypeAccessAsync" disabled="@isExporting">
+                        @if (isExporting)
+                        {
+                            <span class="spinner-border spinner-border-sm" role="status"></span>
+                        }
+                        else
+                        {
+                            <i class="fa fa-file-excel"></i>
+                        }
+                        Export to Excel
+                    </button>
+                </div>
+            </div>
+        }
+    }
+    else
+    {
+        @* ========================================
+           TAB 2: BY USER
+           ======================================== *@
+        <div class="card mb-3">
+            <div class="card-header">
+                <strong><i class="fa fa-search"></i> Search User</strong>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Search by Account Name (min 3 characters)</label>
+                        <input type="text" class="form-control" placeholder="Enter account name..." @bind="userSearchFilter" />
+                    </div>
+                    <div class="col-md-6 d-flex align-items-end">
+                        <button class="btn btn-primary" @onclick="SearchUsersAsync" disabled="@(isLoading || string.IsNullOrWhiteSpace(userSearchFilter) || userSearchFilter.Length < 3)">
+                            <i class="fa fa-search"></i> Search
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Filters -->
+                <div class="row g-3 mt-2">
+                    <div class="col-md-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" @bind="userShowOnlyActiveUsers" id="userActiveUsers">
+                            <label class="form-check-label" for="userActiveUsers">
+                                Show only active users (last 90 days)
+                            </label>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" @bind="userShowOnlySuperUsers" id="userSuperUsers">
+                            <label class="form-check-label" for="userSuperUsers">
+                                Show only SuperUsers
+                            </label>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" @bind="userShowOnlyGlobalAccess" id="userGlobalAccess">
+                            <label class="form-check-label" for="userGlobalAccess">
+                                Show only Global Access users
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        @if (isLoading)
+        {
+            <div class="text-center p-5">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <p class="mt-2">Loading user data...</p>
+            </div>
+        }
+        else if (userSearchResults != null && userSearchResults.Any())
+        {
+            <!-- User Search Results -->
+            <div class="card mb-3">
+                <div class="card-header">
+                    <strong>Search Results (@userSearchResults.Count users)</strong>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>#</th>
+                                    <th>Account Name</th>
+                                    <th>Last Logon</th>
+                                    <th>Super User</th>
+                                    <th>Access Type</th>
+                                    <th>Permissions</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @{ var searchIndex = 0; }
+                                @foreach (var user in userSearchResults)
+                                {
+                                    searchIndex++;
+                                    <tr class="@(selectedUserId == user.UserId ? "table-active" : "")">
+                                        <td>@searchIndex</td>
+                                        <td><i class="fa fa-user"></i> @user.AccountName</td>
+                                        <td>@(user.LastLogon?.ToString("yyyy-MM-dd HH:mm") ?? "-")</td>
+                                        <td>
+                                            @if (user.IsSuperUser)
+                                            {
+                                                <span class="badge bg-warning text-dark"><i class="fa fa-star"></i> Yes</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted">No</span>
+                                            }
+                                        </td>
+                                        <td>
+                                            @if (user.HasGlobalAccess)
+                                            {
+                                                <span class="badge bg-info"><i class="fa fa-globe"></i> Global</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-secondary">Specific</span>
+                                            }
+                                        </td>
+                                        <td><span class="badge bg-primary">@user.PermissionCount</span></td>
+                                        <td>
+                                            <button class="btn btn-sm btn-outline-primary" @onclick="() => LoadUserAccessAsync(user.UserId)">
+                                                <i class="fa fa-eye"></i> View
+                                            </button>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        }
+        else if (userSearchResults != null && !userSearchResults.Any())
+        {
+            <div class="alert alert-info">
+                <i class="fa fa-info-circle"></i> No users found matching your search criteria.
+            </div>
+        }
+
+        @if (userAccessResult != null)
+        {
+            <!-- User Access Details -->
+            <div class="card mb-3">
+                <div class="card-header bg-primary text-white">
+                    <strong>Access Details for "@userAccessResult.AccountName"</strong>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-md-3">
+                            <strong>User ID:</strong> @userAccessResult.UserId
+                        </div>
+                        <div class="col-md-3">
+                            <strong>Last Logon:</strong> @(userAccessResult.LastLogon?.ToString("yyyy-MM-dd HH:mm") ?? "-")
+                        </div>
+                        <div class="col-md-3">
+                            <strong>Super User:</strong>
+                            @if (userAccessResult.IsSuperUser)
+                            {
+                                <span class="badge bg-warning text-dark"><i class="fa fa-star"></i> Yes</span>
+                            }
+                            else
+                            {
+                                <span>No</span>
+                            }
+                        </div>
+                        <div class="col-md-3">
+                            <strong>Access Type:</strong>
+                            @if (userAccessResult.HasGlobalAccess)
+                            {
+                                <span class="badge bg-info"><i class="fa fa-globe"></i> Global (All Document Types)</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-secondary">Specific Document Types</span>
+                            }
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 text-center">
+                            <h3 class="mb-0 text-success">@userAccessResult.TotalDocumentTypesWithAccess</h3>
+                            <small class="text-muted">Document Types WITH Access</small>
+                        </div>
+                        <div class="col-md-6 text-center">
+                            <h3 class="mb-0 text-danger">@userAccessResult.TotalDocumentTypesWithoutAccess</h3>
+                            <small class="text-muted">Document Types WITHOUT Access</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Document Types WITH Access -->
+            @if (userAccessResult.DocumentTypesWithAccess.Any())
+            {
+                <div class="card mb-3">
+                    <div class="card-header bg-success text-white">
+                        <i class="fa fa-check-circle"></i> Document Types WITH Access (@userAccessResult.TotalDocumentTypesWithAccess)
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            @foreach (var dt in userAccessResult.DocumentTypesWithAccess)
+                            {
+                                <div class="col-md-4 col-lg-3 mb-2">
+                                    <span class="badge bg-success w-100 p-2">
+                                        <i class="fa fa-check"></i> @dt.DocumentTypeName
+                                    </span>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            }
+
+            <!-- Document Types WITHOUT Access -->
+            @if (userAccessResult.DocumentTypesWithoutAccess.Any())
+            {
+                <div class="card mb-3">
+                    <div class="card-header bg-danger text-white">
+                        <i class="fa fa-times-circle"></i> Document Types WITHOUT Access (@userAccessResult.TotalDocumentTypesWithoutAccess)
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            @foreach (var dt in userAccessResult.DocumentTypesWithoutAccess)
+                            {
+                                <div class="col-md-4 col-lg-3 mb-2">
+                                    <span class="badge bg-secondary w-100 p-2">
+                                        <i class="fa fa-times"></i> @dt.DocumentTypeName
+                                    </span>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            }
+
+            <!-- Export Button -->
+            <div class="card">
+                <div class="card-body">
+                    <button class="btn btn-success" @onclick="ExportUserAccessAsync" disabled="@isExporting">
+                        @if (isExporting)
+                        {
+                            <span class="spinner-border spinner-border-sm" role="status"></span>
+                        }
+                        else
+                        {
+                            <i class="fa fa-file-excel"></i>
+                        }
+                        Export to Excel
+                    </button>
+                </div>
+            </div>
+        }
+    }
+</div>
+
+@code {
+    // Tab state
+    private string activeTab = "documentType";
+
+    // UI state
+    private bool isLoading = false;
+    private bool isExporting = false;
+    private string? errorMessage;
+
+    // Document Type tab state
+    private List<DocumentTypeDto>? documentTypes;
+    private int selectedDocumentTypeId = 0;
+    private bool dtShowOnlyActiveUsers = false;
+    private bool dtShowOnlySuperUsers = false;
+    private string? dtAccountNameFilter;
+    private DocumentTypeAccessAuditDto? documentTypeAccessResult;
+
+    // User tab state
+    private string? userSearchFilter;
+    private bool userShowOnlyActiveUsers = false;
+    private bool userShowOnlySuperUsers = false;
+    private bool userShowOnlyGlobalAccess = false;
+    private List<AccessAuditUserSearchDto>? userSearchResults;
+    private int? selectedUserId;
+    private UserAccessAuditDto? userAccessResult;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDocumentTypesAsync();
+    }
+
+    private void SwitchTab(string tab)
+    {
+        activeTab = tab;
+        errorMessage = null;
+    }
+
+    private void SwitchToDocumentTypeTab() => SwitchTab("documentType");
+    private void SwitchToUserTab() => SwitchTab("user");
+
+    private async Task LoadDocumentTypesAsync()
+    {
+        try
+        {
+            Logger.LogInformation("Loading document types for access audit");
+            var response = await Http.GetAsync("/api/documenttypes");
+            if (response.IsSuccessStatusCode)
+            {
+                documentTypes = await response.Content.ReadFromJsonAsync<List<DocumentTypeDto>>();
+                Logger.LogInformation("Loaded {Count} document types", documentTypes?.Count ?? 0);
+            }
+            else
+            {
+                errorMessage = "Failed to load document types";
+                Logger.LogError("Failed to load document types: {StatusCode}", response.StatusCode);
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading document types");
+            errorMessage = $"Error loading document types: {ex.Message}";
+        }
+    }
+
+    private async Task LoadDocumentTypeAccessAsync()
+    {
+        if (selectedDocumentTypeId == 0) return;
+
+        try
+        {
+            isLoading = true;
+            errorMessage = null;
+            StateHasChanged();
+
+            var queryParams = new List<string>();
+            if (dtShowOnlyActiveUsers) queryParams.Add("showOnlyActiveUsers=true");
+            if (dtShowOnlySuperUsers) queryParams.Add("showOnlySuperUsers=true");
+            if (!string.IsNullOrWhiteSpace(dtAccountNameFilter)) queryParams.Add($"accountNameFilter={Uri.EscapeDataString(dtAccountNameFilter)}");
+
+            var queryString = queryParams.Any() ? "?" + string.Join("&", queryParams) : "";
+            var url = $"/api/access-audit/document-type/{selectedDocumentTypeId}{queryString}";
+
+            Logger.LogInformation("Loading document type access: {Url}", url);
+
+            var response = await Http.GetAsync(url);
+            if (response.IsSuccessStatusCode)
+            {
+                documentTypeAccessResult = await response.Content.ReadFromJsonAsync<DocumentTypeAccessAuditDto>();
+                Logger.LogInformation("Loaded access data: {TotalUsers} total users", documentTypeAccessResult?.TotalUsersWithAccess ?? 0);
+            }
+            else
+            {
+                errorMessage = $"Failed to load access data: {response.ReasonPhrase}";
+                Logger.LogError("Failed to load document type access: {StatusCode}", response.StatusCode);
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading document type access");
+            errorMessage = $"Error loading access data: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task SearchUsersAsync()
+    {
+        if (string.IsNullOrWhiteSpace(userSearchFilter) || userSearchFilter.Length < 3) return;
+
+        try
+        {
+            isLoading = true;
+            errorMessage = null;
+            userAccessResult = null;
+            selectedUserId = null;
+            StateHasChanged();
+
+            var queryParams = new List<string>();
+            queryParams.Add($"accountNameFilter={Uri.EscapeDataString(userSearchFilter)}");
+            if (userShowOnlyActiveUsers) queryParams.Add("showOnlyActiveUsers=true");
+            if (userShowOnlySuperUsers) queryParams.Add("showOnlySuperUsers=true");
+            if (userShowOnlyGlobalAccess) queryParams.Add("showOnlyGlobalAccess=true");
+
+            var queryString = "?" + string.Join("&", queryParams);
+            var url = $"/api/access-audit/users{queryString}";
+
+            Logger.LogInformation("Searching users: {Url}", url);
+
+            var response = await Http.GetAsync(url);
+            if (response.IsSuccessStatusCode)
+            {
+                userSearchResults = await response.Content.ReadFromJsonAsync<List<AccessAuditUserSearchDto>>();
+                Logger.LogInformation("Found {Count} users", userSearchResults?.Count ?? 0);
+            }
+            else
+            {
+                errorMessage = $"Failed to search users: {response.ReasonPhrase}";
+                Logger.LogError("Failed to search users: {StatusCode}", response.StatusCode);
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error searching users");
+            errorMessage = $"Error searching users: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoadUserAccessAsync(int userId)
+    {
+        try
+        {
+            isLoading = true;
+            errorMessage = null;
+            selectedUserId = userId;
+            StateHasChanged();
+
+            var url = $"/api/access-audit/user/{userId}";
+
+            Logger.LogInformation("Loading user access: {Url}", url);
+
+            var response = await Http.GetAsync(url);
+            if (response.IsSuccessStatusCode)
+            {
+                userAccessResult = await response.Content.ReadFromJsonAsync<UserAccessAuditDto>();
+                Logger.LogInformation("Loaded user access: {WithAccess} with access, {WithoutAccess} without",
+                    userAccessResult?.TotalDocumentTypesWithAccess ?? 0,
+                    userAccessResult?.TotalDocumentTypesWithoutAccess ?? 0);
+            }
+            else
+            {
+                errorMessage = $"Failed to load user access: {response.ReasonPhrase}";
+                Logger.LogError("Failed to load user access: {StatusCode}", response.StatusCode);
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading user access");
+            errorMessage = $"Error loading user access: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task ExportDocumentTypeAccessAsync()
+    {
+        if (selectedDocumentTypeId == 0 || documentTypeAccessResult == null) return;
+
+        try
+        {
+            isExporting = true;
+            StateHasChanged();
+
+            var queryParams = new List<string>();
+            if (dtShowOnlyActiveUsers) queryParams.Add("showOnlyActiveUsers=true");
+            if (dtShowOnlySuperUsers) queryParams.Add("showOnlySuperUsers=true");
+            if (!string.IsNullOrWhiteSpace(dtAccountNameFilter)) queryParams.Add($"accountNameFilter={Uri.EscapeDataString(dtAccountNameFilter)}");
+
+            var queryString = queryParams.Any() ? "?" + string.Join("&", queryParams) : "";
+            var url = $"/api/access-audit/document-type/{selectedDocumentTypeId}/export{queryString}";
+
+            Logger.LogInformation("Exporting document type access: {Url}", url);
+
+            var response = await Http.GetAsync(url);
+            if (response.IsSuccessStatusCode)
+            {
+                var fileBytes = await response.Content.ReadAsByteArrayAsync();
+                var fileName = $"AccessAudit_{documentTypeAccessResult.DocumentTypeName}_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx";
+                await JSRuntime.InvokeVoidAsync("downloadFileFromBytes", fileName, fileBytes);
+                Logger.LogInformation("Exported document type access to {FileName}", fileName);
+            }
+            else
+            {
+                errorMessage = $"Failed to export: {response.ReasonPhrase}";
+                Logger.LogError("Failed to export document type access: {StatusCode}", response.StatusCode);
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error exporting document type access");
+            errorMessage = $"Error exporting: {ex.Message}";
+        }
+        finally
+        {
+            isExporting = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task ExportUserAccessAsync()
+    {
+        if (userAccessResult == null) return;
+
+        try
+        {
+            isExporting = true;
+            StateHasChanged();
+
+            var url = $"/api/access-audit/user/{userAccessResult.UserId}/export";
+
+            Logger.LogInformation("Exporting user access: {Url}", url);
+
+            var response = await Http.GetAsync(url);
+            if (response.IsSuccessStatusCode)
+            {
+                var fileBytes = await response.Content.ReadAsByteArrayAsync();
+                var fileName = $"AccessAudit_{userAccessResult.AccountName.Replace("\\", "_")}_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx";
+                await JSRuntime.InvokeVoidAsync("downloadFileFromBytes", fileName, fileBytes);
+                Logger.LogInformation("Exported user access to {FileName}", fileName);
+            }
+            else
+            {
+                errorMessage = $"Failed to export: {response.ReasonPhrase}";
+                Logger.LogError("Failed to export user access: {StatusCode}", response.StatusCode);
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error exporting user access");
+            errorMessage = $"Error exporting: {ex.Message}";
+        }
+        finally
+        {
+            isExporting = false;
+            StateHasChanged();
+        }
+    }
+}

@@ -224,6 +224,15 @@
                             </NavLink>
                         </div>
                     }
+
+                    @if (HasAccess("AccessAudit"))
+                    {
+                        <div class="nav-item px-3">
+                            <NavLink class="nav-link" href="access-audit">
+                                <span class="bi bi-eye" aria-hidden="true"></span> Access Audit
+                            </NavLink>
+                        </div>
+                    }
                 }
 
              </Authorized>
@@ -275,7 +284,8 @@
                 { "Configuration", ("GET", "/api/configuration/sections") },
                 { "AuditTrail", ("GET", "/api/audit-trail/") },
                 { "SystemLogs", ("POST", "/api/logs/search") },
-                { "EndpointManagement", ("GET", "/api/endpoint-authorization/endpoints") }
+                { "EndpointManagement", ("GET", "/api/endpoint-authorization/endpoints") },
+                { "AccessAudit", ("GET", "/api/access-audit/users") }
             };
 
             Console.WriteLine($"NavMenu: Checking access for {endpointsToCheck.Count} menu items...");
@@ -326,5 +336,6 @@
         HasAccess("Configuration") ||
         HasAccess("AuditTrail") ||
         HasAccess("SystemLogs") ||
-        HasAccess("EndpointManagement");
+        HasAccess("EndpointManagement") ||
+        HasAccess("AccessAudit");
 }

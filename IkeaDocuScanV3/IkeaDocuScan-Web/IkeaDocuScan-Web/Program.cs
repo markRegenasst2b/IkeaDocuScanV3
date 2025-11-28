@@ -169,6 +169,7 @@ builder.Services.AddScoped<ICurrencyService, CurrencyService>();
 builder.Services.AddScoped<IActionReminderService, ActionReminderService>();
 builder.Services.AddScoped<IReportService, ReportService>();
 builder.Services.AddScoped<ILogViewerService, LogViewerService>();
+builder.Services.AddScoped<IAccessAuditService, AccessAuditService>();
 
 #if DEBUG
 // Test Identity Service (DEVELOPMENT ONLY)
@@ -258,6 +259,7 @@ app.MapExcelExportEndpoints();
 app.MapConfigurationEndpoints();
 app.MapLogViewerEndpoints();
 app.MapEndpointAuthorizationEndpoints();
+app.MapAccessAuditEndpoints();
 
 #if DEBUG
 // Test Identity Endpoints (DEVELOPMENT ONLY)

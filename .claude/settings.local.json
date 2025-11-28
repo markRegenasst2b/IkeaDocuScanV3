@@ -11,7 +11,8 @@
       "Bash(dotnet add:*)",
       "Bash(dotnet add package:*)",
       "WebSearch",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(xargs basename:*)"
     ],
     "deny": [],
     "ask": []
