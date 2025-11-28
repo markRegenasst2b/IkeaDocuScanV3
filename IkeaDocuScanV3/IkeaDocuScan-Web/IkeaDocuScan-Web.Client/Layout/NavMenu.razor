@@ -198,8 +198,15 @@
                         </div>
                     }
 
-                    @if (HasAccess("AuditTrail"))
-                    {
+                    @if (HasAccess("AccessAudit")) {
+                        <div class="nav-item px-3">
+                            <NavLink class="nav-link" href="access-audit">
+                                <span class="bi bi-eye" aria-hidden="true"></span> Access Audit
+                            </NavLink>
+                        </div>
+                    }
+
+                    @if (HasAccess("AuditTrail"))           {
                         <div class="nav-item px-3">
                             <NavLink class="nav-link" href="audit-trail">
                                 <span class="bi bi-shield-check" aria-hidden="true"></span> Audit Trail
@@ -221,15 +228,6 @@
                         <div class="nav-item px-3">
                             <NavLink class="nav-link" href="endpoint-management">
                                 <span class="bi bi-shield-lock" aria-hidden="true"></span> Endpoint Permissions
-                            </NavLink>
-                        </div>
-                    }
-
-                    @if (HasAccess("AccessAudit"))
-                    {
-                        <div class="nav-item px-3">
-                            <NavLink class="nav-link" href="access-audit">
-                                <span class="bi bi-eye" aria-hidden="true"></span> Access Audit
                             </NavLink>
                         </div>
                     }
@@ -282,7 +280,7 @@
 
                 // Settings
                 { "Configuration", ("GET", "/api/configuration/sections") },
-                { "AuditTrail", ("GET", "/api/audit-trail/") },
+                { "AuditTrail", ("GET", "/api/audittrail/daterange") },
                 { "SystemLogs", ("POST", "/api/logs/search") },
                 { "EndpointManagement", ("GET", "/api/endpoint-authorization/endpoints") },
                 { "AccessAudit", ("GET", "/api/access-audit/users") }
