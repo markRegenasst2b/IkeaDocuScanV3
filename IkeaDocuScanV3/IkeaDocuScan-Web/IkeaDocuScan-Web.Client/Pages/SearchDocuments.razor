@@ -535,11 +535,17 @@
                                                 <i class="bi bi-three-dots"></i>
                                             </button>
                                             <ul class="dropdown-menu">
-                                                <li><button type="button" class="dropdown-item" @onclick="@(() => OpenPdf(doc.Id))"><i class="bi bi-file-pdf"></i> Open PDF</button></li>
+                                                @if (doc.HasFile)
+                                                {
+                                                    <li><button type="button" class="dropdown-item" @onclick="@(() => OpenPdf(doc.Id))"><i class="bi bi-file-pdf"></i> Open PDF</button></li>
+                                                }
                                                 <li><button type="button" class="dropdown-item" @onclick="@(() => ViewProperties(doc.Id))"><i class="bi bi-eye"></i> View Properties</button></li>
                                                 <li><a class="dropdown-item" href="/documents/edit/@doc.BarCode"><i class="bi bi-pencil"></i> Edit Properties</a></li>
                                                 <li><hr class="dropdown-divider"></li>
-                                                <li><button type="button" class="dropdown-item" @onclick="@(() => SendEmailAttach(doc.Id))"><i class="bi bi-envelope"></i> Email (Attach)</button></li>
+                                                @if (doc.HasFile)
+                                                {
+                                                    <li><button type="button" class="dropdown-item" @onclick="@(() => SendEmailAttach(doc.Id))"><i class="bi bi-envelope"></i> Email (Attach)</button></li>
+                                                }
                                                 <li><button type="button" class="dropdown-item" @onclick="@(() => SendEmailLink(doc.Id))"><i class="bi bi-link-45deg"></i> Email (Link)</button></li>
                                                 <li><hr class="dropdown-divider"></li>
                                                 <li><button type="button" class="dropdown-item text-danger" @onclick="@(() => DeleteDocument(doc.Id, doc.BarCode))"><i class="bi bi-trash"></i> Delete</button></li>
