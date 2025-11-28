@@ -5,95 +5,308 @@
 
 <PageTitle>About - IkeaDocuScan</PageTitle>
 
-<div class="container mt-4">
-    <div class="card">
-        <div class="card-header bg-primary text-white">
-            <h4><i class="bi bi-info-circle"></i> System Information</h4>
-        </div>
-        <div class="card-body">
-            <table class="table table-borderless">
-                <tbody>
-                    <tr>
-                        <th style="width: 200px;">Application:</th>
-                        <td>IkeaDocuScan Document Management System</td>
-                    </tr>
-                    <tr>
-                        <th>Version:</th>
-                        <td><span class="badge bg-primary fs-6">@GetVersion()</span></td>
-                    </tr>
-                    <tr>
-                        <th>Environment:</th>
-                        <td>
-                            <span class="badge @GetEnvironmentBadgeClass() fs-6">
-                                @GetEnvironment()
-                            </span>
-                            @if (!IsProduction())
-                            {
-                                <span class="text-warning ms-2">
-                                    <i class="bi bi-exclamation-triangle"></i>
-                                    Non-production environment
-                                </span>
-                            }
-                        </td>
-                    </tr>
-                    <tr>
-                        <th>Framework:</th>
-                        <td>.NET 9.0 with Blazor WebAssembly</td>
-                    </tr>
-                    <tr>
-                        <th>Company:</th>
-                        <td>IKEA</td>
-                    </tr>
-                </tbody>
-            </table>
-
-            @if (IsDevelopment())
-            {
-                <div class="alert alert-warning mt-3">
-                    <i class="bi bi-exclamation-triangle"></i>
-                    <strong>Development Mode</strong><br/>
-                    This application is running in development mode.
-                    Enhanced logging and debugging features are enabled.
+<div class="container-fluid mt-4">
+    <!-- Hero Section -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="hero-card text-center p-5">
+                <div class="app-icon-container mb-3">
+                    <i class="bi bi-file-earmark-text display-1 text-primary"></i>
                 </div>
-            }
-
-            <div class="mt-4">
-                <h5 class="border-bottom pb-2">Features</h5>
-                <ul class="list-unstyled">
-                    <li><i class="bi bi-check-circle text-success"></i> Document Management & Search</li>
-                    <li><i class="bi bi-check-circle text-success"></i> Scanned File Check-in</li>
-                    <li><i class="bi bi-check-circle text-success"></i> User Permissions Management</li>
-                    <li><i class="bi bi-check-circle text-success"></i> Email Notifications</li>
-                    <li><i class="bi bi-check-circle text-success"></i> Document Export (Excel, PDF)</li>
-                    <li><i class="bi bi-check-circle text-success"></i> Audit Trail</li>
-                    <li><i class="bi bi-check-circle text-success"></i> Action Reminders</li>
-                </ul>
-            </div>
-
-            <div class="mt-4">
-                <h5 class="border-bottom pb-2">Support</h5>
-                <p class="mb-1">For technical support or questions, please contact:</p>
-                <p class="text-muted mb-0">
-                    <i class="bi bi-envelope"></i> IKEA Document Management Team
-                </p>
+                <h1 class="display-5 fw-bold text-primary">IkeaDocuScan</h1>
+                <p class="lead text-muted mb-3">Enterprise Document Management System</p>
+                <div class="d-flex justify-content-center gap-3 flex-wrap">
+                    <span class="badge bg-primary fs-6 px-3 py-2">
+                        <i class="bi bi-tag me-1"></i> v@(Constants.DisplayVersion)
+                    </span>
+                    <span class="badge @GetEnvironmentBadgeClass() fs-6 px-3 py-2">
+                        <i class="bi bi-server me-1"></i> @GetEnvironment()
+                    </span>
+                    <span class="badge bg-secondary fs-6 px-3 py-2">
+                        <i class="bi bi-calendar3 me-1"></i> @DateTime.Now.Year
+                    </span>
+                </div>
             </div>
         </div>
-        <div class="card-footer text-muted text-center">
-            <small>
-                Copyright © 2025 IKEA. All rights reserved.
-            </small>
+    </div>
+
+    <!-- Quick Stats Row -->
+    <div class="row mb-4 g-3">
+        <div class="col-md-3 col-sm-6">
+            <div class="stat-card h-100">
+                <div class="stat-icon bg-primary bg-opacity-10">
+                    <i class="bi bi-stack text-primary"></i>
+                </div>
+                <div class="stat-content">
+                    <div class="stat-label">Architecture</div>
+                    <div class="stat-value">Blazor Hybrid</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-6">
+            <div class="stat-card h-100">
+                <div class="stat-icon bg-success bg-opacity-10">
+                    <i class="bi bi-shield-check text-success"></i>
+                </div>
+                <div class="stat-content">
+                    <div class="stat-label">Authentication</div>
+                    <div class="stat-value">Windows AD</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-6">
+            <div class="stat-card h-100">
+                <div class="stat-icon bg-info bg-opacity-10">
+                    <i class="bi bi-lightning-charge text-info"></i>
+                </div>
+                <div class="stat-content">
+                    <div class="stat-label">Real-Time</div>
+                    <div class="stat-value">SignalR</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-6">
+            <div class="stat-card h-100">
+                <div class="stat-icon bg-warning bg-opacity-10">
+                    <i class="bi bi-database text-warning"></i>
+                </div>
+                <div class="stat-content">
+                    <div class="stat-label">Database</div>
+                    <div class="stat-value">SQL Server</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Features Column -->
+        <div class="col-lg-6">
+            <div class="card h-100 shadow-sm">
+                <div class="card-header bg-gradient text-white" style="background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%);">
+                    <h5 class="mb-0"><i class="bi bi-stars me-2"></i>Features</h5>
+                </div>
+                <div class="card-body">
+                    <div class="feature-grid">
+                        <div class="feature-item">
+                            <div class="feature-icon">
+                                <i class="bi bi-folder2-open"></i>
+                            </div>
+                            <div class="feature-text">
+                                <strong>Document Management</strong>
+                                <small>Organize, search, and manage documents</small>
+                            </div>
+                        </div>
+                        <div class="feature-item">
+                            <div class="feature-icon">
+                                <i class="bi bi-upc-scan"></i>
+                            </div>
+                            <div class="feature-text">
+                                <strong>Scan Check-In</strong>
+                                <small>Import and process scanned files</small>
+                            </div>
+                        </div>
+                        <div class="feature-item">
+                            <div class="feature-icon">
+                                <i class="bi bi-search"></i>
+                            </div>
+                            <div class="feature-text">
+                                <strong>Advanced Search</strong>
+                                <small>Find documents with powerful filters</small>
+                            </div>
+                        </div>
+                        <div class="feature-item">
+                            <div class="feature-icon">
+                                <i class="bi bi-people"></i>
+                            </div>
+                            <div class="feature-text">
+                                <strong>User Permissions</strong>
+                                <small>Role-based access control</small>
+                            </div>
+                        </div>
+                        <div class="feature-item">
+                            <div class="feature-icon">
+                                <i class="bi bi-envelope-paper"></i>
+                            </div>
+                            <div class="feature-text">
+                                <strong>Email Integration</strong>
+                                <small>Send documents via email</small>
+                            </div>
+                        </div>
+                        <div class="feature-item">
+                            <div class="feature-icon">
+                                <i class="bi bi-file-earmark-excel"></i>
+                            </div>
+                            <div class="feature-text">
+                                <strong>Excel Export</strong>
+                                <small>Export document data to Excel</small>
+                            </div>
+                        </div>
+                        <div class="feature-item">
+                            <div class="feature-icon">
+                                <i class="bi bi-clock-history"></i>
+                            </div>
+                            <div class="feature-text">
+                                <strong>Audit Trail</strong>
+                                <small>Complete activity tracking</small>
+                            </div>
+                        </div>
+                        <div class="feature-item">
+                            <div class="feature-icon">
+                                <i class="bi bi-bell"></i>
+                            </div>
+                            <div class="feature-text">
+                                <strong>Action Reminders</strong>
+                                <small>Automated deadline notifications</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Technology Stack Column -->
+        <div class="col-lg-6">
+            <div class="card h-100 shadow-sm">
+                <div class="card-header bg-gradient text-white" style="background: linear-gradient(135deg, #198754 0%, #146c43 100%);">
+                    <h5 class="mb-0"><i class="bi bi-cpu me-2"></i>Technology Stack</h5>
+                </div>
+                <div class="card-body">
+                    <div class="tech-stack">
+                        <div class="tech-category">
+                            <h6 class="text-muted mb-2"><i class="bi bi-layers me-1"></i> Frontend</h6>
+                            <div class="tech-badges">
+                                <span class="tech-badge"><i class="bi bi-filetype-html"></i> Blazor WebAssembly</span>
+                                <span class="tech-badge"><i class="bi bi-bootstrap"></i> Bootstrap 5</span>
+                                <span class="tech-badge"><i class="bi bi-palette"></i> Bootstrap Icons</span>
+                            </div>
+                        </div>
+                        <div class="tech-category">
+                            <h6 class="text-muted mb-2"><i class="bi bi-hdd-stack me-1"></i> Backend</h6>
+                            <div class="tech-badges">
+                                <span class="tech-badge"><i class="bi bi-gear"></i> .NET 10.0</span>
+                                <span class="tech-badge"><i class="bi bi-broadcast"></i> ASP.NET Core</span>
+                                <span class="tech-badge"><i class="bi bi-lightning"></i> SignalR</span>
+                                <span class="tech-badge"><i class="bi bi-boxes"></i> .NET Aspire</span>
+                            </div>
+                        </div>
+                        <div class="tech-category">
+                            <h6 class="text-muted mb-2"><i class="bi bi-database me-1"></i> Data</h6>
+                            <div class="tech-badges">
+                                <span class="tech-badge"><i class="bi bi-server"></i> SQL Server</span>
+                                <span class="tech-badge"><i class="bi bi-diagram-3"></i> Entity Framework Core</span>
+                            </div>
+                        </div>
+                        <div class="tech-category">
+                            <h6 class="text-muted mb-2"><i class="bi bi-shield-lock me-1"></i> Security</h6>
+                            <div class="tech-badges">
+                                <span class="tech-badge"><i class="bi bi-windows"></i> Windows Auth</span>
+                                <span class="tech-badge"><i class="bi bi-person-badge"></i> Active Directory</span>
+                                <span class="tech-badge"><i class="bi bi-key"></i> DPAPI Encryption</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Keyboard Shortcuts & System Info Row -->
+    <div class="row g-4 mt-2">
+        <div class="col-lg-6">
+            <div class="card shadow-sm">
+                <div class="card-header bg-gradient text-white" style="background: linear-gradient(135deg, #6f42c1 0%, #59359a 100%);">
+                    <h5 class="mb-0"><i class="bi bi-keyboard me-2"></i>Keyboard Shortcuts</h5>
+                </div>
+                <div class="card-body">
+                    <div class="shortcuts-list">
+                        <div class="shortcut-item">
+                            <kbd>Ctrl</kbd> + <kbd>S</kbd>
+                            <span>Save current document</span>
+                        </div>
+                        <div class="shortcut-item">
+                            <kbd>Ctrl</kbd> + <kbd>F</kbd>
+                            <span>Focus search field</span>
+                        </div>
+                        <div class="shortcut-item">
+                            <kbd>Esc</kbd>
+                            <span>Close modal / Cancel action</span>
+                        </div>
+                        <div class="shortcut-item">
+                            <kbd>Enter</kbd>
+                            <span>Confirm action / Submit form</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-6">
+            <div class="card shadow-sm">
+                <div class="card-header bg-gradient text-white" style="background: linear-gradient(135deg, #fd7e14 0%, #dc6a0e 100%);">
+                    <h5 class="mb-0"><i class="bi bi-info-circle me-2"></i>System Information</h5>
+                </div>
+                <div class="card-body">
+                    <table class="table table-sm table-borderless mb-0">
+                        <tbody>
+                            <tr>
+                                <td class="text-muted" style="width: 140px;">Application</td>
+                                <td><strong>IkeaDocuScan</strong></td>
+                            </tr>
+                            <tr>
+                                <td class="text-muted">Version</td>
+                                <td><code>@(Constants.DisplayVersion)</code></td>
+                            </tr>
+                            <tr>
+                                <td class="text-muted">Environment</td>
+                                <td>
+                                    <span class="badge @GetEnvironmentBadgeClass()">@GetEnvironment()</span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="text-muted">Framework</td>
+                                <td>.NET 10.0 + Blazor</td>
+                            </tr>
+                            <tr>
+                                <td class="text-muted">Organization</td>
+                                <td>IKEA</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    @if (IsDevelopment())
+                    {
+                        <div class="alert alert-warning mt-3 mb-0 py-2">
+                            <i class="bi bi-exclamation-triangle me-1"></i>
+                            <small><strong>Development Mode</strong> - Enhanced logging enabled</small>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Support Section -->
+    <div class="row mt-4 mb-4">
+        <div class="col-12">
+            <div class="card shadow-sm border-0" style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);">
+                <div class="card-body text-center py-4">
+                    <h5 class="text-muted mb-3">
+                        <i class="bi bi-headset me-2"></i>Need Help?
+                    </h5>
+                    <p class="mb-2">For technical support or questions, contact the IKEA Document Management Team</p>
+                    <p class="text-muted mb-0">
+                        <small>
+                            <i class="bi bi-c-circle me-1"></i>
+                            @DateTime.Now.Year IKEA. All rights reserved.
+                        </small>
+                    </p>
+                </div>
+            </div>
         </div>
     </div>
 </div>
 
 @code {
-    private string GetVersion()
-    {
-        var assembly = System.Reflection.Assembly.GetExecutingAssembly();
-        var version = assembly.GetName().Version;
-        return version != null ? $"{version.Major}.{version.Minor}.{version.Build}" : "1.0.0";
-    }
-
     private string GetEnvironment()
     {
         return Configuration["Environment"] ?? "Unknown";
@@ -121,3 +334,201 @@
         };
     }
 }
+
+<style>
+    .hero-card {
+        background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+        border-radius: 1rem;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+        border: 1px solid #e9ecef;
+    }
+
+    .app-icon-container {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 100px;
+        height: 100px;
+        background: linear-gradient(135deg, #e7f1ff 0%, #cfe2ff 100%);
+        border-radius: 50%;
+        animation: pulse 2s infinite;
+    }
+
+    @@keyframes pulse {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.05); }
+        100% { transform: scale(1); }
+    }
+
+    .stat-card {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        padding: 1.25rem;
+        background: white;
+        border-radius: 0.75rem;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+        border: 1px solid #e9ecef;
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .stat-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    .stat-icon {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 50px;
+        height: 50px;
+        border-radius: 0.75rem;
+        font-size: 1.5rem;
+    }
+
+    .stat-label {
+        font-size: 0.75rem;
+        color: #6c757d;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .stat-value {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: #212529;
+    }
+
+    .feature-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 1rem;
+    }
+
+    .feature-item {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.75rem;
+        padding: 0.75rem;
+        border-radius: 0.5rem;
+        transition: background-color 0.2s;
+    }
+
+    .feature-item:hover {
+        background-color: #f8f9fa;
+    }
+
+    .feature-icon {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 36px;
+        height: 36px;
+        background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%);
+        color: white;
+        border-radius: 0.5rem;
+        font-size: 1rem;
+        flex-shrink: 0;
+    }
+
+    .feature-text {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .feature-text strong {
+        font-size: 0.9rem;
+        color: #212529;
+    }
+
+    .feature-text small {
+        font-size: 0.75rem;
+        color: #6c757d;
+    }
+
+    .tech-stack {
+        display: flex;
+        flex-direction: column;
+        gap: 1.25rem;
+    }
+
+    .tech-category h6 {
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 0.5rem;
+    }
+
+    .tech-badges {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+
+    .tech-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        padding: 0.35rem 0.75rem;
+        background-color: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 2rem;
+        font-size: 0.8rem;
+        color: #495057;
+        transition: all 0.2s;
+    }
+
+    .tech-badge:hover {
+        background-color: #e9ecef;
+        transform: translateY(-1px);
+    }
+
+    .shortcuts-list {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    .shortcut-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0.75rem;
+        background-color: #f8f9fa;
+        border-radius: 0.5rem;
+    }
+
+    .shortcut-item kbd {
+        background-color: #212529;
+        color: white;
+        padding: 0.25rem 0.5rem;
+        border-radius: 0.25rem;
+        font-size: 0.8rem;
+        font-family: inherit;
+        box-shadow: 0 2px 0 #000;
+    }
+
+    .shortcut-item span {
+        color: #6c757d;
+        font-size: 0.9rem;
+    }
+
+    .card {
+        border-radius: 0.75rem;
+        overflow: hidden;
+    }
+
+    .card-header {
+        border-bottom: none;
+        padding: 1rem 1.25rem;
+    }
+
+    code {
+        background-color: #f1f3f4;
+        padding: 0.2rem 0.4rem;
+        border-radius: 0.25rem;
+        color: #0d6efd;
+        font-size: 0.9rem;
+    }
+</style>
