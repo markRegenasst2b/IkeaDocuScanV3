@@ -1,6 +1,6 @@
 @page "/about"
 @rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
-@attribute [Authorize(Policy = "HasAccess")]
+@attribute [Authorize]
 @inject IConfiguration Configuration
 
 <PageTitle>About - IkeaDocuScan</PageTitle>

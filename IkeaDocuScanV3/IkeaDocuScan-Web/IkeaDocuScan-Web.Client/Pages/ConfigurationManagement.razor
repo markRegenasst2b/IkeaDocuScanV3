@@ -1,4 +1,5 @@
 @page "/configuration-management"
+@attribute [Authorize(Policy = "HasAccess")]
 @rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
 @using IkeaDocuScan.Shared.DTOs.Configuration
 @using IkeaDocuScan_Web.Client.Services

@@ -1,4 +1,5 @@
 @page "/checkin-scanned"
+@attribute [Authorize(Policy = "HasAccess")]
 @rendermode InteractiveAuto
 @attribute [Authorize(Policy = "HasAccess")]
 @using IkeaDocuScan.Shared.DTOs.ScannedFiles

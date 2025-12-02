@@ -15,13 +15,9 @@ TODOs
 BUGS
 - system version not shown correctly
 - find out what the Default Document Email Recipients Group is used for? Misnomer? Not used?
-- /documents/search: Reader and Publisher should not see Menu Item "delete" and "Edit Properties" in search result drop down action menu. Show the delete menu item and button only if the user has the corresponding delete endpoint.
-- Reader should not see Edit Document button on /documents/preview/16
-- /documents/properties/ Reader should not see button Edit Properties
 - /documents/properties/ with modified properties: clicking back navigates away. Should ask if changes can be canceled or stay on the page.
-- NoAccess User should not be able to navigate to /configuration-management, /admin/logs, /documents/register, /documents/edit/1,/documents/checkin/1.pdf
-- Publisher should not be able to navigate to /edit-userpermissions
 - checkin in large pdf (41MB) fails with error message. the maximal allowed size should  be displayed.
+- no audit trail of user deletion when done by superuser 
 
 
 ENHANCEMENTS

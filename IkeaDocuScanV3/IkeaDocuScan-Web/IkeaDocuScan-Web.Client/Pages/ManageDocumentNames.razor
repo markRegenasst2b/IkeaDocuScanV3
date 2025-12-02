@@ -1,4 +1,5 @@
 @page "/manage-document-names"
+@attribute [Authorize(Policy = "HasAccess")]
 @rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
 @using IkeaDocuScan.Shared.DTOs.DocumentNames
 @using IkeaDocuScan.Shared.DTOs.DocumentTypes

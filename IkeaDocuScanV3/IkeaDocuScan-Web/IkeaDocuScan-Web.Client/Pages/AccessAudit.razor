@@ -1,6 +1,6 @@
 @page "/access-audit"
 @rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
-@attribute [Authorize(Policy = "SuperUser")]
+@attribute [Authorize(Policy = "HasAccess")]
 @using IkeaDocuScan.Shared.DTOs.AccessAudit
 @using IkeaDocuScan.Shared.DTOs.DocumentTypes
 @inject HttpClient Http

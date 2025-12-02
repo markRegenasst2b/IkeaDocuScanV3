@@ -1,6 +1,7 @@
 @page "/documents/edit/{BarCode:int}"
 @page "/documents/register"
 @page "/documents/checkin/{FileName}"
+@attribute [Authorize(Policy = "HasAccess")]
 @using Microsoft.AspNetCore.Components.Web
 @using Microsoft.AspNetCore.Components.Routing
 @rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
