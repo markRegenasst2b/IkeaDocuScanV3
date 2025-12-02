@@ -49,15 +49,9 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Migration", "Migration", "{
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Documentation", "Documentation", "{3CA0CEEC-0948-4133-825D-A4EBA58802F9}"
 	ProjectSection(SolutionItems) = preProject
-		Documentation\AD_GROUPS_QUICK_REFERENCE.md = Documentation\AD_GROUPS_QUICK_REFERENCE.md
-		Documentation\ARCHITECTURE_IMPLEMENTATION_PLAN.md = Documentation\ARCHITECTURE_IMPLEMENTATION_PLAN.md
-		Documentation\AUTHORIZATION_GUIDE.md = Documentation\AUTHORIZATION_GUIDE.md
-		Documentation\DEPLOYMENT_CHECKLIST.md = Documentation\DEPLOYMENT_CHECKLIST.md
-		Documentation\DEPLOYMENT_PLAN.md = Documentation\DEPLOYMENT_PLAN.md
-		Documentation\DESIGN_DECISIONS.md = Documentation\DESIGN_DECISIONS.md
-		Documentation\EMAIL_SERVICE_GUIDE.md = Documentation\EMAIL_SERVICE_GUIDE.md
-		Documentation\ENDPOINT_AUTHORIZATION_MATRIX.md = Documentation\ENDPOINT_AUTHORIZATION_MATRIX.md
-		Documentation\USER_QUICK_GUIDE.md = Documentation\USER_QUICK_GUIDE.md
+		Documentation\ImplementationDetails\ARCHITECTURE_IMPLEMENTATION_PLAN.md = Documentation\ImplementationDetails\ARCHITECTURE_IMPLEMENTATION_PLAN.md
+		Documentation\ImplementationDetails\CONFIDENTIAL_DOCUMENT_ACCESS_IMPLEMENTATION_PLAN.md = Documentation\ImplementationDetails\CONFIDENTIAL_DOCUMENT_ACCESS_IMPLEMENTATION_PLAN.md
+		..\.claude\commands\initproject.md = ..\.claude\commands\initproject.md
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Deployment", "Deployment", "{10CEB26B-79D7-4979-BA83-6A95EFD7562B}"

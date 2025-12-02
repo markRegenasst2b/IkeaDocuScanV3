@@ -38,22 +38,20 @@
 |------|--------|-----------------|
 | 1 | Navigate to Configuration > Email Templates | List of templates displays |
 | 2 | Click on a template | Template content shown (read-only) |
-| 3 | View placeholders used | Placeholder list visible |
-| 4 | No Edit button | Cannot modify |
+visible |
+| 3 | No Edit button | Cannot modify |
 
 ### 2.2 View Email Recipients
 | Step | Action | Expected Result |
 |------|--------|-----------------|
 | 1 | Navigate to Configuration > Email Recipients | Recipient groups display |
-| 2 | View Admin group | Email addresses listed |
-| 3 | View Notification group | Email addresses listed |
-| 4 | No Edit capability | Fields read-only |
+| 2 | View Access Request Notification   group | Email addresses listed |
+| 3 | No Edit capability | Fields read-only and/or Save button missing/disabled |
 
 ### 2.3 SMTP Settings Hidden
 | Step | Action | Expected Result |
 |------|--------|-----------------|
 | 1 | Navigate to Configuration | SMTP section not visible or shows "Access Denied" |
-| 2 | Attempt direct URL to /admin/smtp | Access denied |
 
 ---
 
@@ -88,19 +86,6 @@
 | 4 | Search for same barcode | No results |
 | 5 | Check audit trail | Delete action logged |
 
-### 4.2 Delete Document with PDF
-| Step | Action | Expected Result |
-|------|--------|-----------------|
-| 1 | Find document with PDF attached | Has PDF icon |
-| 2 | Delete document | Confirmation warns about PDF |
-| 3 | Confirm | Document AND PDF deleted (cascade) |
-| 4 | Verify PDF gone | Cannot download, 404 |
-
-### 4.3 Delete Prevention - Referenced Data
-| Step | Action | Expected Result |
-|------|--------|-----------------|
-| 1 | Attempt to delete document | Should succeed (no FK constraints TO documents) |
-
 ---
 
 ## Edge Cases
@@ -108,10 +93,8 @@
 | Test | Action | Expected Result |
 |------|--------|-----------------|
 | Delete then search | Delete, immediately search | Document not in results |
-| Delete notification | Delete document | SignalR notifies other users |
 | Log volume | View logs with many entries | Pagination works |
-| Log export | Export logs to file | Downloads successfully |
-| View deleted user | User was removed from AD | Shows in history if permissions existed |
+| Log export | Export logs to file | Downloads successfully, csv can be opened in excel with one line per log entry (no missformatting due to newlines in the csv) |
 
 ---
 

@@ -1,6 +1,5 @@
 @page "/audit-trail"
 @rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
-@attribute [Authorize(Policy = "SuperUser")]
 @using IkeaDocuScan.Shared.Interfaces
 @using IkeaDocuScan.Shared.Enums
 @inject HttpClient Http

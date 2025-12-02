@@ -10,10 +10,10 @@
 ### 1.1 Basic Search
 | Step | Action | Expected Result |
 |------|--------|-----------------|
-| 1 | Navigate to Documents page | Document list loads |
-| 2 | Enter barcode in search field | Results filtered to matching barcode |
-| 3 | Clear search, select Document Type filter | Results show only selected type |
-| 4 | Apply date range filter (Receiving Date) | Results within date range |
+| 1 | Navigate to Search Documents page | Filter Criteria loads |
+| 2 | Enter barcode in search field and hit search | Results filtered to matching barcode |
+| 3 | Clear search, select Document Type filter (multiple) | Results show only selected types |
+| 4 | Apply date range filter (Contract from, Receiving Date, ) | Results within date range |
 | 5 | Combine multiple filters | Results match ALL criteria |
 
 ### 1.2 Permission Filtering
@@ -55,14 +55,15 @@
 ### 3.1 Export Search Results
 | Step | Action | Expected Result |
 |------|--------|-----------------|
-| 1 | Perform a search with results | Export button enabled |
-| 2 | Click Export to Excel | .xlsx file downloads |
+| 1 | Perform a search with results and select some documents | Print Detailed button enabled |
+| 1 | Click Print Detailed button | The selected documents metadata is listed (might need to scroll horizontally) |
+| 2 | Click Download Excel | .xlsx file downloads |
 | 3 | Open file | Contains search results columns, only YOUR permitted documents |
 
 ### 3.2 Export Empty Results
 | Step | Action | Expected Result |
 |------|--------|-----------------|
-| 1 | Search with no results | Export button disabled or shows warning |
+| 1 | Search with no results selected | Print Detailed button is not available |
 
 ---
 
@@ -71,16 +72,15 @@
 ### 4.1 Valid Link with Permission
 | Step | Action | Expected Result |
 |------|--------|-----------------|
-| 1 | Receive email with document link | Link format: /documents/preview/{id} or /documents/{barcode} |
-| 2 | Click link | Document properties page opens |
-| 3 | Click Download PDF | PDF downloads to your computer |
+| 1 | Receive email with document link | Link format: /documents/preview/{id} |
+| 2 | Click link | Document preview page opens |
+| 3 | Click Download PDF | PDF downloads and you can open it on your computer |
 
 ### 4.2 Valid Link without Permission
 | Step | Action | Expected Result |
 |------|--------|-----------------|
 | 1 | Receive email with link to document outside your permissions | N/A |
 | 2 | Click link | Access denied message displayed |
-| 3 | Page shows option to request access | Access request form visible |
 
 ---
 
@@ -95,8 +95,10 @@
 ### 5.2 Unauthorized Endpoint
 | Step | Action | Expected Result |
 |------|--------|-----------------|
-| 1 | Manually navigate to /checkin-scanned | Access denied or redirect |
-| 2 | Manually navigate to /admin/* pages | Access denied or redirect |
+| 1 | Manually navigate to /checkin-scanned | Access denied |
+| 2 | Manually navigate to /currency-administration page | Access denied |
+| 3 | Manually navigate to /configuration-management page | Access denied |
+| 4 | same for /access-audit, /endpoint-management, /edit-userpermissions, /admin/logs, /audit-trail, /action-reminders, /documents/register,/documents/edit/1,/documents/checkin/1.pdf | Access denied
 
 ---
 
@@ -104,7 +106,7 @@
 
 | Test | Action | Expected Result |
 |------|--------|-----------------|
-| Empty search | Click Search with no filters | Returns permitted documents (paginated) |
+| Empty search | Click Search with no filters | Returns permitted documents (paginated, max 1000 records) |
 | Special characters | Search with barcode "12345" then "12345'" | No SQL injection, appropriate results |
 | Large export | Export >1000 rows | Export completes or shows limit warning |
 | Session timeout | Leave page idle, then search | Redirect to login or auto-refresh |

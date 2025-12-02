@@ -1,27 +1,42 @@
+Questions
+    Can a Reader send emails with attachments?
+
 Propositions
-    in search restrict the document types to the permissions of the user (show all if the user has no permissions or a permission with null document type)
-    are ther default actions per document type? can we support this in the document registry.
+    Are there default actions per document type? can we support this in the document registry.
     
     
-Issues
-    When adding a new document type and then looking this new document type up in manage document names, adding document names is not possible.
 
 
 TODOs
 - full text search on test
 - add about
-- add view audit log
 - host entry    127.0.0.1    testdocuscan.ikeadt.com
-- restrict the list of claims only to those relevant to docuscan
 
 BUGS
-- Menu dropdown on searchresult does not react
-- NavMenu is to narrow (scrollbar makes item titles brake)
-- remove view pdf from search result dropdown if no pdf is available
-- put dropdown on result list before all others (z-axis)
 - system version not shown correctly
+- find out what the Default Document Email Recipients Group is used for? Misnomer? Not used?
+- /documents/search: Reader and Publisher should not see Menu Item "delete" and "Edit Properties" in search result drop down action menu. Show the delete menu item and button only if the user has the corresponding delete endpoint.
+- Reader should not see Edit Document button on /documents/preview/16
+- /documents/properties/ Reader should not see button Edit Properties
+- /documents/properties/ with modified properties: clicking back navigates away. Should ask if changes can be canceled or stay on the page.
+- NoAccess User should not be able to navigate to /configuration-management, /admin/logs, /documents/register, /documents/edit/1,/documents/checkin/1.pdf
+- Publisher should not be able to navigate to /edit-userpermissions
+- checkin in large pdf (41MB) fails with error message. the maximal allowed size should  be displayed.
 
 
 ENHANCEMENTS
-- add a view on all configurations on the configuration page
 - add a view on all existing document names
+- add a pdf icon in search result with link opening pdf preview
+
+
+In /documents/search, /documents/preview/{id}, /documents/properties/ the menu item delete and the button delete shoud only be shown if 
+the users role has the corresponding endpoints assigned: DELETE /api/documents/{id}
+In /documents/search, /documents/preview/{id}, /documents/properties/ the menu edit properies and the button edit properties shoud only be shown if 
+the users role has the corresponding endpoints assigned: PUT /api/documents/{id}
+In /configuration-management the Save Changes, Edit, Delete and Cancel buttons should only be enabled, if the user has a role assigned with a corresponding endpoint permisssion.
+
+
+For all pages the user without access should not be able to navigate to, except the home page.
+For all pages the user with access should only be able to navigate to, if she/he has a role with the appropriate endpoint permissions.
+
+

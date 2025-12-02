@@ -12,27 +12,24 @@
 | Step | Action | Expected Result |
 |------|--------|-----------------|
 | 1 | Navigate to Register Document | Registration form opens |
-| 2 | Select Document Type | Document Name dropdown populates |
-| 3 | Leave mandatory fields empty, click Save | Validation errors shown for each required field |
-| 4 | Fill all mandatory fields | Save button enables |
-| 5 | Click Save | Document created, barcode auto-generated |
-| 6 | Note the new barcode | Barcode displayed in success message |
+| 2 | Select Document Type | Document Name dropdown populates (not all document types have document names associated, check document names page)|
+| 3 | Leave mandatory fields empty, click Register Document | Validation errors shown for each required field |
+| 4 | Fill all mandatory fields and click Register Document | Document created |
 
-### 1.2 Mandatory Field Validation
-| Field | Test | Expected |
-|-------|------|----------|
-| Document Type | Leave empty | Required field error |
-| Document Name | Leave empty | Required field error |
-| CounterParty | Leave empty | Required field error |
-| Country | Leave empty | Required field error |
-| Receiving Date | Leave empty | Required field error (if mandatory) |
+### 1.2 Mandatory Fields change accroding document type
+| Step | Action | Expected Result |
+|------|--------|-----------------|
+| 1 | Navigate to Register Document | Registration form opens |
+| 2 | Select Document Type | Accroding document type configuration fields are marked as mandtory or disabled (see Document Type Administraton for Document Type Field definitions) |
+| 3 | Select Other Document Type | Accroding document type configuration fields are marked as mandtory or disabled  |
+| 4 | Try to Register document wiht not all mandatory fields filled | Error message indicating missing fields |
+| 5 | Fill all mandatory fields and Register Document | Document created |
 
 ### 1.3 Duplicate Barcode Prevention
 | Step | Action | Expected Result |
 |------|--------|-----------------|
 | 1 | Note an existing barcode from search | Barcode exists |
-| 2 | In Register, manually enter that barcode | Warning: "Barcode already exists" |
-| 3 | Attempt to save | Save prevented |
+| 2 | In Register enter that barcode, select document type, fill all mandatory fields and click Register Document | Warning message: "Barcode already exists", registering not possible |
 
 ---
 
@@ -80,7 +77,7 @@
 ### 3.3 Check-in without Existing Metadata
 | Step | Action | Expected Result |
 |------|--------|-----------------|
-| 1 | Place file named {newbarcode}.pdf (unused barcode) | File in check-in folder |
+| 1 | Place file named {newbarcode}.pdf (unused barcode) in checkin folder | File in check-in folder |
 | 2 | Click Check-in | Warning: "Barcode not registered, enter metadata now" |
 | 3 | Fill all required fields | Form validates |
 | 4 | Click Save | New document created WITH PDF |
@@ -89,7 +86,7 @@
 ### 3.4 Check-in Duplicate (Document Already Has PDF)
 | Step | Action | Expected Result |
 |------|--------|-----------------|
-| 1 | Find document that already has PDF attached | Has PDF icon |
+| 1 | Find document that already has PDF attached | Has PDF open menu item |
 | 2 | Place file named {thatbarcode}.pdf in check-in | File appears |
 | 3 | Click Check-in | Error: "Document already has file attached" |
 | 4 | File NOT deleted | File remains in check-in folder |
@@ -111,7 +108,7 @@
 ### 4.2 Send Document Attachments
 | Step | Action | Expected Result |
 |------|--------|-----------------|
-| 1 | Select documents WITH PDFs | Documents with PDF icons |
+| 1 | Select documents WITH PDFs | Documents with Open PDF menu item  |
 | 2 | Click "Send Attachments" | Email dialog opens |
 | 3 | Enter recipient, click Send | Success message |
 | 4 | Check recipient inbox | Email has PDF attachments |
@@ -155,8 +152,8 @@
 ### 7.1 View Action Reminders
 | Step | Action | Expected Result |
 |------|--------|-----------------|
-| 1 | Navigate to Action Reminders | Documents with action dates display |
-| 2 | View "Today" filter | Shows documents with ActionDate = today |
+| 1 | Navigate to Action Reminders | Documents with action dates of today and receiving date in the past display |
+| 2 | View "Today" filter | Shows documents with ActionDate = today and receiving date in the past |
 | 3 | View "This Week" filter | Shows documents with ActionDate within 7 days |
 | 4 | View "This Month" filter | Shows documents within current month |
 | 5 | View "Overdue" filter | Shows documents with ActionDate < today |
@@ -204,7 +201,7 @@
 |------|--------|-----------------|
 | Large PDF check-in | Check-in 50MB PDF | Uploads successfully or shows size limit |
 | Invalid file extension | Place .exe in check-in folder | File not listed or rejected |
-| Concurrent edit | Two users edit same document | Last save wins, or conflict warning |
+| Concurrent edit | Two users edit same document | Last save wins |
 | Network interruption | Lose connection during save | Error message, retry option |
 | Special characters in fields | Enter "Test & <Company>" | Saved correctly, no XSS |
 
@@ -216,7 +213,7 @@
 |--------|-----------------|
 | Delete document | Delete button not visible |
 | Edit User Permissions | Menu not visible |
-| Edit reference data | Edit buttons not visible on metadata pages |
+| Edit reference data (currency, country, document type, counter party, document names) | Edit buttons not visible on metadata pages |
 | View system configuration | Config menu not visible |
 
 ---
