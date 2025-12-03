@@ -1,0 +1,38 @@
+Questions
+    Can a Reader send emails with attachments?
+
+Propositions
+    Are there default actions per document type? can we support this in the document registry.
+    
+    
+
+
+TODOs
+- full text search on test
+- add about
+- host entry    127.0.0.1    testdocuscan.ikeadt.com
+
+BUGS
+- system version not shown correctly
+- find out what the Default Document Email Recipients Group is used for? Misnomer? Not used?
+- /documents/properties/ with modified properties: clicking back navigates away. Should ask if changes can be canceled or stay on the page.
+- checkin in large pdf (41MB) fails with error message. the maximal allowed size should  be displayed.
+- no audit trail of user deletion when done by superuser 
+
+
+ENHANCEMENTS
+- add a view on all existing document names
+- add a pdf icon in search result with link opening pdf preview
+
+
+In /documents/search, /documents/preview/{id}, /documents/properties/ the menu item delete and the button delete shoud only be shown if 
+the users role has the corresponding endpoints assigned: DELETE /api/documents/{id}
+In /documents/search, /documents/preview/{id}, /documents/properties/ the menu edit properies and the button edit properties shoud only be shown if 
+the users role has the corresponding endpoints assigned: PUT /api/documents/{id}
+In /configuration-management the Save Changes, Edit, Delete and Cancel buttons should only be enabled, if the user has a role assigned with a corresponding endpoint permisssion.
+
+
+For all pages the user without access should not be able to navigate to, except the home page.
+For all pages the user with access should only be able to navigate to, if she/he has a role with the appropriate endpoint permissions.
+
+

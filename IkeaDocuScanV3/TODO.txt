@@ -18,7 +18,9 @@ BUGS
 - /documents/properties/ with modified properties: clicking back navigates away. Should ask if changes can be canceled or stay on the page.
 - checkin in large pdf (41MB) fails with error message. the maximal allowed size should  be displayed.
 - no audit trail of user deletion when done by superuser 
-
+- verify db on markslaptop UserPermissions.Id Identity [DocumentType].IsEnabled Boolean
+- [DocumentType].IsAppendix Boolean (not  used)
+- [DocumentType].[CounterPartyAlpha] (not used)
 
 ENHANCEMENTS
 - add a view on all existing document names
